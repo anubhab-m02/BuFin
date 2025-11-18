@@ -116,6 +116,31 @@ export const FinancialProvider = ({ children }) => {
     setDebts(prev => [...prev, newDebt]);
   };
 
+  // Wishlist State (Impulse Buy Cooldown)
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bufin_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('bufin_wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  const addWishlistItem = (item) => {
+    const newItem = {
+      id: uuidv4(),
+      addedAt: new Date().toISOString(),
+      ...item
+    };
+    setWishlist(prev => [...prev, newItem]);
+  };
+
+  const deleteWishlistItem = (id) => {
+    setWishlist(prev => prev.filter(item => item.id !== id));
+  };
+
   // Derived State
   const balance = transactions.reduce((acc, curr) => {
     return curr.type === 'income' ? acc + curr.amount : acc - curr.amount;
@@ -144,6 +169,9 @@ export const FinancialProvider = ({ children }) => {
       addRecurringPlan,
       debts,
       addDebt,
+      wishlist,
+      addWishlistItem,
+      deleteWishlistItem,
       balance,
       income,
       expense,

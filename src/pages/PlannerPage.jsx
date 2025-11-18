@@ -2,6 +2,8 @@ import React from 'react';
 import { AddRecurringForm, AddDebtForm } from '../components/PlannerForms';
 import RecurringManager from '../components/RecurringManager';
 import DebtTracker from '../components/DebtTracker';
+import WishlistWidget from '../components/WishlistWidget';
+import FiscalCalendar from '../components/FiscalCalendar';
 
 const PlannerPage = () => {
     return (
@@ -17,8 +19,14 @@ const PlannerPage = () => {
 
                 {/* Lists Column */}
                 <div className="md:col-span-8 grid gap-6 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                        <FiscalCalendar />
+                    </div>
                     <RecurringManager />
                     <DebtTracker />
+                    <div className="md:col-span-2">
+                        <WishlistWidget />
+                    </div>
                 </div>
             </div>
         </div>
