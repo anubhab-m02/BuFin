@@ -2,6 +2,7 @@ import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { CalendarClock } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 const RecurringManager = () => {
     const { recurringPlans, isPrivacyMode } = useFinancial();
@@ -19,7 +20,11 @@ const RecurringManager = () => {
             <CardContent>
                 <div className="space-y-4">
                     {recurringPlans.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No recurring plans set.</p>
+                        <EmptyState
+                            title="No recurring plans"
+                            description="Add your rent, salary, or subscriptions to track them automatically."
+                            icon={CalendarClock}
+                        />
                     ) : (
                         recurringPlans.map(plan => (
                             <div key={plan.id} className="flex items-center justify-between border-b pb-2 last:border-0">

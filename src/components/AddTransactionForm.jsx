@@ -5,17 +5,20 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { PlusCircle, MinusCircle } from 'lucide-react';
+import SegmentedControl from './ui/segmented-control';
 
-const AddTransactionForm = ({ initialData, mode = 'add', onSuccess }) => {
-    const { addTransaction, updateTransaction } = useFinancial();
-    const [formData, setFormData] = useState(initialData || {
-        amount: '',
-        category: '',
-        description: '',
-        type: 'expense',
-        date: new Date().toISOString().split('T')[0], // Default to today for date picker
-        remarks: '',
-        necessity: 'variable'
+const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
+    const { addTransaction, updateTransaction, categories } = useFinancial();
+
+    const [formData, setFormData] = useState({
+        date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        amount: initialData?.amount || '',
+        type: initialData?.type || 'expense',
+        category: initialData?.category || '',
+        description: initialData?.description || '', // Kept from original, not explicitly in instruction's snippet but implied
+        merchant: initialData?.merchant || '',
+        remarks: initialData?.remarks || '',
+        necessity: initialData?.necessity || 'variable'
     });
 
     const handleSubmit = (e) => {
@@ -56,26 +59,14 @@ const AddTransactionForm = ({ initialData, mode = 'add', onSuccess }) => {
         <Card className="w-full border-0 shadow-none">
             <CardContent className="p-0">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="flex gap-4">
-                        <Button
-                            type="button"
-                            variant={formData.type === 'expense' ? 'destructive' : 'outline'}
-                            className="flex-1"
-                            onClick={() => setFormData({ ...formData, type: 'expense' })}
-                        >
-                            <MinusCircle className="mr-2 h-4 w-4" />
-                            Expense
-                        </Button>
-                        <Button
-                            type="button"
-                            variant={formData.type === 'income' ? 'default' : 'outline'}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => setFormData({ ...formData, type: 'income' })}
-                        >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Income
-                        </Button>
-                    </div>
+                    <SegmentedControl
+                        options={[
+                            { label: 'Expense', value: 'expense', icon: MinusCircle },
+                            { label: 'Income', value: 'income', icon: PlusCircle }
+                        ]}
+                        value={formData.type}
+                        onChange={(val) => setFormData({ ...formData, type: val })}
+                    />
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -103,13 +94,20 @@ const AddTransactionForm = ({ initialData, mode = 'add', onSuccess }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="category">Category</Label>
-                        <Input
+                        <select
                             id="category"
-                            placeholder="e.g., Food, Rent, Salary"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                             required
-                        />
+                        >
+                            <option value="" disabled>Select a category</option>
+                            {categories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="space-y-2">
@@ -135,26 +133,14 @@ const AddTransactionForm = ({ initialData, mode = 'add', onSuccess }) => {
                     {formData.type === 'expense' && (
                         <div className="space-y-2">
                             <Label>Necessity</Label>
-                            <div className="flex gap-4">
-                                <Button
-                                    type="button"
-                                    variant={formData.necessity === 'variable' ? 'secondary' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setFormData({ ...formData, necessity: 'variable' })}
-                                    className="flex-1"
-                                >
-                                    Variable (Wants/Needs)
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant={formData.necessity === 'fixed' ? 'secondary' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setFormData({ ...formData, necessity: 'fixed' })}
-                                    className="flex-1"
-                                >
-                                    Fixed (Bills/Rent)
-                                </Button>
-                            </div>
+                            <SegmentedControl
+                                options={[
+                                    { label: 'Variable (Wants/Needs)', value: 'variable' },
+                                    { label: 'Fixed (Bills/Rent)', value: 'fixed' }
+                                ]}
+                                value={formData.necessity}
+                                onChange={(val) => setFormData({ ...formData, necessity: val })}
+                            />
                         </div>
                     )}
 

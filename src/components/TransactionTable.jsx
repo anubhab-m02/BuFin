@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Trash2, Edit2 } from 'lucide-react';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
+import EmptyState from './EmptyState';
 
 const TransactionTable = () => {
     const { transactions, deleteTransaction, isPrivacyMode } = useFinancial();
@@ -48,8 +49,13 @@ const TransactionTable = () => {
                             <tbody>
                                 {transactions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-muted-foreground">
-                                            No transactions found. Start by adding one!
+                                        <td colSpan="6" className="p-4">
+                                            <EmptyState
+                                                title="No transactions yet"
+                                                description="Start tracking your income and expenses to see them here."
+                                                actionLabel="Add Transaction"
+                                                onAction={() => document.querySelector('button[type="submit"]')?.click()} // Hacky but works for now, better to lift state
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -58,7 +64,7 @@ const TransactionTable = () => {
                                             <td className="px-4 py-3 font-medium">{formatDate(t.date)}</td>
                                             <td className="px-4 py-3">{t.merchant || '-'}</td>
                                             <td className="px-4 py-3">
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
                                                     {t.category}
                                                 </span>
                                             </td>

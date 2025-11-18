@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus, Repeat, UserMinus, UserPlus } from 'lucide-react';
+import SegmentedControl from './ui/segmented-control';
 
 export const AddRecurringForm = () => {
     const { addRecurringPlan } = useFinancial();
@@ -32,26 +33,14 @@ export const AddRecurringForm = () => {
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-3">
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant={formData.type === 'expense' ? 'destructive' : 'outline'}
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => setFormData({ ...formData, type: 'expense' })}
-                        >
-                            Expense
-                        </Button>
-                        <Button
-                            type="button"
-                            variant={formData.type === 'income' ? 'default' : 'outline'}
-                            size="sm"
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => setFormData({ ...formData, type: 'income' })}
-                        >
-                            Income
-                        </Button>
-                    </div>
+                    <SegmentedControl
+                        options={[
+                            { label: 'Expense', value: 'expense' },
+                            { label: 'Income', value: 'income' }
+                        ]}
+                        value={formData.type}
+                        onChange={(val) => setFormData({ ...formData, type: val })}
+                    />
                     <Input
                         placeholder="Name (e.g. Rent, Salary)"
                         value={formData.name}
@@ -109,26 +98,14 @@ export const AddDebtForm = () => {
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-3">
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant={formData.direction === 'payable' ? 'destructive' : 'outline'}
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => setFormData({ ...formData, direction: 'payable' })}
-                        >
-                            I Owe
-                        </Button>
-                        <Button
-                            type="button"
-                            variant={formData.direction === 'receivable' ? 'default' : 'outline'}
-                            size="sm"
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => setFormData({ ...formData, direction: 'receivable' })}
-                        >
-                            Owes Me
-                        </Button>
-                    </div>
+                    <SegmentedControl
+                        options={[
+                            { label: 'I Owe', value: 'payable' },
+                            { label: 'Owes Me', value: 'receivable' }
+                        ]}
+                        value={formData.direction}
+                        onChange={(val) => setFormData({ ...formData, direction: val })}
+                    />
                     <Input
                         placeholder="Person Name"
                         value={formData.personName}

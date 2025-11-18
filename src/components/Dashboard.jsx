@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
 import JargonBuster from './JargonBuster';
 import { Button } from './ui/button';
+import EmptyState from './EmptyState';
 
 const Dashboard = () => {
     const { balance, income, expense, transactions, deleteTransaction } = useFinancial();
@@ -119,7 +120,13 @@ const Dashboard = () => {
                                 </div>
                             ))}
                             {transactions.length === 0 && (
-                                <div className="text-center text-muted-foreground">No transactions recorded</div>
+                                <div className="py-8">
+                                    <EmptyState
+                                        title="No recent activity"
+                                        description="Your latest transactions will appear here."
+                                        icon={Wallet}
+                                    />
+                                </div>
                             )}
                         </div>
                     </CardContent>

@@ -51,7 +51,7 @@ const PurchaseSimulator = () => {
                             }}
                         />
                     </div>
-                    <Button onClick={handleSimulate} size="sm">Check</Button>
+                    <Button onClick={handleSimulate}>Check</Button>
                 </div>
 
                 {result && (

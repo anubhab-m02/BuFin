@@ -47,17 +47,17 @@ const BudgetHealthBar = () => {
                 <div className="space-y-4">
                     <div className="flex h-4 w-full overflow-hidden rounded-full bg-secondary">
                         <div
-                            className="h-full bg-blue-500"
+                            className="h-full bg-primary"
                             style={{ width: `${needsPct}%` }}
                             title={`Needs: ${needsPct.toFixed(1)}%`}
                         />
                         <div
-                            className={`h-full ${wantsPct > 30 ? 'bg-red-500' : 'bg-yellow-500'}`}
+                            className={`h-full ${wantsPct > 30 ? 'bg-destructive' : 'bg-warning'}`}
                             style={{ width: `${wantsPct}%` }}
                             title={`Wants: ${wantsPct.toFixed(1)}%`}
                         />
                         <div
-                            className="h-full bg-green-500"
+                            className="h-full bg-success"
                             style={{ width: `${savingsPct}%` }}
                             title={`Savings: ${savingsPct.toFixed(1)}%`}
                         />
@@ -65,15 +65,15 @@ const BudgetHealthBar = () => {
 
                     <div className="flex justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <div className="w-2 h-2 rounded-full bg-primary" />
                             <span>Needs ({needsPct.toFixed(0)}%)</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <div className={`w-2 h-2 rounded-full ${wantsPct > 30 ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                            <div className={`w-2 h-2 rounded-full ${wantsPct > 30 ? 'bg-destructive' : 'bg-warning'}`} />
                             <span>Wants ({wantsPct.toFixed(0)}%)</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <div className="w-2 h-2 rounded-full bg-success" />
                             <span>Savings ({savingsPct.toFixed(0)}%)</span>
                         </div>
                     </div>

@@ -1,1 +1,151 @@
 @import "tailwindcss";
+
+@theme {
+    /* Color Palette - Strict Blue/White/Black + Data Colors */
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* Data Colors */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+
+    /* Radius */
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* 
+  Root Variables 
+  Palette: Blue (Primary), Zinc (Neutrals) - Strict B/W + Blue
+*/
+:root {
+    --background: #ffffff;
+    --foreground: #09090b;
+    /* Zinc 950 */
+
+    /* Primary Blue - Strong, Trustworthy */
+    --primary: #2563eb;
+    /* Blue 600 */
+    --primary-foreground: #ffffff;
+
+    /* Secondary - Neutral Gray */
+    --secondary: #f4f4f5;
+    /* Zinc 100 */
+    --secondary-foreground: #18181b;
+    /* Zinc 900 */
+
+    /* Muted - For secondary text */
+    --muted: #fafafa;
+    /* Zinc 50 */
+    --muted-foreground: #71717a;
+    /* Zinc 500 */
+
+    /* Accent - For hover states */
+    --accent: #f4f4f5;
+    /* Zinc 100 */
+    --accent-foreground: #18181b;
+    /* Zinc 900 */
+
+    /* Destructive - Keep for critical errors, but use sparingly */
+    --destructive: #ef4444;
+    /* Red 500 */
+    --destructive-foreground: #ffffff;
+
+    /* Success - Keep for critical success, but use sparingly */
+    --success: #10b981;
+    /* Emerald 500 */
+    --success-foreground: #ffffff;
+
+    /* Warning */
+    --warning: #f59e0b;
+    /* Amber 500 */
+    --warning-foreground: #ffffff;
+
+    /* Borders & Inputs */
+    --border: #e4e4e7;
+    /* Zinc 200 */
+    --input: #e4e4e7;
+    /* Zinc 200 */
+    --ring: #2563eb;
+    /* Blue 600 */
+
+    --radius: 0.5rem;
+    /* 8px - Cleaner, sharper look */
+}
+
+/* Dark Mode Support (Class-based for manual toggle) */
+.dark {
+    --background: #09090b;
+    /* Zinc 950 */
+    --foreground: #fafafa;
+    /* Zinc 50 */
+
+    --primary: #3b82f6;
+    /* Blue 500 */
+    --primary-foreground: #ffffff;
+
+    --secondary: #27272a;
+    /* Zinc 800 */
+    --secondary-foreground: #fafafa;
+    /* Zinc 50 */
+
+    --muted: #09090b;
+    /* Zinc 950 */
+    --muted-foreground: #a1a1aa;
+    /* Zinc 400 */
+
+    --accent: #27272a;
+    /* Zinc 800 */
+    --accent-foreground: #fafafa;
+    /* Zinc 50 */
+
+    --destructive: #7f1d1d;
+    /* Red 900 */
+    --destructive-foreground: #fef2f2;
+    /* Red 50 */
+
+    --success: #064e3b;
+    /* Emerald 900 */
+    --success-foreground: #ecfdf5;
+    /* Emerald 50 */
+
+    --border: #27272a;
+    /* Zinc 800 */
+    --input: #27272a;
+    /* Zinc 800 */
+    --ring: #3b82f6;
+    /* Blue 500 */
+}
+
+/* Global Resets & Typography */
+body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Utility for consistent "Box" styling */
+.card-base {
+    @apply bg-background border border-border rounded-lg shadow-sm;
+}

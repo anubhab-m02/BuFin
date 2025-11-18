@@ -16,12 +16,15 @@ const DashboardPage = () => {
             </section>
 
             {/* Main Dashboard Grid */}
-            <div className="grid gap-8 md:grid-cols-12">
-                <div className="md:col-span-8 space-y-8">
+            <div className="grid gap-6 md:grid-cols-12 lg:gap-8">
+                {/* Left Column: Key Metrics & Charts */}
+                <div className="md:col-span-8 space-y-6 lg:space-y-8">
                     <SafeToSpendWidget />
                     <Dashboard />
                 </div>
-                <div className="md:col-span-4 space-y-8">
+
+                {/* Right Column: Tools & Tips */}
+                <div className="md:col-span-4 space-y-6 lg:space-y-8">
                     <BudgetHealthBar />
                     <PurchaseSimulator />
                     <Card>
@@ -29,7 +32,7 @@ const DashboardPage = () => {
                             <CardTitle>Quick Tips</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground leading-relaxed">
                                 Track your daily expenses to get better insights.
                                 The AI coach will soon help you analyze these patterns!
                             </p>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 const DebtTracker = () => {
     const { debts, isPrivacyMode } = useFinancial();
@@ -21,7 +22,11 @@ const DebtTracker = () => {
             <CardContent>
                 <div className="space-y-4">
                     {activeDebts.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No active debts recorded.</p>
+                        <EmptyState
+                            title="No active debts"
+                            description="Track who owes you and who you owe."
+                            icon={ArrowUpRight}
+                        />
                     ) : (
                         activeDebts.map(debt => (
                             <div key={debt.id} className="flex items-center justify-between border-b pb-2 last:border-0">

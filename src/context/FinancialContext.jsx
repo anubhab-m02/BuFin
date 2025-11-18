@@ -57,9 +57,31 @@ export const FinancialProvider = ({ children }) => {
     localStorage.setItem('bufin_recurring_plans', JSON.stringify(recurringPlans));
   }, [recurringPlans]);
 
+  // Categories State
+  const DEFAULT_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
+
+  const [categories, setCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bufin_categories');
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    } catch (e) { return DEFAULT_CATEGORIES; }
+  });
+
   useEffect(() => {
-    localStorage.setItem('bufin_debts', JSON.stringify(debts));
-  }, [debts]);
+    localStorage.setItem('bufin_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  const addCategory = (category) => {
+    if (!categories.includes(category)) {
+      setCategories(prev => [...prev, category]);
+    }
+  };
+
+  const deleteCategory = (category) => {
+    if (!DEFAULT_CATEGORIES.includes(category)) {
+      setCategories(prev => prev.filter(c => c !== category));
+    }
+  };
 
   // Actions
   const addTransaction = (transaction) => {
@@ -125,6 +147,9 @@ export const FinancialProvider = ({ children }) => {
       balance,
       income,
       expense,
+      categories,
+      addCategory,
+      deleteCategory,
       isPrivacyMode,
       togglePrivacyMode
     }}>

@@ -38,10 +38,10 @@ const InsightsDashboard = () => {
 
             <div className="grid gap-4 md:grid-cols-2">
                 {/* Leak Detector */}
-                <Card className="border-orange-200 bg-orange-50/30">
+                <Card className="border-border bg-card">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-orange-700">
-                            <AlertTriangle className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-foreground">
+                            <AlertTriangle className="h-5 w-5 text-warning" />
                             Spending Leaks
                         </CardTitle>
                     </CardHeader>
@@ -49,12 +49,12 @@ const InsightsDashboard = () => {
                         {leaks.length > 0 ? (
                             <div className="space-y-4">
                                 {leaks.map((leak, index) => (
-                                    <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm">
+                                    <div key={index} className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
                                         <div className="flex-1">
-                                            <p className="font-medium text-orange-900">{leak.category}</p>
-                                            <p className="text-sm text-orange-700">{leak.suggestion}</p>
+                                            <p className="font-medium text-foreground">{leak.category}</p>
+                                            <p className="text-sm text-muted-foreground">{leak.suggestion}</p>
                                         </div>
-                                        <div className="font-bold text-orange-600">-₹{leak.amount.toFixed(2)}</div>
+                                        <div className="font-bold text-destructive">-₹{leak.amount.toFixed(2)}</div>
                                     </div>
                                 ))}
                             </div>
@@ -65,10 +65,10 @@ const InsightsDashboard = () => {
                 </Card>
 
                 {/* Subscription Hunter */}
-                <Card className="border-purple-200 bg-purple-50/30">
+                <Card className="border-border bg-card">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-purple-700">
-                            <Repeat className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-foreground">
+                            <Repeat className="h-5 w-5 text-primary" />
                             Recurring Subscriptions
                         </CardTitle>
                     </CardHeader>
@@ -76,12 +76,12 @@ const InsightsDashboard = () => {
                         {subscriptions.length > 0 ? (
                             <div className="space-y-4">
                                 {subscriptions.map((sub, index) => (
-                                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                                    <div key={index} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
                                         <div>
-                                            <p className="font-medium text-purple-900">{sub.name}</p>
-                                            <p className="text-xs text-purple-600">Last paid: {new Date(sub.lastPaid).toLocaleDateString()}</p>
+                                            <p className="font-medium text-foreground">{sub.name}</p>
+                                            <p className="text-xs text-muted-foreground">Last paid: {new Date(sub.lastPaid).toLocaleDateString()}</p>
                                         </div>
-                                        <div className="font-bold text-purple-600">₹{sub.amount.toFixed(2)}/mo</div>
+                                        <div className="font-bold text-primary">₹{sub.amount.toFixed(2)}/mo</div>
                                     </div>
                                 ))}
                             </div>
@@ -92,16 +92,16 @@ const InsightsDashboard = () => {
                 </Card>
 
                 {/* Quick Tips */}
-                <Card className="border-blue-200 bg-blue-50/30 md:col-span-2">
+                <Card className="border-border bg-card md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-blue-700">
-                            <Lightbulb className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-foreground">
+                            <Lightbulb className="h-5 w-5 text-primary" />
                             AI Quick Tips
                         </CardTitle>
                         <Button
                             size="sm"
                             variant="outline"
-                            className="text-blue-700 border-blue-200 hover:bg-blue-100"
+                            className="text-primary border-border hover:bg-secondary"
                             onClick={handleGenerateTips}
                             disabled={loadingTips}
                         >
@@ -111,8 +111,8 @@ const InsightsDashboard = () => {
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-3">
                             {tips.map((tip, index) => (
-                                <div key={index} className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
-                                    <p className="text-sm text-blue-900">{tip}</p>
+                                <div key={index} className="p-4 bg-secondary/30 rounded-lg border border-border">
+                                    <p className="text-sm text-foreground">{tip}</p>
                                 </div>
                             ))}
                         </div>

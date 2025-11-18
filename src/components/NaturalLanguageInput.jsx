@@ -40,10 +40,10 @@ const NaturalLanguageInput = () => {
     };
 
     return (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-border bg-card shadow-sm">
             <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-blue-700">
-                    <Sparkles className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Sparkles className="h-5 w-5 text-primary" />
                     AI Quick Add
                 </CardTitle>
             </CardHeader>
@@ -53,14 +53,14 @@ const NaturalLanguageInput = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="e.g., 'Spent ₹150 on lunch' or 'Received ₹5000 bonus'"
-                        className="bg-white"
+                        className="bg-background"
                         disabled={isLoading}
                     />
-                    <Button type="submit" disabled={isLoading || !input.trim()} className="bg-blue-600 hover:bg-blue-700">
+                    <Button type="submit" disabled={isLoading || !input.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
                     </Button>
                 </form>
-                {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+                {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
             </CardContent>
         </Card>
     );
