@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, UserPlus } from 'lucide-react';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
+import { AddDebtForm } from './PlannerForms';
 import EmptyState from './EmptyState';
 
 const TransactionTable = () => {
     const { transactions, deleteTransaction, isPrivacyMode } = useFinancial();
     const [editingTransaction, setEditingTransaction] = useState(null);
+    const [splitTransaction, setSplitTransaction] = useState(null);
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
@@ -81,14 +83,25 @@ const TransactionTable = () => {
                                                         size="icon"
                                                         className="h-8 w-8 text-muted-foreground hover:text-primary"
                                                         onClick={() => setEditingTransaction(t)}
+                                                        title="Edit"
                                                     >
                                                         <Edit2 className="h-4 w-4" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                                        onClick={() => setSplitTransaction(t)}
+                                                        title="Split Bill (Create Debt)"
+                                                    >
+                                                        <UserPlus className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
                                                         className="h-8 w-8 text-muted-foreground hover:text-red-500"
                                                         onClick={() => deleteTransaction(t.id)}
+                                                        title="Delete"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -113,6 +126,23 @@ const TransactionTable = () => {
                         initialData={editingTransaction}
                         mode="edit"
                         onSuccess={() => setEditingTransaction(null)}
+                    />
+                )}
+            </Dialog>
+
+            <Dialog
+                isOpen={!!splitTransaction}
+                onClose={() => setSplitTransaction(null)}
+                title="Split Bill / Add Debt"
+            >
+                {splitTransaction && (
+                    <AddDebtForm
+                        initialData={{
+                            amount: splitTransaction.amount,
+                            direction: 'receivable', // Usually if I paid, they owe me
+                            personName: ''
+                        }}
+                        onSuccess={() => setSplitTransaction(null)}
                     />
                 )}
             </Dialog>

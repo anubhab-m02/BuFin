@@ -73,20 +73,24 @@ export const AddRecurringForm = () => {
     );
 };
 
-export const AddDebtForm = () => {
+export const AddDebtForm = ({ initialData, onSuccess }) => {
     const { addDebt } = useFinancial();
     const [formData, setFormData] = useState({
-        personName: '',
-        amount: '',
-        direction: 'payable', // payable (I owe), receivable (They owe)
-        dueDate: ''
+        personName: initialData?.personName || '',
+        amount: initialData?.amount || '',
+        direction: initialData?.direction || 'payable', // payable (I owe), receivable (They owe)
+        dueDate: initialData?.dueDate || ''
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formData.personName || !formData.amount) return;
         addDebt({ ...formData, amount: parseFloat(formData.amount), status: 'active' });
-        setFormData({ personName: '', amount: '', direction: 'payable', dueDate: '' });
+        if (onSuccess) {
+            onSuccess();
+        } else {
+            setFormData({ personName: '', amount: '', direction: 'payable', dueDate: '' });
+        }
     };
 
     return (
