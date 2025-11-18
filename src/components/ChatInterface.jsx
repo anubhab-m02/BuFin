@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './ui/card'
 import { MessageSquare, Send, Bot, User } from 'lucide-react';
 
 const ChatInterface = ({ isFloating }) => {
-    const { transactions, balance, income, expense } = useFinancial();
+    const { balance, transactions, recurringPlans, debts } = useFinancial();
     const [messages, setMessages] = useState([
-        { role: 'assistant', content: "Hi! I'm your financial coach. Ask me anything about your spending or if you can afford a new purchase." }
+        { role: 'model', text: "Hi! I'm your financial coach. Ask me anything about your spending or if you can afford something!" }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -23,22 +23,22 @@ const ChatInterface = ({ isFloating }) => {
         scrollToBottom();
     }, [messages]);
 
-    const handleSend = async (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        const userMessage = input;
+        const userMessage = { role: 'user', text: input };
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setMessages(prev => [...prev, userMessage]);
         setIsLoading(true);
 
         try {
             // Prepare context for the AI
             const financialContext = {
                 balance,
-                income,
-                expense,
                 recentTransactions: transactions.slice(0, 10), // Limit context size
+                recurringPlans,
+                debts,
                 savingsGoals: [] // Placeholder for future feature
             };
 
@@ -97,7 +97,7 @@ const ChatInterface = ({ isFloating }) => {
                 <div ref={messagesEndRef} />
             </CardContent>
             <CardFooter className="border-t p-4">
-                <form onSubmit={handleSend} className="flex w-full gap-2">
+                <form onSubmit={handleSendMessage} className="flex w-full gap-2">
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}

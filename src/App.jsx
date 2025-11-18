@@ -1,12 +1,13 @@
+
 import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { FinancialProvider } from './context/FinancialContext';
-import Dashboard from './components/Dashboard';
+import Navigation from './components/Navigation';
+import DashboardPage from './pages/DashboardPage';
+import LedgerPage from './pages/LedgerPage';
+import PlannerPage from './pages/PlannerPage';
+import InsightsPage from './pages/InsightsPage';
 import AddTransactionForm from './components/AddTransactionForm';
-import NaturalLanguageInput from './components/NaturalLanguageInput';
-import InsightsDashboard from './components/InsightsDashboard';
-import BudgetHealthBar from './components/BudgetHealthBar';
-import PurchaseSimulator from './components/PurchaseSimulator';
-import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import Dialog from './components/ui/dialog';
 import FloatingActionButton from './components/FloatingActionButton';
 import FloatingChat from './components/FloatingChat';
@@ -16,51 +17,25 @@ function App() {
 
   return (
     <FinancialProvider>
-      <div className="min-h-screen bg-background p-4 md:p-8 pb-24">
-        <div className="mx-auto max-w-6xl space-y-8">
-          <header className="flex items-center justify-between border-b pb-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-primary">BuFin</h1>
-              <p className="text-muted-foreground">Your AI Financial Companion</p>
-            </div>
-          </header>
+      <div className="min-h-screen bg-background flex flex-col md:flex-row">
+        <Navigation />
 
-          <main className="space-y-8">
-            {/* AI Quick Add - Prominent at the top */}
-            <section className="max-w-2xl mx-auto">
-              <NaturalLanguageInput />
-            </section>
+        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto h-screen">
+          <div className="max-w-6xl mx-auto">
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/ledger" element={<LedgerPage />} />
+              <Route path="/planner" element={<PlannerPage />} />
+              <Route path="/insights" element={<InsightsPage />} />
+            </Routes>
+          </div>
+        </main>
 
-            {/* Main Dashboard Grid */}
-            <div className="grid gap-8 md:grid-cols-12">
-              <div className="md:col-span-8 space-y-8">
-                <Dashboard />
-                <InsightsDashboard />
-              </div>
-              <div className="md:col-span-4 space-y-8">
-                <BudgetHealthBar />
-                <PurchaseSimulator />
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Tips</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Track your daily expenses to get better insights.
-                      The AI coach will soon help you analyze these patterns!
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </main>
-        </div>
-
-        {/* Floating Elements */}
+        {/* Global Floating Elements */}
         <FloatingActionButton onClick={() => setIsTransactionModalOpen(true)} />
         <FloatingChat />
 
-        {/* Modals */}
+        {/* Global Modals */}
         <Dialog
           isOpen={isTransactionModalOpen}
           onClose={() => setIsTransactionModalOpen(false)}

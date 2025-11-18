@@ -1,6 +1,6 @@
 export const detectLeaks = (transactions) => {
     const expensesByCategory = transactions
-        .filter(t => t.type === 'expense')
+        .filter(t => t.type === 'expense' && t.necessity !== 'fixed')
         .reduce((acc, curr) => {
             acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
             return acc;

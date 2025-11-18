@@ -6,7 +6,14 @@ if (!API_KEY) {
     console.warn("VITE_GEMINI_API_KEY is not set. AI features will not work.");
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
+let genAI = null;
+try {
+    if (API_KEY) {
+        genAI = new GoogleGenerativeAI(API_KEY);
+    }
+} catch (error) {
+    console.error("Failed to initialize GoogleGenerativeAI:", error);
+}
 
 const DATA_ANALYST_PROMPT = `
 You are a transaction classifier. I will give you a raw string (e.g., 'Spotify ₹199'). 
@@ -15,25 +22,65 @@ You will output strictly JSON containing:
 - category: string (Standardized category from list: 'Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income')
 - merchant: string (The specific place/brand, e.g., 'Zomato', 'Uber', 'Amazon')
 - type: 'expense' or 'income'
+- necessity: 'fixed' (for bills, rent, insurance) or 'variable' (for food, shopping, entertainment). Default to 'variable' if unsure.
 
 Do not add conversational text. Output ONLY the JSON.
 `;
 
 const FINANCIAL_COACH_PROMPT = `
-You are a kind, beginner-friendly financial coach. The user has low financial literacy.
-Context: User has provided their financial data (income, balance, goals) in INR (₹).
-User Input: A question about affording a product or a general financial query.
-Task:
-Analyze the user's financial data to determine affordability.
-If the query involves a specific product or service, use the Google Search tool to find real-time information like prices, reviews, or financing options.
-Synthesize the internal data and external search results.
+You are a helpful, empathetic financial coach for an Indian user.
+Your goal is to help them make better spending decisions and understand their finances.
+You have access to their:
+- Current Balance (in ₹)
+- Recent Transactions
+- Recurring Commitments (Rent, SIPs, etc.)
+- Debt Obligations (Money they owe)
+
+When asked "Can I afford this?", ALWAYS check:
+1. Balance - (Upcoming Recurring Bills + Payable Debt) = Safe-to-Spend.
+2. If Safe-to-Spend < Cost, say NO.
+3. If Safe-to-Spend > Cost, apply the 50/30/20 rule.
+
+Use the 'googleSearch' tool to check real-time prices of items if the user mentions a product but not a price (e.g., "Can I buy an iPhone 15?").
+Always speak in Indian Rupees (₹).
+Keep advice short, friendly, and encouraging.
 Explain the impact on their budget in simple, non-judgmental terms and provide actionable advice.
 
 IMPORTANT: Do not output raw code, Python scripts, or tool use traces. Provide the final natural language response directly to the user.
 `;
 
+export const generateFinancialTips = async (transactions, balance) => {
+    if (!API_KEY || !genAI) throw new Error("API Key missing or AI not initialized");
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    const recentTransactions = transactions.slice(0, 10);
+    const prompt = `
+    You are a financial coach. Based on the following recent transactions and balance (₹${balance}), 
+    generate 3 short, actionable, and specific financial tips.
+    Focus on "variable" spending if possible.
+    
+    Transactions: ${JSON.stringify(recentTransactions)}
+    
+    Output strictly a JSON array of strings, e.g.:
+    ["Tip 1...", "Tip 2...", "Tip 3..."]
+  `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        // Clean up markdown code blocks if present
+        const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim();
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        console.error("Error generating tips:", error);
+        return ["Track your daily expenses to identify leaks.", "Try to save 20% of your income.", "Review your subscriptions monthly."];
+    }
+};
+
 export const classifyTransaction = async (text) => {
-    if (!API_KEY) throw new Error("API Key missing");
+    if (!API_KEY || !genAI) throw new Error("API Key missing or AI not initialized");
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent([DATA_ANALYST_PROMPT, text]);
@@ -51,7 +98,7 @@ export const classifyTransaction = async (text) => {
 };
 
 export const analyzePurchase = async (query, financialContext) => {
-    if (!API_KEY) throw new Error("API Key missing");
+    if (!API_KEY || !genAI) throw new Error("API Key missing or AI not initialized");
 
     // Note: Search tool integration would go here. 
     // For MVP without dynamic tool binding in this snippet, we'll use the standard model 
