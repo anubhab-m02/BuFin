@@ -55,6 +55,15 @@ export const api = {
         if (!response.ok) throw new Error('Failed to delete recurring plan');
         return response.json();
     },
+    updateRecurringPlan: async (id, plan) => {
+        const response = await fetch(`${API_BASE_URL}/recurring_plans/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(plan),
+        });
+        if (!response.ok) throw new Error('Failed to update recurring plan');
+        return response.json();
+    },
 
     // Debts
     getDebts: async () => {
@@ -76,6 +85,15 @@ export const api = {
             method: 'DELETE',
         });
         if (!response.ok) throw new Error('Failed to delete debt');
+        return response.json();
+    },
+    updateDebt: async (id, debt) => {
+        const response = await fetch(`${API_BASE_URL}/debts/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(debt),
+        });
+        if (!response.ok) throw new Error('Failed to update debt');
         return response.json();
     },
 

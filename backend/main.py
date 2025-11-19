@@ -82,6 +82,20 @@ def delete_recurring_plan(plan_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True}
 
+@app.put("/recurring_plans/{plan_id}", response_model=schemas.RecurringPlan)
+def update_recurring_plan(plan_id: str, plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db)):
+    db_plan = db.query(models.RecurringPlan).filter(models.RecurringPlan.id == plan_id).first()
+    if not db_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    for key, value in plan.dict().items():
+        if key != 'id':
+            setattr(db_plan, key, value)
+
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
 # --- Debts ---
 @app.get("/debts", response_model=List[schemas.Debt])
 def read_debts(db: Session = Depends(get_db)):
@@ -104,7 +118,23 @@ def delete_debt(debt_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Debt not found")
     db.delete(db_debt)
     db.commit()
+    db.delete(db_debt)
+    db.commit()
     return {"ok": True}
+
+@app.put("/debts/{debt_id}", response_model=schemas.Debt)
+def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(get_db)):
+    db_debt = db.query(models.Debt).filter(models.Debt.id == debt_id).first()
+    if not db_debt:
+        raise HTTPException(status_code=404, detail="Debt not found")
+    
+    for key, value in debt.dict().items():
+        if key != 'id':
+            setattr(db_debt, key, value)
+
+    db.commit()
+    db.refresh(db_debt)
+    return db_debt
 
 # --- Wishlist ---
 @app.get("/wishlist", response_model=List[schemas.WishlistItem])

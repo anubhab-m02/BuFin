@@ -7,18 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus, Repeat, UserMinus, UserPlus } from 'lucide-react';
 import SegmentedControl from './ui/segmented-control';
 
-export const AddRecurringForm = () => {
-    const { addRecurringPlan } = useFinancial();
+export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
+    const { addRecurringPlan, updateRecurringPlan } = useFinancial();
     const [formData, setFormData] = useState({
-        name: '',
-        amount: '',
-        type: 'expense',
-        frequency: 'monthly',
-        expectedDate: '1',
+        name: initialData?.name || '',
+        amount: initialData?.amount || '',
+        type: initialData?.type || 'expense',
+        frequency: initialData?.frequency || 'monthly',
+        expectedDate: initialData?.expectedDate || '1',
         // Loan specific
-        principal: '',
-        interestRate: '',
-        termMonths: ''
+        principal: initialData?.metadata?.principal || '',
+        interestRate: initialData?.metadata?.interestRate || '',
+        termMonths: initialData?.metadata?.termMonths || ''
     });
 
     const calculateEMI = (principal, rate, months) => {
@@ -31,6 +31,8 @@ export const AddRecurringForm = () => {
     // Auto-calculate EMI if loan fields change
     useEffect(() => {
         if (formData.type === 'loan' && formData.principal && formData.interestRate && formData.termMonths) {
+            // Only recalc if not editing an existing loan with fixed amount, or if user changes params
+            // For simplicity, always recalc on change
             const emi = calculateEMI(parseFloat(formData.principal), parseFloat(formData.interestRate), parseFloat(formData.termMonths));
             setFormData(prev => ({ ...prev, amount: emi }));
         }
@@ -54,21 +56,32 @@ export const AddRecurringForm = () => {
             } : {}
         };
 
-        addRecurringPlan(planData);
-        setFormData({
-            name: '', amount: '', type: 'expense', frequency: 'monthly', expectedDate: '1',
-            principal: '', interestRate: '', termMonths: ''
-        });
+        if (initialData) {
+            updateRecurringPlan(initialData.id, planData);
+        } else {
+            addRecurringPlan(planData);
+        }
+
+        if (onSuccess) {
+            onSuccess();
+        } else {
+            setFormData({
+                name: '', amount: '', type: 'expense', frequency: 'monthly', expectedDate: '1',
+                principal: '', interestRate: '', termMonths: ''
+            });
+        }
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                    <Repeat className="h-4 w-4" /> Add Recurring Item / Loan
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className={initialData ? "border-0 shadow-none" : ""}>
+            {!initialData && (
+                <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                        <Repeat className="h-4 w-4" /> Add Recurring Item / Loan
+                    </CardTitle>
+                </CardHeader>
+            )}
+            <CardContent className={initialData ? "p-0" : ""}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <SegmentedControl
                         options={[
@@ -170,7 +183,7 @@ export const AddRecurringForm = () => {
                     </div>
 
                     <Button type="submit" className="w-full">
-                        {formData.type === 'loan' ? 'Add Loan' : 'Add Recurring Plan'}
+                        {submitLabel || (formData.type === 'loan' ? 'Add Loan' : 'Add Recurring Plan')}
                     </Button>
                 </form>
             </CardContent>
@@ -184,17 +197,42 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
         personName: initialData?.personName || '',
         amount: initialData?.amount || '',
         direction: initialData?.direction || 'payable', // payable (I owe), receivable (They owe)
-        dueDate: initialData?.dueDate || ''
+        dueDate: initialData?.dueDate || '',
+        isSplit: false,
+        splitWith: ''
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.personName || !formData.amount) return;
-        addDebt({ ...formData, amount: parseFloat(formData.amount), status: 'active' });
+        if (!formData.personName && !formData.isSplit) return;
+        if (!formData.amount) return;
+
+        if (formData.isSplit && formData.splitWith) {
+            // Split Logic
+            const names = formData.splitWith.split(',').map(n => n.trim()).filter(n => n);
+            if (names.length === 0) return;
+
+            const totalAmount = parseFloat(formData.amount);
+            const splitAmount = totalAmount / (names.length + 1); // +1 for user
+
+            names.forEach(name => {
+                addDebt({
+                    personName: name,
+                    amount: splitAmount,
+                    direction: 'receivable', // They owe me
+                    dueDate: formData.dueDate,
+                    status: 'active'
+                });
+            });
+        } else {
+            // Normal Logic
+            addDebt({ ...formData, amount: parseFloat(formData.amount), status: 'active' });
+        }
+
         if (onSuccess) {
             onSuccess();
         } else {
-            setFormData({ personName: '', amount: '', direction: 'payable', dueDate: '' });
+            setFormData({ personName: '', amount: '', direction: 'payable', dueDate: '', isSplit: false, splitWith: '' });
         }
     };
 
@@ -215,16 +253,49 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
                         value={formData.direction}
                         onChange={(val) => setFormData({ ...formData, direction: val })}
                     />
-                    <Input
-                        placeholder="Person Name"
-                        value={formData.personName}
-                        onChange={(e) => setFormData({ ...formData, personName: e.target.value })}
-                        required
-                    />
+
+                    {!formData.isSplit && (
+                        <Input
+                            placeholder="Person Name"
+                            value={formData.personName}
+                            onChange={(e) => setFormData({ ...formData, personName: e.target.value })}
+                            required={!formData.isSplit}
+                        />
+                    )}
+
+                    {/* Split Option (Only for Receivable usually, but let's allow generic logic if needed. User asked for "Split among people") */}
+                    {formData.direction === 'receivable' && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="split-check"
+                                checked={formData.isSplit}
+                                onChange={(e) => setFormData({ ...formData, isSplit: e.target.checked })}
+                                className="rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <Label htmlFor="split-check" className="text-xs cursor-pointer">Split among people?</Label>
+                        </div>
+                    )}
+
+                    {formData.isSplit && (
+                        <div className="space-y-1">
+                            <Label className="text-xs">Split with (comma separated)</Label>
+                            <Input
+                                placeholder="e.g. Alice, Bob, Charlie"
+                                value={formData.splitWith}
+                                onChange={(e) => setFormData({ ...formData, splitWith: e.target.value })}
+                                required
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                                Total amount will be divided by {formData.splitWith.split(',').filter(n => n.trim()).length + 1} (including you).
+                            </p>
+                        </div>
+                    )}
+
                     <div className="flex gap-2">
                         <Input
                             type="number"
-                            placeholder="Amount"
+                            placeholder="Total Amount"
                             value={formData.amount}
                             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                             required
@@ -235,7 +306,9 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
                             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                         />
                     </div>
-                    <Button type="submit" className="w-full" size="sm">Add Debt</Button>
+                    <Button type="submit" className="w-full" size="sm">
+                        {formData.isSplit ? 'Split & Add Debts' : 'Add Debt'}
+                    </Button>
                 </form>
             </CardContent>
         </Card>

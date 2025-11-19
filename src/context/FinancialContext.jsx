@@ -127,12 +127,104 @@ export const FinancialProvider = ({ children }) => {
     }
   };
 
+  const updateRecurringPlan = async (id, updatedPlan) => {
+    try {
+      const updated = await api.updateRecurringPlan(id, updatedPlan);
+      setRecurringPlans(prev => prev.map(p => p.id === id ? updated : p));
+    } catch (error) {
+      console.error("Failed to update recurring plan:", error);
+    }
+  };
+
+  const deleteRecurringPlan = async (id) => {
+    try {
+      await api.deleteRecurringPlan(id);
+      setRecurringPlans(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Failed to delete recurring plan:", error);
+    }
+  };
+
   const addDebt = async (debt) => {
     try {
       const newDebt = await api.createDebt(debt);
       setDebts(prev => [...prev, newDebt]);
+
+      // 1. Borrowing (I Owe) -> Income (Cash In)
+      if (debt.direction === 'payable') {
+        console.log("Adding Income for Borrowed Money:", debt.amount);
+        await addTransaction({
+          amount: parseFloat(debt.amount),
+          category: 'Income',
+          description: `Borrowed from ${debt.personName}`,
+          type: 'income',
+          date: new Date().toISOString(),
+          necessity: 'variable'
+        });
+      }
+      // 2. Lending (Owes Me) -> Expense (Cash Out)
+      // Note: We assume this is a direct loan. If it's a split bill, the user might have already logged the expense.
+      // For now, we will NOT auto-add expense for receivable to avoid double-counting, 
+      // unless we add a checkbox "Record as Expense?". 
+      // But for "Borrowed", it's definitely Income.
     } catch (error) {
       console.error("Failed to add debt:", error);
+    }
+  };
+
+  const updateDebt = async (id, updatedDebt) => {
+    try {
+      const updated = await api.updateDebt(id, updatedDebt);
+      setDebts(prev => prev.map(d => d.id === id ? updated : d));
+    } catch (error) {
+      console.error("Failed to update debt:", error);
+    }
+  };
+
+  const deleteDebt = async (id) => {
+    try {
+      await api.deleteDebt(id);
+      setDebts(prev => prev.filter(d => d.id !== id));
+    } catch (error) {
+      console.error("Failed to delete debt:", error);
+    }
+  };
+
+  const repayDebt = async (id) => {
+    const debt = debts.find(d => d.id === id);
+    if (!debt) return;
+
+    try {
+      // 1. Mark as Repaid
+      const updatedDebt = { ...debt, status: 'repaid' };
+      await updateDebt(id, updatedDebt);
+
+      // 2. Financial Impact
+      if (debt.direction === 'payable') {
+        // I Repay -> Expense
+        console.log("Adding Expense for Debt Repayment:", debt.amount);
+        await addTransaction({
+          amount: parseFloat(debt.amount),
+          category: 'Debt Repayment',
+          description: `Repaid ${debt.personName}`,
+          type: 'expense',
+          date: new Date().toISOString(),
+          necessity: 'essential'
+        });
+      } else if (debt.direction === 'receivable') {
+        // They Repay Me -> Income
+        console.log("Adding Income for Debt Repayment Received:", debt.amount);
+        await addTransaction({
+          amount: parseFloat(debt.amount),
+          category: 'Debt Repayment',
+          description: `Repayment from ${debt.personName}`,
+          type: 'income',
+          date: new Date().toISOString(),
+          necessity: 'variable'
+        });
+      }
+    } catch (error) {
+      console.error("Failed to repay debt:", error);
     }
   };
 
@@ -217,6 +309,11 @@ export const FinancialProvider = ({ children }) => {
       addRecurringPlan,
       debts,
       addDebt,
+      updateDebt,
+      deleteDebt,
+      repayDebt,
+      updateRecurringPlan,
+      deleteRecurringPlan,
       wishlist,
       addWishlistItem,
       deleteWishlistItem,
