@@ -111,10 +111,20 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Title</Label>
+                        <Label htmlFor="merchant">Merchant</Label>
+                        <Input
+                            id="merchant"
+                            placeholder="e.g., Starbucks, Uber, Landlord"
+                            value={formData.merchant}
+                            onChange={(e) => setFormData({ ...formData, merchant: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Title / Description</Label>
                         <Input
                             id="description"
-                            placeholder="e.g., Monthly Rent, Grocery Run"
+                            placeholder="e.g., Morning Coffee, Ride to Work"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             required

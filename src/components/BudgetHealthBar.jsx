@@ -39,7 +39,7 @@ const BudgetHealthBar = () => {
     const savingsPct = (savings / total) * 100;
 
     return (
-        <Card>
+        <Card className="h-full flex flex-col justify-center">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Budget Health (50/30/20 Rule)</CardTitle>
             </CardHeader>

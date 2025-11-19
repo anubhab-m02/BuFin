@@ -95,7 +95,7 @@ function App() {
              */}
           </div>
         )}
-        )}
+
         <RecurringSuggestionModal />
       </div>
     </FinancialProvider>

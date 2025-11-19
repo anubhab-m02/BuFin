@@ -12,9 +12,34 @@ const SpendingMonitor = () => {
     useEffect(() => {
         let mounted = true;
         const fetchAlert = async () => {
+            const today = new Date().toISOString().split('T')[0];
+            const cacheKey = `bufin_spending_alert_${today}`;
+            const cachedData = localStorage.getItem(cacheKey);
+
+            // Check if we have a valid cache
+            if (cachedData) {
+                const { alert: cachedAlert, transactionCount } = JSON.parse(cachedData);
+                // If transaction count hasn't changed, use cached alert
+                if (transactionCount === transactions.length) {
+                    if (mounted) {
+                        setAlert(cachedAlert);
+                        setLoading(false);
+                    }
+                    return;
+                }
+            }
+
+            // If no cache or data changed, fetch new alert
             try {
                 const result = await generateSpendingAlert(transactions, balance, recurringPlans);
-                if (mounted) setAlert(result);
+                if (mounted) {
+                    setAlert(result);
+                    // Update cache
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        alert: result,
+                        transactionCount: transactions.length
+                    }));
+                }
             } catch (error) {
                 console.error(error);
             } finally {
@@ -24,7 +49,7 @@ const SpendingMonitor = () => {
 
         fetchAlert();
         return () => mounted = false;
-    }, [transactions, balance, recurringPlans]);
+    }, [transactions.length, balance, recurringPlans.length]); // Only depend on lengths/balance to trigger updates
 
     if (loading) {
         return (
@@ -63,15 +88,15 @@ const SpendingMonitor = () => {
     }
 
     return (
-        <Card className="border-l-4 border-l-primary bg-card shadow-sm h-full">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary animate-pulse" />
+        <Card className="bg-card shadow-sm h-full flex flex-col">
+            <CardHeader className="pb-2 pt-4 px-5">
+                <CardTitle className="text-xs font-semibold flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
+                    <Activity className="h-3.5 w-3.5 text-primary animate-pulse" />
                     Live Insight
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <p className="text-sm font-medium leading-relaxed">
+            <CardContent className="px-5 pb-4 pt-1 flex-1 flex items-center">
+                <p className="text-sm font-medium leading-relaxed text-foreground/90">
                     {alert}
                 </p>
             </CardContent>

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
@@ -156,6 +157,15 @@ async def generate_alert(request: dict):
     balance = request.get("balance")
     recurring_plans = request.get("recurringPlans")
     return await ai_service.generate_spending_alert(transactions, balance, recurring_plans)
+
+from google.api_core.exceptions import ResourceExhausted
+
+@app.exception_handler(ResourceExhausted)
+async def resource_exhausted_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "AI Quota Exceeded. Please try again later."},
+    )
 
 @app.post("/ai/tips")
 async def generate_tips(request: dict):

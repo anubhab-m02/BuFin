@@ -34,22 +34,6 @@ Output ONLY the JSON.
 """
 
 FINANCIAL_COACH_PROMPT = """
-You are a helpful, empathetic financial coach for an Indian user.
-Your goal is to help them make better spending decisions and understand their finances.
-You have access to their:
-- Current Balance (in ₹)
-- Recent Transactions
-- Recurring Commitments (Rent, SIPs, etc.)
-- Debt Obligations (Money they owe)
-
-When asked "Can I afford this?", ALWAYS check:
-1. Balance - (Upcoming Recurring Bills + Payable Debt) = Safe-to-Spend.
-2. If Safe-to-Spend < Cost, say NO.
-3. If Safe-to-Spend > Cost, apply the 50/30/20 rule.
-
-Always speak in Indian Rupees (₹).
-Keep advice short, friendly, and encouraging.
-Explain the impact on their budget in simple, non-judgmental terms and provide actionable advice.
 
 IMPORTANT: Do not output raw code, Python scripts, or tool use traces. Provide the final natural language response directly to the user.
 """
@@ -92,10 +76,26 @@ async def analyze_purchase(query: str, context: dict):
     model = genai.GenerativeModel('gemini-2.0-flash')
     
     context_str = json.dumps(context)
-    prompt = f"{FINANCIAL_COACH_PROMPT}\n\nUser Financial Context: {context_str}\n\nUser Query: {query}"
+    prompt = f"""
+    You are a strict financial guard.
+    Analyze the user's purchase request against their balance and recent spending.
+    
+    User Context: {context_str}
+    User Query: {query}
+
+    OUTPUT FORMAT:
+    Line 1: Decision (Must be exactly "YES, AFFORDABLE", "CAUTION, OVER-BUDGET", or "NO, TOO EXPENSIVE").
+    Line 2: Impact (Single sharp sentence on budget impact).
+    Line 3: Trade-off (Concrete, immediate action).
+
+    Example:
+    YES, AFFORDABLE
+    Impact: Fits comfortably within your monthly wants budget.
+    Trade-off: Reduce dining out by ₹200 to stay perfectly on track.
+    """
     
     response = model.generate_content(prompt)
-    return response.text
+    return response.text.strip()
 
 async def generate_spending_alert(transactions: list, balance: float, recurring_plans: list):
     if not API_KEY:
@@ -126,27 +126,23 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
         return None
 
     prompt = f"""
-    You are a real-time spending monitor.
     Context:
     - Spent Today: ₹{spent_today}
     - Safe Daily Limit: ₹{safe_daily:.0f}
     - Balance: ₹{balance}
     
-    Task: Generate a SINGLE, short, urgent but helpful alert sentence (max 15 words).
-    If spending is high (> safe limit), warn them.
-    If spending is low/good, encourage them slightly.
+    You are a strict financial guard.
+    Output a SINGLE sentence alert about today's spending.
+    NO JSON. NO MARKDOWN.
     
-    Examples:
-    - "You've exceeded your daily limit by ₹500; slow down!"
-    - "Great job staying under budget today; keep it up."
-    - "High spending detected on Food; consider cooking dinner."
-    
-    Output ONLY the sentence.
+    Example:
+    "You've spent ₹5000 today, which is well above your daily limit of ₹2000."
+    "Spending is on track today, keep it up!"
     """
     
     try:
         response = model.generate_content(prompt)
-        return response.text
+        return response.text.strip()
     except Exception as e:
         print(f"Alert generation failed: {e}")
         return None

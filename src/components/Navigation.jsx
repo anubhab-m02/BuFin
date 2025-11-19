@@ -43,24 +43,7 @@ const Navigation = () => {
                 ))}
             </div>
 
-            <div className="hidden md:block px-2 pb-4 space-y-2">
-                <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-                    onClick={togglePrivacyMode}
-                >
-                    {isPrivacyMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span>Privacy Mode</span>
-                </Button>
-                <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                >
-                    {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-                </Button>
-            </div>
+
         </nav>
     );
 };

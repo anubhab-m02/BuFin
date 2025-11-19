@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 
-const NaturalLanguageInput = () => {
+const NaturalLanguageInput = ({ onManualEntry }) => {
     const { addTransaction, addRecurringPlan, addDebt } = useFinancial();
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -69,12 +69,22 @@ const NaturalLanguageInput = () => {
     };
 
     return (
-        <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-3">
+        <Card className="border-border bg-card shadow-sm h-full">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="flex items-center gap-2 text-foreground">
                     <Sparkles className="h-5 w-5 text-primary" />
                     AI Quick Add
                 </CardTitle>
+                {onManualEntry && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onManualEntry}
+                        className="text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+                    >
+                        + Manual Entry
+                    </Button>
+                )}
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="flex gap-2">

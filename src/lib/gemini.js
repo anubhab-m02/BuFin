@@ -23,7 +23,8 @@ export const analyzePurchase = async (query, financialContext) => {
         return await api.analyzePurchase(query, financialContext);
     } catch (error) {
         console.error("Failed to analyze purchase:", error);
-        return "I couldn't analyze this right now. Please try again.";
+        // Propagate error so component can handle 429
+        throw error;
     }
 };
 

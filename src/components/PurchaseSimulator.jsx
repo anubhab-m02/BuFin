@@ -8,66 +8,69 @@ import { Calculator, Sparkles, Loader2 } from 'lucide-react';
 
 const PurchaseSimulator = () => {
     const financialContext = useFinancial();
-    const [query, setQuery] = useState('');
+    const [input, setInput] = useState('');
     const [advice, setAdvice] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSimulate = async () => {
-        if (!query.trim()) return;
+    const handleCheck = async () => {
+        if (!input.trim()) return;
 
         setIsLoading(true);
         setAdvice(null);
 
         try {
-            // Pass relevant context to AI
-            const context = {
-                balance: financialContext.balance,
-                recentTransactions: financialContext.transactions.slice(0, 5),
-                recurringPlans: financialContext.recurringPlans,
-                debts: financialContext.debts
-            };
-
-            const response = await analyzePurchase(query, context);
-            setAdvice(response);
+            const transactions = financialContext.transactions;
+            const data = await analyzePurchase(input, transactions);
+            setAdvice(data);
         } catch (error) {
-            console.error("AI Simulation failed:", error);
-            setAdvice("I couldn't analyze this right now. Please try again.");
+            console.error("Error analyzing purchase:", error);
+            if (error.message.includes('429')) {
+                setAdvice("QUOTA EXCEEDED: Please try again later.");
+            } else {
+                setAdvice("ERROR: Something went wrong. Please try again.");
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <Card className="border-border bg-card shadow-sm">
+        <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Calculator className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
                     Purchase Simulator
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="flex gap-2 items-end">
-                    <div className="flex-1 space-y-1">
-                        <Input
-                            placeholder="e.g. Can I buy AirPods for ₹12000?"
-                            value={query}
-                            onChange={(e) => {
-                                setQuery(e.target.value);
-                                setAdvice(null);
-                            }}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
-                        />
-                    </div>
-                    <Button onClick={handleSimulate} disabled={isLoading || !query.trim()}>
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+            <CardContent className="flex-1 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                    <Input
+                        placeholder="e.g. Can I buy AirPods for ₹12000?"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
+                        className="flex-1"
+                    />
+                    <Button
+                        onClick={handleCheck}
+                        disabled={!input.trim() || isLoading}
+                        className="bg-primary hover:bg-primary/90 shrink-0"
+                    >
+                        {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            'Check'
+                        )}
                     </Button>
                 </div>
 
                 {advice && (
-                    <div className="mt-3 p-3 rounded-md bg-primary/5 border border-primary/20 text-sm text-foreground animate-in fade-in slide-in-from-top-1">
-                        <div className="flex gap-2 items-start">
-                            <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                            <p className="leading-relaxed">{advice}</p>
+                    <div className="flex-1 rounded-lg p-3 text-sm bg-muted/50 border border-border">
+                        <div className="flex items-start gap-2">
+                            <Sparkles className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                            <div className="whitespace-pre-wrap font-medium leading-relaxed">
+                                {advice}
+                            </div>
                         </div>
                     </div>
                 )}
