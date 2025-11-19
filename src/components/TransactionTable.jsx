@@ -12,6 +12,7 @@ const TransactionTable = () => {
     const { transactions, deleteTransaction, isPrivacyMode, debts, categories } = useFinancial();
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [splitTransaction, setSplitTransaction] = useState(null);
+    const [viewingTransaction, setViewingTransaction] = useState(null);
 
     // Filters & Sorting
     const [filterType, setFilterType] = useState('all'); // all, income, expense, debt
@@ -39,7 +40,7 @@ const TransactionTable = () => {
                 date: d.dueDate || new Date().toISOString(), // Use dueDate or now
                 merchant: d.personName,
                 category: 'Debt',
-                remarks: d.direction === 'receivable' ? 'Owes me' : 'I owe',
+                description: d.direction === 'receivable' ? 'Owes me' : 'I owe', // Map remarks/desc
                 type: d.direction === 'receivable' ? 'income' : 'expense', // Map for color coding (Receivable = Green/Income-like)
                 isDebt: true
             }));
@@ -75,17 +76,6 @@ const TransactionTable = () => {
     });
 
     // Calculate Running Balance (Net Balance)
-    // We need to calculate it from the *bottom up* (oldest to newest) if we want a true running balance history,
-    // OR just a cumulative balance for the current view.
-    // Standard ledger running balance is usually chronological.
-    // So we should sort by date ASC to calculate, then flip if needed for display?
-    // Or just calculate it on the sorted list?
-    // If we sort by Amount, "Running Balance" loses meaning.
-    // The user asked for "Net Balance column... dynamically changes based on filters".
-    // Let's calculate a cumulative sum on the *displayed* order, or strictly chronological?
-    // "Running Balance" usually implies chronological.
-    // Let's compute it chronologically first.
-
     const dataWithBalance = (() => {
         // Sort chronologically ascending to calc balance
         const chrono = [...sortedData].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -97,13 +87,9 @@ const TransactionTable = () => {
         });
 
         // Now re-sort to match user's sort config
-        // If user wants Date DESC (default), we reverse
         if (sortConfig.key === 'date' && sortConfig.direction === 'desc') {
             return withBal.reverse();
         }
-        // If user sorts by Amount, we just return the mapped items (balance might look random but is accurate to history)
-        // Actually, if sorted by Amount, "Running Balance" is confusing. 
-        // But we'll stick to the chronological calculation attached to the item.
         return withBal.sort((a, b) => {
             let aValue = a[sortConfig.key];
             let bValue = b[sortConfig.key];
@@ -152,7 +138,7 @@ const TransactionTable = () => {
                                     <th className="px-4 py-3 cursor-pointer hover:text-foreground" onClick={() => handleSort('category')}>
                                         Category
                                     </th>
-                                    <th className="px-4 py-3">Remarks</th>
+                                    <th className="px-4 py-3">Title</th>
                                     <th className="px-4 py-3 text-right cursor-pointer hover:text-foreground" onClick={() => handleSort('amount')}>
                                         Amount {sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
@@ -174,7 +160,11 @@ const TransactionTable = () => {
                                     </tr>
                                 ) : (
                                     dataWithBalance.map((t) => (
-                                        <tr key={t.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                                        <tr
+                                            key={t.id}
+                                            className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
+                                            onClick={() => setViewingTransaction(t)}
+                                        >
                                             <td className="px-4 py-3 font-medium whitespace-nowrap">{formatDate(t.date)}</td>
                                             <td className="px-4 py-3">{t.merchant || t.personName || '-'}</td>
                                             <td className="px-4 py-3">
@@ -182,8 +172,8 @@ const TransactionTable = () => {
                                                     {t.category}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate" title={t.remarks}>
-                                                {t.remarks || '-'}
+                                            <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate" title={t.description}>
+                                                {t.description || '-'}
                                             </td>
                                             <td className={`px-4 py-3 text-right font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                                                 {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
@@ -191,7 +181,7 @@ const TransactionTable = () => {
                                             <td className="px-4 py-3 text-right text-muted-foreground font-mono text-xs">
                                                 {formatCurrency(t.balance)}
                                             </td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-center gap-2">
                                                     {!t.isDebt && (
                                                         <>
@@ -199,7 +189,7 @@ const TransactionTable = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                                onClick={() => setEditingTransaction(t)}
+                                                                onClick={(e) => { e.stopPropagation(); setEditingTransaction(t); }}
                                                                 title="Edit"
                                                             >
                                                                 <Edit2 className="h-4 w-4" />
@@ -208,7 +198,7 @@ const TransactionTable = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                                onClick={() => setSplitTransaction(t)}
+                                                                onClick={(e) => { e.stopPropagation(); setSplitTransaction(t); }}
                                                                 title="Split Bill"
                                                             >
                                                                 <UserPlus className="h-4 w-4" />
@@ -217,7 +207,7 @@ const TransactionTable = () => {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                                                                onClick={() => deleteTransaction(t.id)}
+                                                                onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
                                                                 title="Delete"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -234,6 +224,54 @@ const TransactionTable = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog
+                isOpen={!!viewingTransaction}
+                onClose={() => setViewingTransaction(null)}
+                title="Transaction Details"
+            >
+                {viewingTransaction && (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 className="text-lg font-bold">{viewingTransaction.description || 'No Title'}</h3>
+                                <p className="text-sm text-muted-foreground">{formatDate(viewingTransaction.date)}</p>
+                            </div>
+                            <div className={`text-xl font-bold ${viewingTransaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                {viewingTransaction.type === 'income' ? '+' : '-'}{formatCurrency(viewingTransaction.amount)}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span className="text-muted-foreground block">Merchant</span>
+                                <span className="font-medium">{viewingTransaction.merchant || viewingTransaction.personName || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground block">Category</span>
+                                <span className="font-medium">{viewingTransaction.category}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground block">Type</span>
+                                <span className="capitalize">{viewingTransaction.type}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted-foreground block">Necessity</span>
+                                <span className="capitalize">{viewingTransaction.necessity || '-'}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-muted/30 p-3 rounded-md">
+                            <span className="text-muted-foreground block text-xs mb-1">Remarks</span>
+                            <p className="text-sm">{viewingTransaction.remarks || 'No remarks provided.'}</p>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <Button variant="outline" onClick={() => setViewingTransaction(null)}>Close</Button>
+                        </div>
+                    </div>
+                )}
+            </Dialog>
 
             <Dialog
                 isOpen={!!editingTransaction}
