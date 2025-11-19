@@ -6,9 +6,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+venv
 node_modules
 dist
+.pyc
+__pycache__
+
 # Local env files
 .env
 .env.local

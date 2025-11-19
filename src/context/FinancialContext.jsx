@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { migrateData } from '../lib/migration';
+import { api } from '../lib/api';
 
 const FinancialContext = createContext();
 
@@ -13,60 +12,130 @@ export const useFinancial = () => {
 };
 
 export const FinancialProvider = ({ children }) => {
-  // Transactions State
-  const [transactions, setTransactions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('bufin_transactions');
-      const parsed = saved ? JSON.parse(saved) : [];
-      const safeParsed = Array.isArray(parsed) ? parsed : [];
-
-      const { migrated, updatedTransactions } = migrateData(safeParsed);
-      if (migrated) {
-        console.log("Migrated legacy data to v2 schema");
-        localStorage.setItem('bufin_transactions', JSON.stringify(updatedTransactions));
-      }
-      return updatedTransactions;
-    } catch (error) {
-      console.error("Failed to load transactions:", error);
-      return [];
-    }
-  });
-
-  // Recurring Plans State
-  const [recurringPlans, setRecurringPlans] = useState(() => {
-    try {
-      const saved = localStorage.getItem('bufin_recurring_plans');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
-
-  // Debts State
-  const [debts, setDebts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('bufin_debts');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
-
-  // Persistence Effects
-  useEffect(() => {
-    localStorage.setItem('bufin_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('bufin_recurring_plans', JSON.stringify(recurringPlans));
-  }, [recurringPlans]);
-
-  // Categories State
-  const DEFAULT_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
+  // State
+  const [transactions, setTransactions] = useState([]);
+  const [recurringPlans, setRecurringPlans] = useState([]);
+  const [debts, setDebts] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
 
   const [categories, setCategories] = useState(() => {
     try {
       const saved = localStorage.getItem('bufin_categories');
-      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-    } catch (e) { return DEFAULT_CATEGORIES; }
+      return saved ? JSON.parse(saved) : ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
+    } catch (e) {
+      return ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
+    }
   });
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
+  // Initial Fetch
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [txs, plans, dbt, wish] = await Promise.all([
+          api.getTransactions(),
+          api.getRecurringPlans(),
+          api.getDebts(),
+          api.getWishlist()
+        ]);
+        setTransactions(txs);
+        setRecurringPlans(plans);
+        setDebts(dbt);
+        setWishlist(wish);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Actions
+  const addTransaction = async (transaction) => {
+    try {
+      const newTx = await api.createTransaction({
+        ...transaction,
+        amount: parseFloat(transaction.amount),
+        necessity: transaction.necessity || 'variable',
+        remarks: transaction.remarks || ''
+      });
+      setTransactions(prev => [newTx, ...prev]);
+    } catch (error) {
+      console.error("Failed to add transaction:", error);
+    }
+  };
+
+  const deleteTransaction = async (id) => {
+    try {
+      await api.deleteTransaction(id);
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
+    }
+  };
+
+  const updateTransaction = async (id, updatedData) => {
+    try {
+      // We need to send the full object or at least what the backend expects.
+      // For now, let's assume updatedData contains the fields to change.
+      // We might need to fetch the existing one first or merge it in the UI.
+      // Assuming the UI passes the complete updated object or we merge it here.
+
+      // Find existing to merge (since backend expects full object in PUT usually, or we can use PATCH)
+      // My backend implementation uses PUT and expects TransactionCreate schema.
+      const existing = transactions.find(t => t.id === id);
+      if (!existing) return;
+
+      const merged = { ...existing, ...updatedData, amount: parseFloat(updatedData.amount) };
+
+      const updatedTx = await api.updateTransaction(id, merged);
+
+      setTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
+    } catch (error) {
+      console.error("Failed to update transaction:", error);
+    }
+  };
+
+  const addRecurringPlan = async (plan) => {
+    try {
+      const newPlan = await api.createRecurringPlan(plan);
+      setRecurringPlans(prev => [...prev, newPlan]);
+    } catch (error) {
+      console.error("Failed to add recurring plan:", error);
+    }
+  };
+
+  const addDebt = async (debt) => {
+    try {
+      const newDebt = await api.createDebt(debt);
+      setDebts(prev => [...prev, newDebt]);
+    } catch (error) {
+      console.error("Failed to add debt:", error);
+    }
+  };
+
+  const addWishlistItem = async (item) => {
+    try {
+      const newItem = await api.createWishlistItem({
+        ...item,
+        addedAt: new Date().toISOString()
+      });
+      setWishlist(prev => [...prev, newItem]);
+    } catch (error) {
+      console.error("Failed to add wishlist item:", error);
+    }
+  };
+
+  const deleteWishlistItem = async (id) => {
+    try {
+      await api.deleteWishlistItem(id);
+      setWishlist(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error("Failed to delete wishlist item:", error);
+    }
+  };
+
+  // Categories (Client-side only for now as per MVP)
+  // Restore localStorage persistence for categories to maintain feature parity
   useEffect(() => {
     localStorage.setItem('bufin_categories', JSON.stringify(categories));
   }, [categories]);
@@ -78,67 +147,10 @@ export const FinancialProvider = ({ children }) => {
   };
 
   const deleteCategory = (category) => {
+    const DEFAULT_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
     if (!DEFAULT_CATEGORIES.includes(category)) {
       setCategories(prev => prev.filter(c => c !== category));
     }
-  };
-
-  // Actions
-  const addTransaction = (transaction) => {
-    const newTransaction = {
-      id: uuidv4(),
-      date: transaction.date || new Date().toISOString(),
-      remarks: transaction.remarks || '',
-      necessity: transaction.necessity || 'variable',
-      ...transaction,
-      amount: parseFloat(transaction.amount)
-    };
-    setTransactions(prev => [newTransaction, ...prev]);
-  };
-
-  const deleteTransaction = (id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
-
-  const updateTransaction = (id, updatedData) => {
-    setTransactions(prev => prev.map(t =>
-      t.id === id ? { ...t, ...updatedData, amount: parseFloat(updatedData.amount) } : t
-    ));
-  };
-
-  const addRecurringPlan = (plan) => {
-    const newPlan = { id: uuidv4(), ...plan };
-    setRecurringPlans(prev => [...prev, newPlan]);
-  };
-
-  const addDebt = (debt) => {
-    const newDebt = { id: uuidv4(), ...debt };
-    setDebts(prev => [...prev, newDebt]);
-  };
-
-  // Wishlist State (Impulse Buy Cooldown)
-  const [wishlist, setWishlist] = useState(() => {
-    try {
-      const saved = localStorage.getItem('bufin_wishlist');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('bufin_wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
-
-  const addWishlistItem = (item) => {
-    const newItem = {
-      id: uuidv4(),
-      addedAt: new Date().toISOString(),
-      ...item
-    };
-    setWishlist(prev => [...prev, newItem]);
-  };
-
-  const deleteWishlistItem = (id) => {
-    setWishlist(prev => prev.filter(item => item.id !== id));
   };
 
   // Derived State
@@ -153,9 +165,6 @@ export const FinancialProvider = ({ children }) => {
   const expense = transactions
     .filter(t => t.type === 'expense')
     .reduce((acc, curr) => acc + curr.amount, 0);
-
-  // UI State
-  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
   const togglePrivacyMode = () => setIsPrivacyMode(prev => !prev);
 
