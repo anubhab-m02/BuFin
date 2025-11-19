@@ -1,37 +1,44 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { analyzePurchase } from '../lib/gemini';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Calculator, CheckCircle, XCircle } from 'lucide-react';
+import { Calculator, Sparkles, Loader2 } from 'lucide-react';
 
 const PurchaseSimulator = () => {
-    const { balance } = useFinancial();
-    const [cost, setCost] = useState('');
-    const [result, setResult] = useState(null); // 'safe', 'risky', 'danger'
+    const financialContext = useFinancial();
+    const [query, setQuery] = useState('');
+    const [advice, setAdvice] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSimulate = () => {
-        const amount = parseFloat(cost);
-        if (isNaN(amount) || amount <= 0) return;
+    const handleSimulate = async () => {
+        if (!query.trim()) return;
 
-        // Simple logic:
-        // Safe: Leaves > 20% of current balance
-        // Risky: Leaves > 0 but < 20%
-        // Danger: Overdraft
+        setIsLoading(true);
+        setAdvice(null);
 
-        const remaining = balance - amount;
+        try {
+            // Pass relevant context to AI
+            const context = {
+                balance: financialContext.balance,
+                recentTransactions: financialContext.transactions.slice(0, 5),
+                recurringPlans: financialContext.recurringPlans,
+                debts: financialContext.debts
+            };
 
-        if (remaining < 0) {
-            setResult('danger');
-        } else if (remaining < (balance * 0.2)) {
-            setResult('risky');
-        } else {
-            setResult('safe');
+            const response = await analyzePurchase(query, context);
+            setAdvice(response);
+        } catch (error) {
+            console.error("AI Simulation failed:", error);
+            setAdvice("I couldn't analyze this right now. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <Card>
+        <Card className="border-border bg-card shadow-sm">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Calculator className="h-4 w-4" />
@@ -42,27 +49,26 @@ const PurchaseSimulator = () => {
                 <div className="flex gap-2 items-end">
                     <div className="flex-1 space-y-1">
                         <Input
-                            type="number"
-                            placeholder="Item Cost (₹)"
-                            value={cost}
+                            placeholder="e.g. Can I buy AirPods for ₹12000?"
+                            value={query}
                             onChange={(e) => {
-                                setCost(e.target.value);
-                                setResult(null);
+                                setQuery(e.target.value);
+                                setAdvice(null);
                             }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
                         />
                     </div>
-                    <Button onClick={handleSimulate}>Check</Button>
+                    <Button onClick={handleSimulate} disabled={isLoading || !query.trim()}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+                    </Button>
                 </div>
 
-                {result && (
-                    <div className={`mt-3 p-2 rounded-md flex items-center gap-2 text-sm font-medium animate-in fade-in slide-in-from-top-1
-                ${result === 'safe' ? 'bg-green-100 text-green-700' :
-                            result === 'risky' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'}`
-                    }>
-                        {result === 'safe' && <><CheckCircle className="h-4 w-4" /> Go for it! Safe to buy.</>}
-                        {result === 'risky' && <><XCircle className="h-4 w-4" /> Careful! Funds will be low.</>}
-                        {result === 'danger' && <><XCircle className="h-4 w-4" /> You can't afford this right now.</>}
+                {advice && (
+                    <div className="mt-3 p-3 rounded-md bg-primary/5 border border-primary/20 text-sm text-foreground animate-in fade-in slide-in-from-top-1">
+                        <div className="flex gap-2 items-start">
+                            <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <p className="leading-relaxed">{advice}</p>
+                        </div>
                     </div>
                 )}
             </CardContent>

@@ -16,15 +16,24 @@ try {
 }
 
 const DATA_ANALYST_PROMPT = `
-You are a transaction classifier. I will give you a raw string (e.g., 'Spotify ₹199'). 
-You will output strictly JSON containing:
-- amount: number
-- category: string (Standardized category from list: 'Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income')
-- merchant: string (The specific place/brand, e.g., 'Zomato', 'Uber', 'Amazon')
-- type: 'expense' or 'income'
-- necessity: 'fixed' (for bills, rent, insurance) or 'variable' (for food, shopping, entertainment). Default to 'variable' if unsure.
+You are a financial intent classifier. I will give you a raw string (e.g., 'Spotify ₹199', 'Rent 15000 every 1st', 'Lent 500 to Jane').
+You will output strictly JSON with an 'intent' field and a 'data' object.
 
-Do not add conversational text. Output ONLY the JSON.
+Possible Intents:
+1. 'transaction': One-time expense or income.
+   - data: { amount, category, merchant, type, necessity, date }
+2. 'recurring': A repeating bill or salary.
+   - data: { name, amount, type, frequency (monthly/weekly/yearly), expectedDate (day of month 1-31 OR 'last') }
+3. 'debt': Money owed to user or by user.
+   - data: { personName, amount, direction ('payable' for I owe, 'receivable' for they owe), dueDate (YYYY-MM-DD or null) }
+
+Examples:
+- "Lunch ₹150" -> { "intent": "transaction", "data": { "amount": 150, "category": "Food", "merchant": "Lunch", "type": "expense", "necessity": "variable" } }
+- "Rent 15000 every 1st" -> { "intent": "recurring", "data": { "name": "Rent", "amount": 15000, "type": "expense", "frequency": "monthly", "expectedDate": "1" } }
+- "Salary 50k last working day" -> { "intent": "recurring", "data": { "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last" } }
+- "Lent 500 to Jane" -> { "intent": "debt", "data": { "personName": "Jane", "amount": 500, "direction": "receivable", "dueDate": null } }
+
+Output ONLY the JSON.
 `;
 
 const FINANCIAL_COACH_PROMPT = `
@@ -116,4 +125,51 @@ export const analyzePurchase = async (query, financialContext) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
+};
+
+export const generateSpendingAlert = async (transactions, balance, recurringPlans) => {
+    if (!API_KEY || !genAI) return null;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // Filter for today's transactions
+    const today = new Date().toISOString().split('T')[0];
+    const todaysTransactions = transactions.filter(t => t.date.startsWith(today) && t.type === 'expense');
+    const spentToday = todaysTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+    // Calculate daily safe-to-spend (simplified)
+    // In a real app, this would be shared logic from SafeToSpendWidget
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const daysRemaining = daysInMonth - new Date().getDate() + 1;
+    const totalRecurring = recurringPlans.reduce((sum, p) => sum + (p.type === 'expense' ? p.amount : 0), 0);
+    const safeDaily = Math.max(0, (balance - totalRecurring) / daysRemaining);
+
+    if (todaysTransactions.length === 0) return null;
+
+    const prompt = `
+    You are a real-time spending monitor.
+    Context:
+    - Spent Today: ₹${spentToday}
+    - Safe Daily Limit: ₹${safeDaily.toFixed(0)}
+    - Balance: ₹${balance}
+    
+    Task: Generate a SINGLE, short, urgent but helpful alert sentence (max 15 words).
+    If spending is high (> safe limit), warn them.
+    If spending is low/good, encourage them slightly.
+    
+    Examples:
+    - "You've exceeded your daily limit by ₹500; slow down!"
+    - "Great job staying under budget today; keep it up."
+    - "High spending detected on Food; consider cooking dinner."
+    
+    Output ONLY the sentence.
+    `;
+
+    try {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (e) {
+        console.error("Alert generation failed", e);
+        return null;
+    }
 };

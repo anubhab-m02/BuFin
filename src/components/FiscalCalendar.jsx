@@ -26,7 +26,14 @@ const FiscalCalendar = () => {
 
         // Recurring Plans
         recurringPlans.forEach(plan => {
-            if (parseInt(plan.expectedDate) === day) {
+            let planDay = parseInt(plan.expectedDate);
+
+            // Handle "last day of month" logic
+            if (plan.expectedDate === 'last') {
+                planDay = daysInMonth;
+            }
+
+            if (planDay === day) {
                 items.push({
                     id: plan.id,
                     name: plan.name,

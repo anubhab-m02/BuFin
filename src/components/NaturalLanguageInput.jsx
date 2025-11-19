@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 const NaturalLanguageInput = () => {
-    const { addTransaction } = useFinancial();
+    const { addTransaction, addRecurringPlan, addDebt } = useFinancial();
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -20,15 +20,44 @@ const NaturalLanguageInput = () => {
         setError('');
 
         try {
-            const transactionData = await classifyTransaction(input);
+            const result = await classifyTransaction(input);
 
-            addTransaction({
-                amount: transactionData.amount,
-                category: transactionData.category,
-                description: transactionData.merchant || input,
-                type: transactionData.type || 'expense',
-                date: new Date().toISOString()
-            });
+            if (result.intent === 'transaction') {
+                addTransaction({
+                    amount: result.data.amount,
+                    category: result.data.category,
+                    description: result.data.merchant || input,
+                    type: result.data.type || 'expense',
+                    date: new Date().toISOString(),
+                    necessity: result.data.necessity || 'variable'
+                });
+            } else if (result.intent === 'recurring') {
+                addRecurringPlan({
+                    name: result.data.name,
+                    amount: result.data.amount,
+                    type: result.data.type,
+                    frequency: result.data.frequency || 'monthly',
+                    expectedDate: result.data.expectedDate || '1'
+                });
+            } else if (result.intent === 'debt') {
+                addDebt({
+                    personName: result.data.personName,
+                    amount: result.data.amount,
+                    direction: result.data.direction,
+                    dueDate: result.data.dueDate || '',
+                    status: 'active'
+                });
+            } else {
+                // Fallback for legacy or malformed response
+                const data = result.data || result;
+                addTransaction({
+                    amount: data.amount,
+                    category: data.category || 'Uncategorized',
+                    description: data.merchant || input,
+                    type: data.type || 'expense',
+                    date: new Date().toISOString()
+                });
+            }
 
             setInput('');
         } catch (err) {
