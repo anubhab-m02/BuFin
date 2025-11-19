@@ -16,9 +16,10 @@ export const FinancialProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
   const [debts, setDebts] = useState([]);
-  const [debts, setDebts] = useState([]);
+
   const [wishlist, setWishlist] = useState([]);
-  const [recurringSuggestion, setRecurringSuggestion] = useState(null); // { name, amount, ... }
+  const [savingsGoals, setSavingsGoals] = useState([]); // { id, name, targetAmount, currentAmount }
+  const [recurringSuggestion, setRecurringSuggestion] = useState(null);
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -156,6 +157,22 @@ export const FinancialProvider = ({ children }) => {
     }
   };
 
+  // Savings Goals
+  const addSavingsGoal = (goal) => {
+    // MVP: Local state only for now, or mock API
+    const newGoal = { ...goal, id: Date.now().toString(), currentAmount: 0 };
+    setSavingsGoals(prev => [...prev, newGoal]);
+  };
+
+  const updateSavingsGoal = (id, amountToAdd) => {
+    setSavingsGoals(prev => prev.map(g => {
+      if (g.id === id) {
+        return { ...g, currentAmount: g.currentAmount + amountToAdd };
+      }
+      return g;
+    }));
+  };
+
   // Categories (Client-side only for now as per MVP)
   // Restore localStorage persistence for categories to maintain feature parity
   useEffect(() => {
@@ -212,7 +229,10 @@ export const FinancialProvider = ({ children }) => {
       isPrivacyMode,
       togglePrivacyMode,
       recurringSuggestion,
-      setRecurringSuggestion
+      setRecurringSuggestion,
+      savingsGoals,
+      addSavingsGoal,
+      updateSavingsGoal
     }}>
       {children}
     </FinancialContext.Provider>

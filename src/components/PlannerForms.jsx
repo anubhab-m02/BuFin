@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -14,21 +14,58 @@ export const AddRecurringForm = () => {
         amount: '',
         type: 'expense',
         frequency: 'monthly',
-        expectedDate: '1'
+        expectedDate: '1',
+        // Loan specific
+        principal: '',
+        interestRate: '',
+        termMonths: ''
     });
+
+    const calculateEMI = (principal, rate, months) => {
+        if (!principal || !rate || !months) return 0;
+        const r = rate / 12 / 100;
+        const emi = (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+        return emi.toFixed(2);
+    };
+
+    // Auto-calculate EMI if loan fields change
+    useEffect(() => {
+        if (formData.type === 'loan' && formData.principal && formData.interestRate && formData.termMonths) {
+            const emi = calculateEMI(parseFloat(formData.principal), parseFloat(formData.interestRate), parseFloat(formData.termMonths));
+            setFormData(prev => ({ ...prev, amount: emi }));
+        }
+    }, [formData.principal, formData.interestRate, formData.termMonths, formData.type]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formData.name || !formData.amount) return;
-        addRecurringPlan({ ...formData, amount: parseFloat(formData.amount) });
-        setFormData({ name: '', amount: '', type: 'expense', frequency: 'monthly', expectedDate: '1' });
+
+        // For loans, we treat them as expenses but with extra metadata
+        const planData = {
+            ...formData,
+            amount: parseFloat(formData.amount),
+            type: formData.type === 'loan' ? 'expense' : formData.type, // Store as expense for balance calc
+            category: formData.type === 'loan' ? 'Loan' : 'General', // Auto-tag
+            metadata: formData.type === 'loan' ? {
+                principal: parseFloat(formData.principal),
+                interestRate: parseFloat(formData.interestRate),
+                termMonths: parseFloat(formData.termMonths),
+                isLoan: true
+            } : {}
+        };
+
+        addRecurringPlan(planData);
+        setFormData({
+            name: '', amount: '', type: 'expense', frequency: 'monthly', expectedDate: '1',
+            principal: '', interestRate: '', termMonths: ''
+        });
     };
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                    <Repeat className="h-4 w-4" /> Add Recurring Item
+                    <Repeat className="h-4 w-4" /> Add Recurring Item / Loan
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -36,7 +73,8 @@ export const AddRecurringForm = () => {
                     <SegmentedControl
                         options={[
                             { label: 'Expense', value: 'expense' },
-                            { label: 'Income', value: 'income' }
+                            { label: 'Income', value: 'income' },
+                            { label: 'Loan (EMI)', value: 'loan' }
                         ]}
                         value={formData.type}
                         onChange={(val) => setFormData({ ...formData, type: val })}
@@ -46,16 +84,48 @@ export const AddRecurringForm = () => {
                         <Label htmlFor="rec-name">Name</Label>
                         <Input
                             id="rec-name"
-                            placeholder="e.g. Rent, Netflix, Salary"
+                            placeholder={formData.type === 'loan' ? "e.g. Car Loan, Home Loan" : "e.g. Rent, Netflix"}
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
                         />
                     </div>
 
+                    {formData.type === 'loan' && (
+                        <div className="grid grid-cols-3 gap-2 bg-secondary/30 p-3 rounded-md">
+                            <div className="space-y-1">
+                                <Label className="text-xs">Principal</Label>
+                                <Input
+                                    type="number"
+                                    className="h-8 text-xs"
+                                    value={formData.principal}
+                                    onChange={e => setFormData({ ...formData, principal: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs">Rate (%)</Label>
+                                <Input
+                                    type="number"
+                                    className="h-8 text-xs"
+                                    value={formData.interestRate}
+                                    onChange={e => setFormData({ ...formData, interestRate: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs">Months</Label>
+                                <Input
+                                    type="number"
+                                    className="h-8 text-xs"
+                                    value={formData.termMonths}
+                                    onChange={e => setFormData({ ...formData, termMonths: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="rec-amount">Amount</Label>
+                            <Label htmlFor="rec-amount">Amount {formData.type === 'loan' && '(EMI)'}</Label>
                             <Input
                                 id="rec-amount"
                                 type="number"
@@ -63,6 +133,8 @@ export const AddRecurringForm = () => {
                                 value={formData.amount}
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                                 required
+                                readOnly={formData.type === 'loan'} // Auto-calculated
+                                className={formData.type === 'loan' ? "bg-muted" : ""}
                             />
                         </div>
                         <div className="space-y-2">
@@ -97,7 +169,9 @@ export const AddRecurringForm = () => {
                         </p>
                     </div>
 
-                    <Button type="submit" className="w-full">Add Recurring Plan</Button>
+                    <Button type="submit" className="w-full">
+                        {formData.type === 'loan' ? 'Add Loan' : 'Add Recurring Plan'}
+                    </Button>
                 </form>
             </CardContent>
         </Card>

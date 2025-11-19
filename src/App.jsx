@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import LedgerPage from './pages/LedgerPage';
 import PlannerPage from './pages/PlannerPage';
 import InsightsPage from './pages/InsightsPage';
+import ProfilePage from './pages/ProfilePage';
 import ChatInterface from './components/ChatInterface';
 import { Button } from './components/ui/button';
 import { MessageSquare, X, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/ledger" element={<LedgerPage />} />
                 <Route path="/planner" element={<PlannerPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Routes>
             </div>
           </div>
