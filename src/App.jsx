@@ -11,6 +11,7 @@ import ChatInterface from './components/ChatInterface';
 import { Button } from './components/ui/button';
 import { MessageSquare, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { cn } from './lib/utils';
+import RecurringSuggestionModal from './components/RecurringSuggestionModal';
 
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -92,6 +93,8 @@ function App() {
              */}
           </div>
         )}
+        )}
+        <RecurringSuggestionModal />
       </div>
     </FinancialProvider>
   );

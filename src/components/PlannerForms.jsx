@@ -32,7 +32,7 @@ export const AddRecurringForm = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-3">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <SegmentedControl
                         options={[
                             { label: 'Expense', value: 'expense' },
@@ -41,32 +41,63 @@ export const AddRecurringForm = () => {
                         value={formData.type}
                         onChange={(val) => setFormData({ ...formData, type: val })}
                     />
-                    <Input
-                        placeholder="Name (e.g. Rent, Salary)"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                    />
-                    <div className="flex gap-2">
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rec-name">Name</Label>
                         <Input
-                            type="number"
-                            placeholder="Amount"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            id="rec-name"
+                            placeholder="e.g. Rent, Netflix, Salary"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
-                        />
-                        <Input
-                            type="number"
-                            min="1"
-                            max="31"
-                            placeholder="Day (1-31)"
-                            value={formData.expectedDate}
-                            onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
-                            required
-                            className="w-24"
                         />
                     </div>
-                    <Button type="submit" className="w-full" size="sm">Add Plan</Button>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="rec-amount">Amount</Label>
+                            <Input
+                                id="rec-amount"
+                                type="number"
+                                placeholder="0.00"
+                                value={formData.amount}
+                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="rec-freq">Frequency</Label>
+                            <select
+                                id="rec-freq"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                value={formData.frequency}
+                                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                            >
+                                <option value="monthly">Monthly</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="rec-date">Expected Day / Date</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                id="rec-date"
+                                type="text"
+                                placeholder="Day (1-31) or 'last'"
+                                value={formData.expectedDate}
+                                onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                            Enter the day of the month (1-31) or "last" for the last day.
+                        </p>
+                    </div>
+
+                    <Button type="submit" className="w-full">Add Recurring Plan</Button>
                 </form>
             </CardContent>
         </Card>

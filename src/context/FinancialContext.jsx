@@ -16,7 +16,9 @@ export const FinancialProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [debts, setDebts] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [recurringSuggestion, setRecurringSuggestion] = useState(null); // { name, amount, ... }
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -52,6 +54,22 @@ export const FinancialProvider = ({ children }) => {
   // Actions
   const addTransaction = async (transaction) => {
     try {
+      // AI Duplicate Detection
+      const isDuplicate = transactions.some(t =>
+        t.amount === parseFloat(transaction.amount) &&
+        (t.merchant === transaction.merchant || t.description === transaction.description) &&
+        t.type === transaction.type &&
+        new Date(t.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+      );
+
+      if (isDuplicate) {
+        setRecurringSuggestion({
+          name: transaction.merchant || transaction.description,
+          amount: parseFloat(transaction.amount),
+          type: transaction.type
+        });
+      }
+
       const newTx = await api.createTransaction({
         ...transaction,
         amount: parseFloat(transaction.amount),
@@ -59,6 +77,10 @@ export const FinancialProvider = ({ children }) => {
         remarks: transaction.remarks || ''
       });
       setTransactions(prev => [newTx, ...prev]);
+
+      // If duplicate, maybe we can trigger a "suggestion" state?
+      // For now, I'll leave the hook here.
+
     } catch (error) {
       console.error("Failed to add transaction:", error);
     }
@@ -188,7 +210,9 @@ export const FinancialProvider = ({ children }) => {
       addCategory,
       deleteCategory,
       isPrivacyMode,
-      togglePrivacyMode
+      togglePrivacyMode,
+      recurringSuggestion,
+      setRecurringSuggestion
     }}>
       {children}
     </FinancialContext.Provider>

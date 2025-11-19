@@ -11,19 +11,46 @@ const SafeToSpendWidget = () => {
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const daysRemaining = Math.max(1, lastDay.getDate() - today.getDate());
 
-    // Calculate upcoming fixed costs (simple MVP logic: sum of all fixed plans)
-    // In a real app, we'd check if they are already paid this month.
+    // Calculate upcoming fixed costs (Predictive)
+    // We want to know what is *left* to pay this month.
+    // If today is 15th, and Rent (1st) is paid, don't count it.
+    // If Netflix (20th) is coming, count it.
     const upcomingFixed = recurringPlans
-        .filter(p => p.type === 'expense')
+        .filter(p => {
+            if (p.type !== 'expense') return false;
+
+            let expectedDay = parseInt(p.expectedDate);
+            if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
+
+            // Only count if the expected day is AFTER today
+            return expectedDay > today.getDate();
+        })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Calculate debt obligations (payable)
+    // Also consider expected INCOME for the rest of the month?
+    // "The balance should reflect the Current Day balance + Expected Income - Expected Expenses"
+    const upcomingIncome = recurringPlans
+        .filter(p => {
+            if (p.type !== 'income') return false;
+            let expectedDay = parseInt(p.expectedDate);
+            if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
+            return expectedDay > today.getDate();
+        })
+        .reduce((acc, curr) => acc + curr.amount, 0);
+
+    // Calculate debt obligations (payable) - Assuming immediate/overdue or this month?
+    // Let's keep it simple: Active debts are "liabilities" that *could* be called in.
     const debtPayable = debts
         .filter(d => d.direction === 'payable' && d.status === 'active')
         .reduce((acc, curr) => acc + curr.amount, 0);
 
-    const safeBalance = balance - upcomingFixed - debtPayable;
-    const dailySafeSpend = safeBalance / daysRemaining;
+    // Predictive Safe Balance
+    // Current Balance + Future Income - Future Bills - Debts
+    const projectedBalance = balance + upcomingIncome - upcomingFixed - debtPayable;
+
+    // Safe Daily = Projected / Days Remaining
+    // If projected is negative, safe is 0.
+    const dailySafeSpend = Math.max(0, projectedBalance / daysRemaining);
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
@@ -48,12 +75,12 @@ const SafeToSpendWidget = () => {
 
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4 text-xs">
                     <div>
-                        <p className="text-muted-foreground">True Balance</p>
-                        <p className="font-semibold text-foreground">{formatCurrency(balance)}</p>
+                        <p className="text-muted-foreground">Projected End-Month</p>
+                        <p className="font-semibold text-foreground">{formatCurrency(projectedBalance + debtPayable)}</p>
                     </div>
                     <div>
-                        <p className="text-muted-foreground">Committed</p>
-                        <p className="font-semibold text-foreground">{formatCurrency(upcomingFixed + debtPayable)}</p>
+                        <p className="text-muted-foreground">Upcoming Bills</p>
+                        <p className="font-semibold text-red-500">-{formatCurrency(upcomingFixed)}</p>
                     </div>
                 </div>
             </CardContent>
