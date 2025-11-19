@@ -10,6 +10,7 @@ class Transaction(Base):
     amount = Column(Float)
     category = Column(String)
     description = Column(String)
+    merchant = Column(String)
     type = Column(String) # 'income' or 'expense'
     necessity = Column(String) # 'fixed' or 'variable'
     remarks = Column(String, nullable=True)

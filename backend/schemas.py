@@ -3,8 +3,10 @@ from typing import Optional, List
 
 class TransactionBase(BaseModel):
     amount: float
+    amount: float
     category: str
     description: str
+    merchant: Optional[str] = None
     type: str
     necessity: str = 'variable'
     date: str

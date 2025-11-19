@@ -18,7 +18,7 @@ You will output strictly JSON with an 'intent' field and a 'data' object.
 
 Possible Intents:
 1. 'transaction': One-time expense or income.
-   - data: { amount, category, merchant, type, necessity, date }
+   - data: { amount, category, merchant (NEVER empty, use category or description if unknown), type, necessity, date }
 2. 'recurring': A repeating bill or salary.
    - data: { name, amount, type, frequency (monthly/weekly/yearly), expectedDate (day of month 1-31 OR 'last') }
 3. 'debt': Money owed to user or by user.
@@ -64,7 +64,22 @@ async def classify_transaction(text: str):
     try:
         text_response = response.text
         json_str = text_response.replace('```json', '').replace('```', '').strip()
-        return json.loads(json_str)
+        data = json.loads(json_str)
+        
+        # Post-processing to ensure data completeness
+        if data.get('intent') == 'transaction':
+            tx_data = data.get('data', {})
+            if not tx_data.get('merchant'):
+                # Fallback to category or a generic term
+                tx_data['merchant'] = tx_data.get('category') or "Unknown Merchant"
+            
+            # Ensure description is present (Required by Schema)
+            if not tx_data.get('description'):
+                tx_data['description'] = tx_data.get('merchant') or "Transaction"
+
+            data['data'] = tx_data
+            
+        return data
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
         # Fallback logic could go here, but for now re-raise

@@ -23,7 +23,7 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.amount || !formData.category) return;
+        if (!formData.amount || !formData.category || !formData.description) return;
 
         const transactionData = {
             ...formData,
@@ -111,12 +111,13 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">Title</Label>
                         <Input
                             id="description"
-                            placeholder="e.g., Lunch at Taco Bell"
+                            placeholder="e.g., Monthly Rent, Grocery Run"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            required
                         />
                     </div>
 
