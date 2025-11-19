@@ -13,60 +13,109 @@ else:
     genai.configure(api_key=API_KEY)
 
 DATA_ANALYST_PROMPT = """
-You are a financial intent classifier. I will give you a raw string (e.g., 'Spotify ₹199', 'Rent 15000 every 1st', 'Lent 500 to Jane').
-You will output strictly JSON with an 'intent' field and a 'data' object.
+You are an advanced financial parser. I will give you a natural language command.
+You must output a JSON ARRAY of "actions". Each action represents a distinct financial entry.
 
-Possible Intents:
-1. 'transaction': One-time expense or income.
-   - data: { amount, category, merchant (NEVER empty, use category or description if unknown), type, necessity, date }
-2. 'recurring': A repeating bill or salary.
-   - data: { name, amount, type, frequency (monthly/weekly/yearly), expectedDate (day of month 1-31 OR 'last') }
-3. 'debt': Money owed to user or by user.
-   - data: { personName, amount, direction ('payable' for I owe, 'receivable' for they owe), dueDate (YYYY-MM-DD or null) }
+Supported Actions:
+1. "transaction": Expense or Income.
+   - Fields: { "action": "transaction", "amount": float, "category": str, "merchant": str, "title": str, "type": "expense"|"income", "date": "YYYY-MM-DD", "remarks": str|null }
+   - Rules: 
+     - "merchant": The entity paid (e.g., "Starbucks", "Landlord"). If unknown, use Category.
+     - "title": Concise summary (max 5 words), e.g., "Starbucks Coffee", "Rent Payment".
+     - "remarks": Context (e.g., "with friends"). If none, null.
+     - "date": Parse explicit dates (e.g., "yesterday", "3rd Nov"). Default to today if absent.
 
-Examples:
-- "Lunch ₹150" -> { "intent": "transaction", "data": { "amount": 150, "category": "Food", "merchant": "Lunch", "type": "expense", "necessity": "variable" } }
-- "Rent 15000 every 1st" -> { "intent": "recurring", "data": { "name": "Rent", "amount": 15000, "type": "expense", "frequency": "monthly", "expectedDate": "1" } }
-- "Salary 50k last working day" -> { "intent": "recurring", "data": { "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last" } }
-- "Lent 500 to Jane" -> { "intent": "debt", "data": { "personName": "Jane", "amount": 500, "direction": "receivable", "dueDate": null } }
+2. "debt": Money owed TO user (receivable) or BY user (payable).
+   - Fields: { "action": "debt", "personName": str, "amount": float, "direction": "receivable"|"payable", "dueDate": "YYYY-MM-DD"|null }
 
-Output ONLY the JSON.
-"""
+3. "recurring": Repeating bills/income.
+   - Fields: { "action": "recurring", "name": str, "amount": float, "type": "expense"|"income", "frequency": "monthly"|"weekly"|"yearly", "expectedDate": int (1-31) or "last", "endDate": "YYYY-MM-DD"|null }
+   - Rules:
+     - "endDate": Parse "till Dec 2025" or "for 6 months".
 
-FINANCIAL_COACH_PROMPT = """
+SPECIAL LOGIC: "Split Expense"
+If user says "Spent 300 on Lunch split with A and B":
+1. Create ONE "transaction" (expense) for the FULL amount (300).
+2. Create "debt" (receivable) entries for the others' shares.
+   - If "split with A and B" (3 people total including user): User pays 300. A owes 100. B owes 100.
+   - Output: [ {transaction: 300}, {debt: A, 100}, {debt: B, 100} ]
 
-IMPORTANT: Do not output raw code, Python scripts, or tool use traces. Provide the final natural language response directly to the user.
+EXAMPLES:
+Input: "Lunch 150 at McD"
+Output:
+[
+  {
+    "action": "transaction",
+    "amount": 150,
+    "category": "Food",
+    "merchant": "McDonalds",
+    "title": "McDonalds Lunch",
+    "type": "expense",
+    "date": "2025-11-19", 
+    "remarks": null
+  }
+]
+
+Input: "Paid 900 for Dinner split between me, Sam, and Tom"
+Output:
+[
+  { "action": "transaction", "amount": 900, "category": "Food", "merchant": "Dinner", "title": "Dinner Expense", "type": "expense", "date": "2025-11-19", "remarks": "Split with Sam, Tom" },
+  { "action": "debt", "personName": "Sam", "amount": 300, "direction": "receivable", "dueDate": null },
+  { "action": "debt", "personName": "Tom", "amount": 300, "direction": "receivable", "dueDate": null }
+]
+
+Input: "Rent 15k every 1st till Dec 2025"
+Output:
+[
+  { "action": "recurring", "name": "Rent", "amount": 15000, "type": "expense", "frequency": "monthly", "expectedDate": 1, "endDate": "2025-12-31" }
+]
+
+Input: "Salary 50k last working day"
+Output:
+[
+    { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last", "endDate": null }
+]
+
+IMPORTANT:
+- Return ONLY the JSON Array.
+- Current Date Reference: {today_date}
 """
 
 async def classify_transaction(text: str):
     if not API_KEY:
         raise Exception("API Key missing")
     
+    import datetime
+    today_str = datetime.date.today().isoformat()
+    
+    import re
+    
+    # Inject today's date into prompt for relative date parsing
+    formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
+
     model = genai.GenerativeModel('gemini-2.0-flash')
-    response = model.generate_content([DATA_ANALYST_PROMPT, text])
+    response = model.generate_content([formatted_prompt, text])
     
     try:
         text_response = response.text
-        json_str = text_response.replace('```json', '').replace('```', '').strip()
+        # Robust JSON extraction using regex
+        match = re.search(r'\[.*\]', text_response, re.DOTALL)
+        if match:
+            json_str = match.group(0)
+        else:
+            # Fallback to simple stripping if regex fails (e.g. if it's a single object not in array, though prompt asks for array)
+            json_str = text_response.replace('```json', '').replace('```', '').strip()
+            
         data = json.loads(json_str)
         
-        # Post-processing to ensure data completeness
-        if data.get('intent') == 'transaction':
-            tx_data = data.get('data', {})
-            if not tx_data.get('merchant'):
-                # Fallback to category or a generic term
-                tx_data['merchant'] = tx_data.get('category') or "Unknown Merchant"
-            
-            # Ensure description is present (Required by Schema)
-            if not tx_data.get('description'):
-                tx_data['description'] = tx_data.get('merchant') or "Transaction"
-
-            data['data'] = tx_data
+        # Ensure it's a list
+        if isinstance(data, dict):
+            data = [data]
             
         return data
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
-        # Fallback logic could go here, but for now re-raise
+        print(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
 
 async def analyze_purchase(query: str, context: dict):

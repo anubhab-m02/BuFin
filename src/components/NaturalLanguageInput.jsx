@@ -20,43 +20,41 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
         setError('');
 
         try {
-            const result = await classifyTransaction(input);
+            const results = await classifyTransaction(input);
 
-            if (result.intent === 'transaction') {
-                addTransaction({
-                    amount: result.data.amount,
-                    category: result.data.category,
-                    description: result.data.merchant || input,
-                    type: result.data.type || 'expense',
-                    date: new Date().toISOString(),
-                    necessity: result.data.necessity || 'variable'
-                });
-            } else if (result.intent === 'recurring') {
-                addRecurringPlan({
-                    name: result.data.name,
-                    amount: result.data.amount,
-                    type: result.data.type,
-                    frequency: result.data.frequency || 'monthly',
-                    expectedDate: result.data.expectedDate || '1'
-                });
-            } else if (result.intent === 'debt') {
-                addDebt({
-                    personName: result.data.personName,
-                    amount: result.data.amount,
-                    direction: result.data.direction,
-                    dueDate: result.data.dueDate || '',
-                    status: 'active'
-                });
-            } else {
-                // Fallback for legacy or malformed response
-                const data = result.data || result;
-                addTransaction({
-                    amount: data.amount,
-                    category: data.category || 'Uncategorized',
-                    description: data.merchant || input,
-                    type: data.type || 'expense',
-                    date: new Date().toISOString()
-                });
+            // Handle array of actions
+            const actions = Array.isArray(results) ? results : [results];
+
+            for (const action of actions) {
+                if (action.action === 'transaction') {
+                    addTransaction({
+                        amount: action.amount,
+                        category: action.category,
+                        description: action.title || action.merchant || 'Transaction', // Title is the main display
+                        merchant: action.merchant,
+                        type: action.type || 'expense',
+                        date: action.date || new Date().toISOString(),
+                        necessity: 'variable', // Default for quick add
+                        remarks: action.remarks || ''
+                    });
+                } else if (action.action === 'recurring') {
+                    addRecurringPlan({
+                        name: action.name,
+                        amount: action.amount,
+                        type: action.type,
+                        frequency: action.frequency || 'monthly',
+                        expectedDate: action.expectedDate || '1',
+                        endDate: action.endDate || null
+                    });
+                } else if (action.action === 'debt') {
+                    addDebt({
+                        personName: action.personName,
+                        amount: action.amount,
+                        direction: action.direction,
+                        dueDate: action.dueDate || '',
+                        status: 'active'
+                    });
+                }
             }
 
             setInput('');
