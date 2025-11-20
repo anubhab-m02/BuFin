@@ -223,3 +223,60 @@ async def generate_financial_tips(transactions: list, balance: float):
     except Exception as e:
         print(f"Error generating tips: {e}")
         return ["Track your daily expenses to identify leaks.", "Try to save 20% of your income.", "Review your subscriptions monthly."]
+
+async def coach_chat(message: str, mode: str, context: dict):
+    if not API_KEY:
+        raise Exception("API Key missing")
+
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    
+    # specialized prompts
+    prompts = {
+        "analyst": """
+            You are a Purchase Analyst.
+            Goal: Help the user decide on a large purchase (e.g., bike, phone).
+            Style: Concise, objective, trade-off focused.
+            Instructions:
+            1. Analyze the purchase in the context of their balance and recent spending.
+            2. Provide specific trade-offs (e.g., "If you buy this, you'll have 20% less for...").
+            3. Suggest alternatives if possible (e.g., "Consider a used model" or "Wait for sale").
+            4. Use your knowledge to ground the advice (e.g., "iPhone 15 prices are high now, maybe wait for 16 launch").
+        """,
+        "strategist": """
+            You are a Savings Strategist.
+            Goal: Help the user set targets and choose investments.
+            Style: Encouraging, actionable, personalized.
+            Instructions:
+            1. Use the user's profile (income, job, risk tolerance if known) to tailor advice.
+            2. Suggest specific actions (e.g., "Start a SIP of ₹5000 in an Index Fund").
+            3. Explain WHY this strategy fits them.
+            4. Keep it beginner-friendly but authoritative.
+        """,
+        "educator": """
+            You are a Financial Educator.
+            Goal: Explain financial terms and concepts.
+            Style: Simple, clear, analogy-rich.
+            Instructions:
+            1. Define the term in plain English.
+            2. Use an analogy (e.g., "Inflation is like a hole in your pocket...").
+            3. Explain how it affects the user personally.
+            4. Avoid jargon unless you define it immediately.
+        """
+    }
+    
+    system_instruction = prompts.get(mode, "You are a helpful financial assistant.")
+    
+    full_prompt = f"""
+    {system_instruction}
+    
+    User Context: {json.dumps(context)}
+    
+    User Message: {message}
+    """
+    
+    try:
+        response = model.generate_content(full_prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Coach chat failed: {e}")
+        return "I'm having trouble connecting to my financial brain right now. Please try again."

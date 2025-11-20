@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Calendar, PieChart, User, Eye, EyeOff, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Calendar, PieChart, User, Eye, EyeOff, Sun, Moon, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { useTheme } from '../context/ThemeContext';
@@ -15,6 +15,7 @@ const Navigation = () => {
         { name: 'Ledger', path: '/ledger', icon: BookOpen },
         { name: 'Planner', path: '/planner', icon: Calendar },
         { name: 'Insights', path: '/insights', icon: PieChart },
+        { name: 'Coach', path: '/coach', icon: Sparkles },
         { name: 'Profile', path: '/profile', icon: User }
     ];
 

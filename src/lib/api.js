@@ -156,5 +156,14 @@ export const api = {
         });
         if (!response.ok) throw new Error('AI tips generation failed');
         return response.json();
+    },
+    coachChat: async (message, mode, context) => {
+        const response = await fetch(`${API_BASE_URL}/coach/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, mode, context }),
+        });
+        if (!response.ok) throw new Error('Coach chat failed');
+        return response.json(); // Returns string directly
     }
 };

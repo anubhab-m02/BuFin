@@ -204,3 +204,13 @@ async def generate_tips(request: dict):
     balance = request.get("balance")
     return await ai_service.generate_financial_tips(transactions, balance)
 
+@app.post("/coach/chat")
+async def coach_chat(request: dict):
+    # Expects {"message": "...", "mode": "...", "context": {...}}
+    message = request.get("message")
+    mode = request.get("mode")
+    context = request.get("context")
+    if not message or not mode:
+        raise HTTPException(status_code=400, detail="Message and Mode are required")
+    return await ai_service.coach_chat(message, mode, context)
+
