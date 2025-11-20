@@ -24,6 +24,7 @@ class RecurringPlan(Base):
     type = Column(String)
     frequency = Column(String)
     expectedDate = Column(String)
+    endDate = Column(String, nullable=True)
 
 class Debt(Base):
     __tablename__ = "debts"

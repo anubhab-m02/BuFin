@@ -21,6 +21,18 @@ const SafeToSpendWidget = () => {
 
             let expectedDay = parseInt(p.expectedDate);
             if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
+            else if (p.expectedDate === 'last-working') {
+                let d = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+                expectedDay = d.getDate();
+            }
+
+            // Check End Date
+            if (p.endDate) {
+                const end = new Date(p.endDate);
+                const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
+                if (current > end) return false;
+            }
 
             // Only count if the expected day is AFTER today
             return expectedDay > today.getDate();
@@ -32,8 +44,22 @@ const SafeToSpendWidget = () => {
     const upcomingIncome = recurringPlans
         .filter(p => {
             if (p.type !== 'income') return false;
+
             let expectedDay = parseInt(p.expectedDate);
             if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
+            else if (p.expectedDate === 'last-working') {
+                let d = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+                expectedDay = d.getDate();
+            }
+
+            // Check End Date
+            if (p.endDate) {
+                const end = new Date(p.endDate);
+                const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
+                if (current > end) return false;
+            }
+
             return expectedDay > today.getDate();
         })
         .reduce((acc, curr) => acc + curr.amount, 0);

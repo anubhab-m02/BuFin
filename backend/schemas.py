@@ -26,6 +26,7 @@ class RecurringPlanBase(BaseModel):
     type: str
     frequency: str
     expectedDate: str
+    endDate: Optional[str] = None
 
 class RecurringPlanCreate(RecurringPlanBase):
     id: Optional[str] = None

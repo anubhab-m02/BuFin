@@ -40,10 +40,10 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                 } else if (action.action === 'recurring') {
                     addRecurringPlan({
                         name: action.name,
-                        amount: action.amount,
+                        amount: parseFloat(action.amount) || 0,
                         type: action.type,
                         frequency: action.frequency || 'monthly',
-                        expectedDate: action.expectedDate || '1',
+                        expectedDate: String(action.expectedDate || '1'),
                         endDate: action.endDate || null
                     });
                 } else if (action.action === 'debt') {

@@ -29,9 +29,10 @@ Supported Actions:
    - Fields: { "action": "debt", "personName": str, "amount": float, "direction": "receivable"|"payable", "dueDate": "YYYY-MM-DD"|null }
 
 3. "recurring": Repeating bills/income.
-   - Fields: { "action": "recurring", "name": str, "amount": float, "type": "expense"|"income", "frequency": "monthly"|"weekly"|"yearly", "expectedDate": int (1-31) or "last", "endDate": "YYYY-MM-DD"|null }
+   - Fields: { "action": "recurring", "name": str, "amount": float, "type": "expense"|"income", "frequency": "monthly"|"weekly"|"yearly", "expectedDate": int (1-31) or "last" or "last-working", "endDate": "YYYY-MM-DD"|null }
    - Rules:
-     - "endDate": Parse "till Dec 2025" or "for 6 months".
+     - "endDate": Parse "till Dec 2025" or "for 6 months". Calculate the specific date.
+     - "expectedDate": If "last working day", use "last-working".
 
 SPECIAL LOGIC: "Split Expense"
 If user says "Spent 300 on Lunch split with A and B":
