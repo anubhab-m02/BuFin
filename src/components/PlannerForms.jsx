@@ -56,7 +56,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
             } : {}
         };
 
-        if (initialData) {
+        if (initialData && initialData.id) {
             updateRecurringPlan(initialData.id, planData);
         } else {
             addRecurringPlan(planData);

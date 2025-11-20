@@ -30,6 +30,22 @@ export const FinancialProvider = ({ children }) => {
     }
   });
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
+  const [ignoredMerchants, setIgnoredMerchants] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bufin_ignored_merchants');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('bufin_ignored_merchants', JSON.stringify(ignoredMerchants));
+  }, [ignoredMerchants]);
+
+  const ignoreMerchant = (merchantName) => {
+    setIgnoredMerchants(prev => [...prev, merchantName.toLowerCase()]);
+  };
 
   // Initial Fetch
   useEffect(() => {
@@ -329,7 +345,9 @@ export const FinancialProvider = ({ children }) => {
       setRecurringSuggestion,
       savingsGoals,
       addSavingsGoal,
-      updateSavingsGoal
+      updateSavingsGoal,
+      ignoredMerchants,
+      ignoreMerchant
     }}>
       {children}
     </FinancialContext.Provider>
