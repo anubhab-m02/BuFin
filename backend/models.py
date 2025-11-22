@@ -59,6 +59,8 @@ class User(Base):
     # Profile Data
     currency = Column(String, default="INR")
     monthly_income = Column(Float, default=0.0)
+    current_balance = Column(Float, default=0.0)
+    savings_goal = Column(Float, default=0.0)
     financial_literacy = Column(String, default="beginner") # beginner, intermediate, advanced
     risk_tolerance = Column(String, default="low") # low, medium, high
     goals = Column(String, default="[]") # JSON string of goals

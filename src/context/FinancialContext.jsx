@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { useAuth } from './AuthContext';
 
 const FinancialContext = createContext();
 
@@ -12,6 +13,7 @@ export const useFinancial = () => {
 };
 
 export const FinancialProvider = ({ children }) => {
+  const { user } = useAuth();
   // State
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
@@ -301,7 +303,7 @@ export const FinancialProvider = ({ children }) => {
   };
 
   // Derived State
-  const balance = transactions.reduce((acc, curr) => {
+  const balance = (user?.current_balance || 0) + transactions.reduce((acc, curr) => {
     return curr.type === 'income' ? acc + curr.amount : acc - curr.amount;
   }, 0);
 

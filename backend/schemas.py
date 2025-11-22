@@ -24,11 +24,14 @@ class UserLogin(BaseModel):
 
 class User(UserBase):
     id: str
-    currency: str
-    monthly_income: float
-    financial_literacy: str
-    risk_tolerance: str
-    goals: str # JSON string
+    full_name: Optional[str] = None
+    currency: Optional[str] = "INR"
+    monthly_income: Optional[float] = 0.0
+    current_balance: Optional[float] = 0.0
+    savings_goal: Optional[float] = 0.0
+    financial_literacy: Optional[str] = "beginner"
+    risk_tolerance: Optional[str] = "low"
+    goals: Optional[str] = "[]" # JSON string
 
     class Config:
         orm_mode = True

@@ -11,7 +11,7 @@ import { Slider } from '../components/ui/slider';
 import { Check, ChevronRight, ChevronLeft, Wallet, Target, Brain } from 'lucide-react';
 
 const OnboardingPage = () => {
-    const { user, login } = useAuth(); // We might need to refresh user data
+    const { user, login, refreshUser } = useAuth(); // We might need to refresh user data
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -44,6 +44,7 @@ const OnboardingPage = () => {
 
             console.log("Submitting Onboarding Data:", formData);
             await api.updateProfile(formData);
+            await refreshUser();
             // Refresh user data in context if needed, or just redirect
             // Ideally, login() or a new refreshUser() method would update the context
             // For now, we rely on the next page load or a force refresh if we had one.

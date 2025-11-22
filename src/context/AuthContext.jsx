@@ -63,8 +63,19 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
     };
 
+    const refreshUser = async () => {
+        if (token) {
+            try {
+                const userData = await api.getMe(token);
+                setUser(userData);
+            } catch (error) {
+                console.error("Failed to refresh user", error);
+            }
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated, login, signup, logout, loading }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated, login, signup, logout, loading, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

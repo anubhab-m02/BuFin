@@ -92,30 +92,45 @@ export const api = {
 
     // Recurring Plans
     getRecurringPlans: async () => {
-        const response = await fetch(`${API_URL}/recurring_plans`);
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/recurring_plans`, { headers });
         if (!response.ok) throw new Error('Failed to fetch recurring plans');
         return response.json();
     },
     createRecurringPlan: async (plan) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         const response = await fetch(`${API_URL}/recurring_plans`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(plan),
         });
         if (!response.ok) throw new Error('Failed to create recurring plan');
         return response.json();
     },
     deleteRecurringPlan: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         const response = await fetch(`${API_URL}/recurring_plans/${id}`, {
             method: 'DELETE',
+            headers
         });
         if (!response.ok) throw new Error('Failed to delete recurring plan');
         return response.json();
     },
     updateRecurringPlan: async (id, plan) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         const response = await fetch(`${API_URL}/recurring_plans/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(plan),
         });
         if (!response.ok) throw new Error('Failed to update recurring plan');
@@ -124,30 +139,45 @@ export const api = {
 
     // Debts
     getDebts: async () => {
-        const response = await fetch(`${API_URL}/debts`);
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/debts`, { headers });
         if (!response.ok) throw new Error('Failed to fetch debts');
         return response.json();
     },
     createDebt: async (debt) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         const response = await fetch(`${API_URL}/debts`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(debt),
         });
         if (!response.ok) throw new Error('Failed to create debt');
         return response.json();
     },
     deleteDebt: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         const response = await fetch(`${API_URL}/debts/${id}`, {
             method: 'DELETE',
+            headers
         });
         if (!response.ok) throw new Error('Failed to delete debt');
         return response.json();
     },
     updateDebt: async (id, debt) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         const response = await fetch(`${API_URL}/debts/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(debt),
         });
         if (!response.ok) throw new Error('Failed to update debt');
@@ -156,22 +186,32 @@ export const api = {
 
     // Wishlist
     getWishlist: async () => {
-        const response = await fetch(`${API_URL}/wishlist`);
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/wishlist`, { headers });
         if (!response.ok) throw new Error('Failed to fetch wishlist');
         return response.json();
     },
     createWishlistItem: async (item) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         const response = await fetch(`${API_URL}/wishlist`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(item),
         });
         if (!response.ok) throw new Error('Failed to create wishlist item');
         return response.json();
     },
     deleteWishlistItem: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         const response = await fetch(`${API_URL}/wishlist/${id}`, {
             method: 'DELETE',
+            headers
         });
         if (!response.ok) throw new Error('Failed to delete wishlist item');
         return response.json();
