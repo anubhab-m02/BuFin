@@ -3,6 +3,8 @@ import { useFinancial } from '../context/FinancialContext';
 import { generateSpendingAlert } from '../lib/gemini';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Activity, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const SpendingMonitor = () => {
     const { transactions, balance, recurringPlans } = useFinancial();
@@ -96,9 +98,9 @@ const SpendingMonitor = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-4 pt-1 flex-1 flex items-center">
-                <p className="text-sm font-medium leading-relaxed text-foreground/90">
-                    {alert}
-                </p>
+                <div className="text-sm font-medium leading-relaxed text-foreground/90 prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{alert}</ReactMarkdown>
+                </div>
             </CardContent>
         </Card>
     );

@@ -7,6 +7,8 @@ import { Button } from './ui/button';
 import { AlertTriangle, Repeat, Lightbulb, Plus, X, Check, Pencil, Trash2 } from 'lucide-react';
 import Dialog from './ui/dialog';
 import { AddRecurringForm } from './PlannerForms';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const InsightsDashboard = () => {
     const { transactions, recurringPlans, balance, ignoredMerchants, ignoreMerchant, deleteRecurringPlan } = useFinancial();
@@ -214,7 +216,9 @@ const InsightsDashboard = () => {
                         <div className="grid gap-4 md:grid-cols-3">
                             {tips.map((tip, index) => (
                                 <div key={index} className="p-4 bg-secondary/30 rounded-lg border border-border">
-                                    <p className="text-sm text-foreground">{tip}</p>
+                                    <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{tip}</ReactMarkdown>
+                                    </div>
                                 </div>
                             ))}
                         </div>
