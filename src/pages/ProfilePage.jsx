@@ -1,16 +1,24 @@
 import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { User, Shield, Calendar } from 'lucide-react';
+import { User, Shield, Calendar, LogOut } from 'lucide-react';
 import SegmentedControl from '../components/ui/segmented-control';
 
 const ProfilePage = () => {
     const { isPrivacyMode, togglePrivacyMode } = useFinancial();
+    const { user, logout } = useAuth();
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight text-primary">Profile & Settings</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">Profile & Settings</h1>
+                <Button variant="destructive" size="sm" onClick={logout} className="gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                </Button>
+            </div>
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Identity Card */}
@@ -21,12 +29,12 @@ const ProfilePage = () => {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-                            G
+                        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary uppercase">
+                            {user?.full_name?.[0] || user?.email?.[0] || 'U'}
                         </div>
                         <div>
-                            <h3 className="font-semibold text-lg">Guddu</h3>
-                            <p className="text-sm text-muted-foreground">BuFin Pro User</p>
+                            <h3 className="font-semibold text-lg">{user?.full_name || 'User'}</h3>
+                            <p className="text-sm text-muted-foreground">{user?.email}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -58,7 +66,7 @@ const ProfilePage = () => {
                                 <label className="text-sm font-medium">Currency</label>
                                 <p className="text-xs text-muted-foreground">Display currency</p>
                             </div>
-                            <div className="text-sm font-bold">INR (₹)</div>
+                            <div className="text-sm font-bold">{user?.currency || 'INR'} ({user?.currency === 'USD' ? '$' : '₹'})</div>
                         </div>
 
                         <div className="flex items-center justify-between">

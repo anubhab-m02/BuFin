@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { FinancialProvider } from './context/FinancialContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navigation from './components/Navigation';
 import DashboardPage from './pages/DashboardPage';
 import LedgerPage from './pages/LedgerPage';
@@ -9,11 +10,33 @@ import PlannerPage from './pages/PlannerPage';
 import InsightsPage from './pages/InsightsPage';
 import ProfilePage from './pages/ProfilePage';
 import CoachPage from './pages/CoachPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import OnboardingPage from './pages/OnboardingPage';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 import RecurringSuggestionModal from './components/RecurringSuggestionModal';
+import { Loader2 } from 'lucide-react';
 
-function App() {
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
+};
+
+const AppLayout = () => {
   return (
     <FinancialProvider>
       <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
@@ -39,6 +62,27 @@ function App() {
         <RecurringSuggestionModal />
       </div>
     </FinancialProvider>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <OnboardingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </AuthProvider>
   );
 }
 

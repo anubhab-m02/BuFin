@@ -1,8 +1,46 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 
+# --- User Schemas ---
+class UserBase(BaseModel):
+    email: EmailStr
+
+class UserCreate(UserBase):
+    password: str
+    full_name: str
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    currency: Optional[str] = None
+    monthly_income: Optional[float] = None
+    current_balance: Optional[float] = None
+    savings_goal: Optional[float] = None
+    financial_literacy: Optional[str] = None
+    risk_tolerance: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class User(UserBase):
+    id: str
+    currency: str
+    monthly_income: float
+    financial_literacy: str
+    risk_tolerance: str
+    goals: str # JSON string
+
+    class Config:
+        orm_mode = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
 class TransactionBase(BaseModel):
-    amount: float
     amount: float
     category: str
     description: str

@@ -1,15 +1,19 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import List
-import models, schemas
+import models, schemas, auth_utils
 from database import SessionLocal, engine, get_db
 import uuid
+from datetime import timedelta
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,15 +23,102 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Auth Endpoints ---
+@app.post("/auth/signup", response_model=schemas.Token)
+def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth_utils.get_password_hash(user.password)
+    db_user = models.User(
+        id=str(uuid.uuid4()),
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth_utils.create_access_token(
+        data={"sub": db_user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/auth/login", response_model=schemas.Token)
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if not db_user or not auth_utils.verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth_utils.create_access_token(
+        data={"sub": db_user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = auth_utils.jwt.decode(token, auth_utils.SECRET_KEY, algorithms=[auth_utils.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = schemas.TokenData(email=email)
+    except auth_utils.JWTError:
+        raise credentials_exception
+        
+    user = db.query(models.User).filter(models.User.email == token_data.email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+@app.get("/auth/me", response_model=schemas.User)
+def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
+@app.put("/auth/me", response_model=schemas.User)
+def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Update fields
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
+    if user_update.currency is not None:
+        current_user.currency = user_update.currency
+    if user_update.monthly_income is not None:
+        current_user.monthly_income = user_update.monthly_income
+    if user_update.current_balance is not None:
+        current_user.current_balance = user_update.current_balance
+    if user_update.savings_goal is not None:
+        current_user.savings_goal = user_update.savings_goal
+    if user_update.financial_literacy is not None:
+        current_user.financial_literacy = user_update.financial_literacy
+    if user_update.risk_tolerance is not None:
+        current_user.risk_tolerance = user_update.risk_tolerance
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 # --- Transactions ---
 @app.get("/transactions", response_model=List[schemas.Transaction])
-def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).offset(skip).limit(limit).all()
+def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    transactions = db.query(models.Transaction).filter(models.Transaction.user_id == current_user.id).offset(skip).limit(limit).all()
     return transactions
 
 @app.post("/transactions", response_model=schemas.Transaction)
-def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
-    db_transaction = models.Transaction(**transaction.dict())
+def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_transaction = models.Transaction(**transaction.dict(), user_id=current_user.id)
     if not db_transaction.id:
         db_transaction.id = str(uuid.uuid4())
     db.add(db_transaction)
@@ -36,8 +127,8 @@ def create_transaction(transaction: schemas.TransactionCreate, db: Session = Dep
     return db_transaction
 
 @app.delete("/transactions/{transaction_id}")
-def delete_transaction(transaction_id: str, db: Session = Depends(get_db)):
-    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+def delete_transaction(transaction_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id, models.Transaction.user_id == current_user.id).first()
     if not db_transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     db.delete(db_transaction)
@@ -45,8 +136,8 @@ def delete_transaction(transaction_id: str, db: Session = Depends(get_db)):
     return {"ok": True}
 
 @app.put("/transactions/{transaction_id}", response_model=schemas.Transaction)
-def update_transaction(transaction_id: str, transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
-    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+def update_transaction(transaction_id: str, transaction: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id, models.Transaction.user_id == current_user.id).first()
     if not db_transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
@@ -60,12 +151,12 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
 
 # --- Recurring Plans ---
 @app.get("/recurring_plans", response_model=List[schemas.RecurringPlan])
-def read_recurring_plans(db: Session = Depends(get_db)):
-    return db.query(models.RecurringPlan).all()
+def read_recurring_plans(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == current_user.id).all()
 
 @app.post("/recurring_plans", response_model=schemas.RecurringPlan)
-def create_recurring_plan(plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db)):
-    db_plan = models.RecurringPlan(**plan.dict())
+def create_recurring_plan(plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_plan = models.RecurringPlan(**plan.dict(), user_id=current_user.id)
     if not db_plan.id:
         db_plan.id = str(uuid.uuid4())
     db.add(db_plan)
@@ -74,8 +165,8 @@ def create_recurring_plan(plan: schemas.RecurringPlanCreate, db: Session = Depen
     return db_plan
 
 @app.delete("/recurring_plans/{plan_id}")
-def delete_recurring_plan(plan_id: str, db: Session = Depends(get_db)):
-    db_plan = db.query(models.RecurringPlan).filter(models.RecurringPlan.id == plan_id).first()
+def delete_recurring_plan(plan_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_plan = db.query(models.RecurringPlan).filter(models.RecurringPlan.id == plan_id, models.RecurringPlan.user_id == current_user.id).first()
     if not db_plan:
         raise HTTPException(status_code=404, detail="Plan not found")
     db.delete(db_plan)
@@ -83,8 +174,8 @@ def delete_recurring_plan(plan_id: str, db: Session = Depends(get_db)):
     return {"ok": True}
 
 @app.put("/recurring_plans/{plan_id}", response_model=schemas.RecurringPlan)
-def update_recurring_plan(plan_id: str, plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db)):
-    db_plan = db.query(models.RecurringPlan).filter(models.RecurringPlan.id == plan_id).first()
+def update_recurring_plan(plan_id: str, plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_plan = db.query(models.RecurringPlan).filter(models.RecurringPlan.id == plan_id, models.RecurringPlan.user_id == current_user.id).first()
     if not db_plan:
         raise HTTPException(status_code=404, detail="Plan not found")
     
@@ -98,12 +189,12 @@ def update_recurring_plan(plan_id: str, plan: schemas.RecurringPlanCreate, db: S
 
 # --- Debts ---
 @app.get("/debts", response_model=List[schemas.Debt])
-def read_debts(db: Session = Depends(get_db)):
-    return db.query(models.Debt).all()
+def read_debts(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.Debt).filter(models.Debt.user_id == current_user.id).all()
 
 @app.post("/debts", response_model=schemas.Debt)
-def create_debt(debt: schemas.DebtCreate, db: Session = Depends(get_db)):
-    db_debt = models.Debt(**debt.dict())
+def create_debt(debt: schemas.DebtCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_debt = models.Debt(**debt.dict(), user_id=current_user.id)
     if not db_debt.id:
         db_debt.id = str(uuid.uuid4())
     db.add(db_debt)
@@ -112,8 +203,8 @@ def create_debt(debt: schemas.DebtCreate, db: Session = Depends(get_db)):
     return db_debt
 
 @app.delete("/debts/{debt_id}")
-def delete_debt(debt_id: str, db: Session = Depends(get_db)):
-    db_debt = db.query(models.Debt).filter(models.Debt.id == debt_id).first()
+def delete_debt(debt_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_debt = db.query(models.Debt).filter(models.Debt.id == debt_id, models.Debt.user_id == current_user.id).first()
     if not db_debt:
         raise HTTPException(status_code=404, detail="Debt not found")
     db.delete(db_debt)
@@ -123,8 +214,8 @@ def delete_debt(debt_id: str, db: Session = Depends(get_db)):
     return {"ok": True}
 
 @app.put("/debts/{debt_id}", response_model=schemas.Debt)
-def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(get_db)):
-    db_debt = db.query(models.Debt).filter(models.Debt.id == debt_id).first()
+def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_debt = db.query(models.Debt).filter(models.Debt.id == debt_id, models.Debt.user_id == current_user.id).first()
     if not db_debt:
         raise HTTPException(status_code=404, detail="Debt not found")
     
@@ -138,12 +229,12 @@ def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(ge
 
 # --- Wishlist ---
 @app.get("/wishlist", response_model=List[schemas.WishlistItem])
-def read_wishlist(db: Session = Depends(get_db)):
-    return db.query(models.WishlistItem).all()
+def read_wishlist(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.WishlistItem).filter(models.WishlistItem.user_id == current_user.id).all()
 
 @app.post("/wishlist", response_model=schemas.WishlistItem)
-def create_wishlist_item(item: schemas.WishlistItemCreate, db: Session = Depends(get_db)):
-    db_item = models.WishlistItem(**item.dict())
+def create_wishlist_item(item: schemas.WishlistItemCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_item = models.WishlistItem(**item.dict(), user_id=current_user.id)
     if not db_item.id:
         db_item.id = str(uuid.uuid4())
     db.add(db_item)
@@ -152,8 +243,8 @@ def create_wishlist_item(item: schemas.WishlistItemCreate, db: Session = Depends
     return db_item
 
 @app.delete("/wishlist/{item_id}")
-def delete_wishlist_item(item_id: str, db: Session = Depends(get_db)):
-    db_item = db.query(models.WishlistItem).filter(models.WishlistItem.id == item_id).first()
+def delete_wishlist_item(item_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_item = db.query(models.WishlistItem).filter(models.WishlistItem.id == item_id, models.WishlistItem.user_id == current_user.id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
     db.delete(db_item)
