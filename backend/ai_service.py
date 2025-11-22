@@ -94,7 +94,7 @@ async def classify_transaction(text: str):
     # Inject today's date into prompt for relative date parsing
     formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
 
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     response = model.generate_content([formatted_prompt, text])
     
     try:
@@ -123,7 +123,7 @@ async def analyze_purchase(query: str, context: dict):
     if not API_KEY:
         raise Exception("API Key missing")
 
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     context_str = json.dumps(context)
     prompt = f"""
@@ -151,7 +151,7 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     if not API_KEY:
         return None
 
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     # Filter for today's transactions (assuming transactions have ISO date string)
     # In Python we might need to handle date parsing, but let's assume string matching for MVP parity
@@ -201,7 +201,7 @@ async def generate_financial_tips(transactions: list, balance: float):
     if not API_KEY:
         raise Exception("API Key missing")
 
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     recent_transactions = transactions[:10]
     prompt = f"""
@@ -228,19 +228,33 @@ async def coach_chat(message: str, mode: str, context: dict):
     if not API_KEY:
         raise Exception("API Key missing")
 
-    model = genai.GenerativeModel('gemini-2.0-flash')
-    
-    # specialized prompts
+    # Specialized prompts
     prompts = {
         "analyst": """
-            You are a Purchase Analyst.
-            Goal: Help the user decide on a large purchase (e.g., bike, phone).
-            Style: Concise, objective, trade-off focused.
-            Instructions:
-            1. Analyze the purchase in the context of their balance and recent spending.
-            2. Provide specific trade-offs (e.g., "If you buy this, you'll have 20% less for...").
-            3. Suggest alternatives if possible (e.g., "Consider a used model" or "Wait for sale").
-            4. Use your knowledge to ground the advice (e.g., "iPhone 15 prices are high now, maybe wait for 16 launch").
+            You are a Purchase Analyst & Financial Modeler.
+            Goal: Analyze a large purchase request (e.g., vehicle, device) with real-time market data and financial modeling.
+            
+            CRITICAL INSTRUCTIONS:
+            1. **Real-Time Search**: Use Google Search to find CURRENT prices, interest rates (EMI), and reviews for the requested item and its competitors.
+            2. **Financial Modeling**: Analyze affordability based on the User Context (Balance, Income vs Expenses).
+               - Calculate "Free Cash Flow" (Income - Recurring Expenses).
+               - Assess if the EMI fits within 30% of Free Cash Flow.
+            3. **Structured Output**: You MUST use the following Markdown structure:
+            
+            ### 1. Affordability Rule-of-Thumb
+            - Cite a rule (e.g., "20/4/10 Rule" for cars, "Buy it Twice" for gadgets).
+            - Verdict: **Affordable / Stretch / Unwise**.
+            
+            ### 2. Market Comparison & EMI Modeling
+            | Model | Price (Est.) | Down Payment (20%) | EMI (24mo @ 12%) | Total Interest |
+            |-------|--------------|--------------------|------------------|----------------|
+            | [Item A] | ₹... | ₹... | ₹... | ₹... |
+            | [Item B] | ₹... | ₹... | ₹... | ₹... |
+            
+            ### 3. Recommendation Shortlist
+            - **Best Value**: [Item] - [Reason]
+            - **Budget Pick**: [Item] - [Reason]
+            - **Financial Advice**: Specific advice based on their cash flow (e.g., "Wait 2 months to save for larger down payment").
         """,
         "strategist": """
             You are a Savings Strategist.
@@ -273,10 +287,65 @@ async def coach_chat(message: str, mode: str, context: dict):
     
     User Message: {message}
     """
+
+    # Use REST API directly to support google_search tool reliably
+    import requests
     
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": full_prompt}]
+        }]
+    }
+
+    # Enable Google Search for Analyst mode
+    if mode == "analyst":
+        payload["tools"] = [{"google_search": {}}]
+
     try:
-        response = model.generate_content(full_prompt)
-        return response.text.strip()
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Extract text
+        candidate = result.get("candidates", [{}])[0]
+        content_parts = candidate.get("content", {}).get("parts", [])
+        text = "".join([part.get("text", "") for part in content_parts])
+        
+        # Add citations if grounding metadata exists
+        grounding_metadata = candidate.get("groundingMetadata")
+        if grounding_metadata:
+            supports = grounding_metadata.get("groundingSupports", [])
+            chunks = grounding_metadata.get("groundingChunks", [])
+            
+            # Sort supports by end_index descending
+            sorted_supports = sorted(
+                supports, 
+                key=lambda s: s.get("segment", {}).get("endIndex", 0), 
+                reverse=True
+            )
+            
+            for support in sorted_supports:
+                end_index = support.get("segment", {}).get("endIndex")
+                indices = support.get("groundingChunkIndices", [])
+                
+                if end_index is not None and indices:
+                    citation_links = []
+                    for i in indices:
+                        if i < len(chunks):
+                            uri = chunks[i].get("web", {}).get("uri")
+                            if uri:
+                                citation_links.append(f"[[{i+1}]]({uri})")
+                    
+                    if citation_links:
+                        citation_string = " " + "".join(citation_links)
+                        text = text[:end_index] + citation_string + text[end_index:]
+
+        return text.strip()
+
     except Exception as e:
         print(f"Coach chat failed: {e}")
+        if hasattr(e, 'response') and e.response:
+            print(f"Response: {e.response.text}")
         return "I'm having trouble connecting to my financial brain right now. Please try again."
