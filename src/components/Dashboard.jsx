@@ -111,9 +111,15 @@ export const RecentTransactions = () => {
 
     // Robust sort: Date descending, then ID descending (for same-day items)
     // Also filter out future transactions
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use LOCAL time for "today"
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const sortedTransactions = transactions
-        .filter(t => t.date <= todayStr)
+        .filter(t => {
+            // Normalize transaction date to YYYY-MM-DD to handle ISO strings with time
+            const tDate = t.date.split('T')[0];
+            return tDate <= todayStr;
+        })
         .sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);

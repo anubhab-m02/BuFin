@@ -86,13 +86,15 @@ const SafeToSpendWidget = () => {
         .filter(d => d.direction === 'payable' && d.status === 'active')
         .reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Predictive Safe Balance
-    // Current Balance + Future Income - Future Expenses - Debts
-    const projectedBalance = balance + totalUpcomingIncome - totalUpcomingExpenses - debtPayable;
+    // Predictive Safe Balance (Optimistic - includes future income)
+    const projectedEndMonth = balance + totalUpcomingIncome - totalUpcomingExpenses - debtPayable;
 
-    // Safe Daily = Projected / Days Remaining
-    // If projected is negative, safe is 0.
-    const dailySafeSpend = Math.max(0, projectedBalance / daysRemaining);
+    // Conservative Safe Balance (Cash Basis - only what you have NOW minus bills)
+    // We do NOT include future income for the daily limit to prevent overspending before money arrives.
+    const conservativeSafeBalance = balance - totalUpcomingExpenses - debtPayable;
+
+    // Safe Daily = Conservative Balance / Days Remaining
+    const dailySafeSpend = Math.max(0, conservativeSafeBalance / daysRemaining);
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
@@ -118,7 +120,7 @@ const SafeToSpendWidget = () => {
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <p className="text-muted-foreground">Projected End-Month</p>
-                        <p className="font-semibold text-foreground">{formatCurrency(projectedBalance + debtPayable)}</p>
+                        <p className="font-semibold text-foreground">{formatCurrency(projectedEndMonth)}</p>
                     </div>
                     <div>
                         <p className="text-muted-foreground">Upcoming Bills</p>

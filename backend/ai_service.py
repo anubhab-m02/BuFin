@@ -161,16 +161,58 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     todays_transactions = [t for t in transactions if t['date'].startswith(today) and t['type'] == 'expense']
     spent_today = sum(t['amount'] for t in todays_transactions)
     
-    # Calculate daily safe-to-spend (simplified)
-    # Logic mirrored from frontend
+    # Calculate daily safe-to-spend (Conservative: Balance - Upcoming Expenses)
     now = datetime.datetime.now()
-    # Days in month
     import calendar
     _, days_in_month = calendar.monthrange(now.year, now.month)
-    days_remaining = days_in_month - now.day + 1
+    days_remaining = max(1, days_in_month - now.day + 1)
     
-    total_recurring = sum(p['amount'] for p in recurring_plans if p['type'] == 'expense')
-    safe_daily = max(0, (balance - total_recurring) / days_remaining)
+    # 1. Recurring Expenses (remaining in month)
+    # We must only subtract UPCOMING recurring expenses. 
+    # Past ones are assumed to be paid and already reflected in the Balance.
+    total_recurring = 0
+    for p in recurring_plans:
+        if p['type'] != 'expense':
+            continue
+            
+        try:
+            expected_date_val = p.get('expectedDate')
+            # Handle "last" or "last-working"
+            if expected_date_val == 'last':
+                expected_day = days_in_month
+            elif expected_date_val == 'last-working':
+                # Simplified: just assume last day for safety in backend or 28th
+                expected_day = days_in_month
+            else:
+                expected_day = int(expected_date_val)
+            
+            # Check end date
+            if p.get('endDate'):
+                end_date = datetime.date.fromisoformat(p['endDate'])
+                # Construct this month's occurrence date
+                current_occurrence = datetime.date(now.year, now.month, expected_day)
+                if current_occurrence > end_date:
+                    continue
+
+            if expected_day > now.day:
+                total_recurring += p['amount']
+        except Exception as e:
+            print(f"Error processing recurring plan {p.get('name')}: {e}")
+            continue
+
+    # 2. Future One-off Expenses (from transactions list)
+    # We need to check if any transactions are in the future of this month
+    future_one_offs = 0
+    for t in transactions:
+        try:
+            t_date = datetime.date.fromisoformat(t['date'])
+            if t['type'] == 'expense' and t_date > datetime.date.today() and t_date.month == now.month:
+                future_one_offs += t['amount']
+        except:
+            pass
+
+    conservative_balance = balance - total_recurring - future_one_offs
+    safe_daily = max(0, conservative_balance / days_remaining)
     
     if not todays_transactions:
         return None

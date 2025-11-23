@@ -11,18 +11,24 @@ const SpendingMonitor = () => {
     const [alert, setAlert] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // Create a hash of today's transactions to detect changes (edits/deletes)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayTxHash = transactions
+        .filter(t => t.date.startsWith(todayStr))
+        .map(t => `${t.id}-${t.amount}-${t.type}`)
+        .join('|');
+
     useEffect(() => {
         let mounted = true;
         const fetchAlert = async () => {
-            const today = new Date().toISOString().split('T')[0];
-            const cacheKey = `bufin_spending_alert_${today}`;
+            const cacheKey = `bufin_spending_alert_${todayStr}`;
             const cachedData = localStorage.getItem(cacheKey);
 
             // Check if we have a valid cache
             if (cachedData) {
-                const { alert: cachedAlert, transactionCount } = JSON.parse(cachedData);
-                // If transaction count hasn't changed, use cached alert
-                if (transactionCount === transactions.length) {
+                const { alert: cachedAlert, txHash } = JSON.parse(cachedData);
+                // If transaction hash matches, use cached alert
+                if (txHash === todayTxHash) {
                     if (mounted) {
                         setAlert(cachedAlert);
                         setLoading(false);
@@ -39,7 +45,7 @@ const SpendingMonitor = () => {
                     // Update cache
                     localStorage.setItem(cacheKey, JSON.stringify({
                         alert: result,
-                        transactionCount: transactions.length
+                        txHash: todayTxHash
                     }));
                 }
             } catch (error) {
@@ -51,7 +57,7 @@ const SpendingMonitor = () => {
 
         fetchAlert();
         return () => mounted = false;
-    }, [transactions.length, balance, recurringPlans.length]); // Only depend on lengths/balance to trigger updates
+    }, [todayTxHash, balance, recurringPlans.length]); // Depend on hash to trigger updates
 
     if (loading) {
         return (

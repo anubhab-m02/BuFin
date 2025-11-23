@@ -288,6 +288,18 @@ export const FinancialProvider = ({ children }) => {
         currentAmount: goal.currentAmount + amountToAdd
       });
       setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
+
+      // Create an expense transaction to reflect money leaving "Available Balance"
+      if (amountToAdd > 0) {
+        await addTransaction({
+          amount: parseFloat(amountToAdd),
+          category: 'Savings',
+          description: `Transfer to Goal: ${goal.name}`,
+          type: 'expense',
+          date: new Date().toISOString(),
+          necessity: 'essential' // Savings are essential!
+        });
+      }
     } catch (error) {
       console.error("Failed to update savings goal:", error);
     }
@@ -295,6 +307,8 @@ export const FinancialProvider = ({ children }) => {
 
   const deleteSavingsGoal = async (id) => {
     try {
+      // Optional: When deleting, should we refund the money?
+      // For now, let's keep it simple. User can manually add income if they withdraw.
       await api.deleteGoal(id);
       setSavingsGoals(prev => prev.filter(g => g.id !== id));
     } catch (error) {
@@ -338,7 +352,9 @@ export const FinancialProvider = ({ children }) => {
   const untouchedSavings = savingsGoals.reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
 
   // Safe Balance (Liquid Cash)
-  const safeBalance = balance - untouchedSavings;
+  // Since we now record savings as expenses, 'balance' already excludes savings.
+  // So safeBalance is just balance.
+  const safeBalance = balance;
 
   const income = transactions
     .filter(t => t.type === 'income' && t.date <= todayStr)
