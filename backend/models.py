@@ -48,6 +48,20 @@ class WishlistItem(Base):
     cost = Column(Float)
     addedAt = Column(String)
 
+class Goal(Base):
+    __tablename__ = "goals"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    name = Column(String)
+    targetAmount = Column(Float)
+    currentAmount = Column(Float, default=0.0)
+    targetDate = Column(String, nullable=True)
+    icon = Column(String, default="PiggyBank")
+    fundingSource = Column(String, default="manual")
+    type = Column(String, default="savings") # 'savings' or 'investment'
+    projectedReturnRate = Column(Float, default=0.0) # For investment goals
+
 class User(Base):
     __tablename__ = "users"
 

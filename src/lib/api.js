@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://localhost:8000/api';
 
 export const api = {
     // Auth
@@ -213,6 +213,53 @@ export const api = {
             body: JSON.stringify(debt),
         });
         if (!response.ok) throw new Error('Failed to update debt');
+        return response.json();
+    },
+
+    // Goals
+    getGoals: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/goals`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch goals');
+        return response.json();
+    },
+    createGoal: async (goal) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/goals`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(goal),
+        });
+        if (!response.ok) throw new Error('Failed to create goal');
+        return response.json();
+    },
+    updateGoal: async (id, goal) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/goals/${id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(goal),
+        });
+        if (!response.ok) throw new Error('Failed to update goal');
+        return response.json();
+    },
+    deleteGoal: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/goals/${id}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete goal');
         return response.json();
     },
 
