@@ -41,6 +41,12 @@ If user says "Spent 300 on Lunch split with A and B":
    - If "split with A and B" (3 people total including user): User pays 300. A owes 100. B owes 100.
    - Output: [ {transaction: 300}, {debt: A, 100}, {debt: B, 100} ]
 
+SPECIAL LOGIC: "Lending / Giving Money"
+If user says "Lent 500 to John" or "Gave 500 to John":
+1. Create a "transaction" (expense) for the amount (Category: "Loan").
+2. Create a "debt" (receivable) for the amount.
+   - Output: [ {transaction: 500, category: "Loan", type: "expense"}, {debt: John, 500, receivable} ]
+
 EXAMPLES:
 Input: "Lunch 150 at McD"
 Output:
