@@ -192,7 +192,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
 };
 
 export const AddDebtForm = ({ initialData, onSuccess }) => {
-    const { addDebt } = useFinancial();
+    const { addDebt, updateDebt } = useFinancial();
     const [formData, setFormData] = useState({
         personName: initialData?.personName || '',
         amount: initialData?.amount || '',
@@ -207,26 +207,35 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
         if (!formData.personName && !formData.isSplit) return;
         if (!formData.amount) return;
 
-        if (formData.isSplit && formData.splitWith) {
-            // Split Logic
-            const names = formData.splitWith.split(',').map(n => n.trim()).filter(n => n);
-            if (names.length === 0) return;
-
-            const totalAmount = parseFloat(formData.amount);
-            const splitAmount = totalAmount / (names.length + 1); // +1 for user
-
-            names.forEach(name => {
-                addDebt({
-                    personName: name,
-                    amount: splitAmount,
-                    direction: 'receivable', // They owe me
-                    dueDate: formData.dueDate,
-                    status: 'active'
-                });
+        if (initialData && initialData.id) {
+            // Edit Mode
+            updateDebt(initialData.id, {
+                ...formData,
+                amount: parseFloat(formData.amount)
             });
         } else {
-            // Normal Logic
-            addDebt({ ...formData, amount: parseFloat(formData.amount), status: 'active' });
+            // Add Mode
+            if (formData.isSplit && formData.splitWith) {
+                // Split Logic
+                const names = formData.splitWith.split(',').map(n => n.trim()).filter(n => n);
+                if (names.length === 0) return;
+
+                const totalAmount = parseFloat(formData.amount);
+                const splitAmount = totalAmount / (names.length + 1); // +1 for user
+
+                names.forEach(name => {
+                    addDebt({
+                        personName: name,
+                        amount: splitAmount,
+                        direction: 'receivable', // They owe me
+                        dueDate: formData.dueDate,
+                        status: 'active'
+                    });
+                });
+            } else {
+                // Normal Logic
+                addDebt({ ...formData, amount: parseFloat(formData.amount), status: 'active' });
+            }
         }
 
         if (onSuccess) {

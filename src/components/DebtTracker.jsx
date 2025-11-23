@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowUpRight, ArrowDownLeft, Trash2, CheckCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Trash2, CheckCircle, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import EmptyState from './EmptyState';
+import Dialog from './ui/dialog';
+import { AddDebtForm } from './PlannerForms';
 
 const DebtTracker = ({ compact }) => {
     const { debts, isPrivacyMode, deleteDebt, repayDebt } = useFinancial();
+    const [editingDebt, setEditingDebt] = useState(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
         return `₹${amount.toFixed(2)}`;
+    };
+
+    const handleEdit = (debt) => {
+        setEditingDebt(debt);
+        setIsEditOpen(true);
     };
 
     const activeDebts = debts.filter(d => d.status === 'active');
@@ -54,6 +63,14 @@ const DebtTracker = ({ compact }) => {
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                    onClick={() => handleEdit(debt)}
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50"
                                     onClick={() => deleteDebt(debt.id)}
                                 >
@@ -64,6 +81,17 @@ const DebtTracker = ({ compact }) => {
                     </div>
                 ))
             )}
+
+            <Dialog
+                isOpen={isEditOpen}
+                onClose={() => setIsEditOpen(false)}
+                title="Edit Debt"
+            >
+                <AddDebtForm
+                    initialData={editingDebt}
+                    onSuccess={() => setIsEditOpen(false)}
+                />
+            </Dialog>
         </div>
     );
 

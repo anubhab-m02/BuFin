@@ -8,8 +8,7 @@ import remarkGfm from 'remark-gfm';
 
 const SpendingMonitor = () => {
     const { transactions, balance, recurringPlans } = useFinancial();
-    const [alert, setAlert] = useState(null);
-    const [loading, setLoading] = useState(true);
+
 
     // Create a hash of today's transactions to detect changes (edits/deletes)
     const todayStr = new Date().toISOString().split('T')[0];
@@ -18,16 +17,37 @@ const SpendingMonitor = () => {
         .map(t => `${t.id}-${t.amount}-${t.type}`)
         .join('|');
 
-    useEffect(() => {
-        let mounted = true;
-        const fetchAlert = async () => {
-            const cacheKey = `bufin_spending_alert_${todayStr}`;
-            const cachedData = localStorage.getItem(cacheKey);
+    const cacheKey = `bufin_spending_alert_${todayStr}`;
 
-            // Check if we have a valid cache
+    // Initialize state from cache if valid
+    const [alert, setAlert] = useState(() => {
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 const { alert: cachedAlert, txHash } = JSON.parse(cachedData);
-                // If transaction hash matches, use cached alert
+                if (txHash === todayTxHash) {
+                    return cachedAlert;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to read cache", e);
+        }
+        return null;
+    });
+
+    const [loading, setLoading] = useState(() => !alert);
+
+    useEffect(() => {
+        // If we already have an alert from initial state, and hash matches, do nothing
+        if (alert && !loading) return;
+
+        let mounted = true;
+        const fetchAlert = async () => {
+            // Double check cache in effect (though initial state handles most)
+            // This is mainly for when hash changes while component is mounted
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                const { alert: cachedAlert, txHash } = JSON.parse(cachedData);
                 if (txHash === todayTxHash) {
                     if (mounted) {
                         setAlert(cachedAlert);

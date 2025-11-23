@@ -57,7 +57,7 @@ const CommitmentsHub = () => {
             </CardHeader>
 
             <CardContent className="flex-1 overflow-hidden p-0">
-                <div className="h-full overflow-y-auto px-4 pb-4 custom-scrollbar">
+                <div className="h-full overflow-y-auto px-4 pb-4 custom-scrollbar space-y-4">
                     {activeTab === 'recurring' ? (
                         <RecurringManager compact={true} />
                     ) : (
