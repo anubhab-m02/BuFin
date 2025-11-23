@@ -42,6 +42,33 @@ export const api = {
         if (!response.ok) throw new Error('Failed to update profile');
         return response.json();
     },
+    changePassword: async (oldPassword, newPassword) => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/auth/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to change password');
+        }
+        return response.json();
+    },
+    deleteAccount: async () => {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/auth/me`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+        });
+        if (!response.ok) throw new Error('Failed to delete account');
+        return response.json();
+    },
 
     // Transactions
     getTransactions: async () => {

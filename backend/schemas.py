@@ -22,6 +22,10 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class UserChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+
 class User(UserBase):
     id: str
     full_name: Optional[str] = None

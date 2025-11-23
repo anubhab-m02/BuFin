@@ -107,7 +107,31 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
     
     db.commit()
     db.refresh(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user
+
+@app.post("/auth/change-password")
+def change_password(passwords: schemas.UserChangePassword, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not auth_utils.verify_password(passwords.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+    
+    current_user.hashed_password = auth_utils.get_password_hash(passwords.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
+@app.delete("/auth/me")
+def delete_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Manually delete related data since we don't have cascade set up in models (safer for now)
+    db.query(models.Transaction).filter(models.Transaction.user_id == current_user.id).delete()
+    db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == current_user.id).delete()
+    db.query(models.Debt).filter(models.Debt.user_id == current_user.id).delete()
+    db.query(models.WishlistItem).filter(models.WishlistItem.user_id == current_user.id).delete()
+    
+    # Delete user
+    db.delete(current_user)
+    db.commit()
+    return {"message": "Account deleted successfully"}
 
 
 # --- Transactions ---
