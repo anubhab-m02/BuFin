@@ -80,9 +80,12 @@ const FiscalCalendar = () => {
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const blanks = Array.from({ length: firstDay }, (_, i) => i);
 
+    const totalSlots = blanks.length + days.length;
+    const rows = Math.ceil(totalSlots / 7);
+
     return (
-        <Card className="h-full border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <Card className="sticky top-6 border-none shadow-lg rounded-2xl bg-card flex flex-col min-h-[60vh] overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 flex-shrink-0 border-b border-border/30">
                 <CardTitle className="text-base font-medium flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4 text-primary" />
                     Fiscal Calendar
@@ -99,15 +102,18 @@ const FiscalCalendar = () => {
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-2">
+            <CardContent className="flex-1 flex flex-col min-h-0">
+                <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-2 flex-shrink-0">
                     {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
                         <div key={d} className="py-1">{d}</div>
                     ))}
                 </div>
-                <div className="grid grid-cols-7 gap-1">
+                <div
+                    className="grid grid-cols-7 gap-0.5 flex-1 min-h-0 overflow-auto"
+                    style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+                >
                     {blanks.map(i => (
-                        <div key={`blank-${i}`} className="h-20 bg-secondary/10 rounded-md border border-transparent" />
+                        <div key={`blank-${i}`} className="bg-secondary/5 rounded border border-border/10" />
                     ))}
                     {days.map(day => {
                         const items = getItemsForDay(day);
@@ -120,22 +126,22 @@ const FiscalCalendar = () => {
                             <div
                                 key={day}
                                 className={cn(
-                                    "h-20 p-1 rounded-md border border-border bg-background flex flex-col gap-1 overflow-hidden transition-colors hover:bg-secondary/20",
-                                    isToday && "ring-1 ring-primary bg-primary/5"
+                                    "p-1.5 rounded border border-border/20 bg-background flex flex-col gap-1 overflow-hidden transition-all hover:border-border/40 hover:shadow-sm",
+                                    isToday && "ring-1 ring-primary/50 bg-primary/5 border-primary/30"
                                 )}
                             >
                                 <span className={cn(
-                                    "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full",
+                                    "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0",
                                     isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                                 )}>
                                     {day}
                                 </span>
-                                <div className="flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
+                                <div className="flex flex-col gap-0.5 overflow-y-auto no-scrollbar min-h-0">
                                     {items.map((item, idx) => (
                                         <div
                                             key={`${day}-${idx}`}
                                             className={cn(
-                                                "text-[10px] px-1 py-0.5 rounded truncate flex justify-between items-center",
+                                                "text-[10px] px-1 py-0.5 rounded truncate flex justify-between items-center flex-shrink-0",
                                                 item.type === 'income'
                                                     ? "bg-green-500/10 text-green-700 dark:text-green-400"
                                                     : "bg-red-500/10 text-red-700 dark:text-red-400"
