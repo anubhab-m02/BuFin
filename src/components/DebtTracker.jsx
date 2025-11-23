@@ -36,7 +36,7 @@ const DebtTracker = ({ compact }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`font-bold ${debt.direction === 'receivable' ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`font-bold whitespace-nowrap ${debt.direction === 'receivable' ? 'text-green-600' : 'text-red-600'}`}>
                                 {formatCurrency(debt.amount)}
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
