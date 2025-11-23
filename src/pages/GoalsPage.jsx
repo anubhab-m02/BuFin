@@ -9,7 +9,18 @@ import ImpulseControl from '../components/ImpulseControl';
 
 const GoalsPage = () => {
     const { savingsGoals } = useFinancial();
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingGoal, setEditingGoal] = useState(null);
+
+    const handleCreate = () => {
+        setEditingGoal(null);
+        setIsDialogOpen(true);
+    };
+
+    const handleEdit = (goal) => {
+        setEditingGoal(goal);
+        setIsDialogOpen(true);
+    };
 
     return (
         <div className="space-y-6">
@@ -18,7 +29,7 @@ const GoalsPage = () => {
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Goals & Jars</h1>
                     <p className="text-muted-foreground mt-1">Your path to guilt-free spending.</p>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm">
+                <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 shadow-sm">
                     <Plus className="mr-2 h-4 w-4" />
                     New Jar
                 </Button>
@@ -40,14 +51,18 @@ const GoalsPage = () => {
                             <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
                                 AI Suggestion: Create an "Emergency Fund" jar to build financial security.
                             </p>
-                            <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90">
+                            <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
                                 Create Emergency Fund Jar
                             </Button>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {savingsGoals.map(goal => (
-                                <JarVisualization key={goal.id} goal={goal} />
+                                <JarVisualization
+                                    key={goal.id}
+                                    goal={goal}
+                                    onEdit={() => handleEdit(goal)}
+                                />
                             ))}
                         </div>
                     )}
@@ -60,11 +75,14 @@ const GoalsPage = () => {
             </div>
 
             <Dialog
-                isOpen={isCreateOpen}
-                onClose={() => setIsCreateOpen(false)}
-                title="Create Savings Jar"
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                title={editingGoal ? "Edit Savings Jar" : "Create Savings Jar"}
             >
-                <JarCreationForm onSuccess={() => setIsCreateOpen(false)} />
+                <JarCreationForm
+                    initialData={editingGoal}
+                    onSuccess={() => setIsDialogOpen(false)}
+                />
             </Dialog>
         </div>
     );

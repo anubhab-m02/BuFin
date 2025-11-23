@@ -289,19 +289,39 @@ export const FinancialProvider = ({ children }) => {
       });
       setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
 
-      // Create an expense transaction to reflect money leaving "Available Balance"
+      // Create transaction to reflect money movement
       if (amountToAdd > 0) {
+        // Deposit: Expense (Money leaves Available Balance)
         await addTransaction({
           amount: parseFloat(amountToAdd),
           category: 'Savings',
           description: `Transfer to Goal: ${goal.name}`,
           type: 'expense',
           date: new Date().toISOString(),
-          necessity: 'essential' // Savings are essential!
+          necessity: 'essential'
+        });
+      } else if (amountToAdd < 0) {
+        // Withdrawal: Income (Money returns to Available Balance)
+        await addTransaction({
+          amount: Math.abs(parseFloat(amountToAdd)),
+          category: 'Savings Withdrawal',
+          description: `Withdrawal from Goal: ${goal.name}`,
+          type: 'income',
+          date: new Date().toISOString(),
+          necessity: 'variable'
         });
       }
     } catch (error) {
       console.error("Failed to update savings goal:", error);
+    }
+  };
+
+  const editSavingsGoal = async (id, goalData) => {
+    try {
+      const updatedGoal = await api.updateGoal(id, goalData);
+      setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
+    } catch (error) {
+      console.error("Failed to edit savings goal:", error);
     }
   };
 
@@ -400,6 +420,8 @@ export const FinancialProvider = ({ children }) => {
       savingsGoals,
       addSavingsGoal,
       updateSavingsGoal,
+      editSavingsGoal,
+      deleteSavingsGoal,
       deleteSavingsGoal,
       ignoredMerchants,
       ignoreMerchant
