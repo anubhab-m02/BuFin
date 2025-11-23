@@ -55,7 +55,8 @@ const JarVisualization = ({ goal }) => {
     return (
         <Card className={cn(
             "relative overflow-hidden transition-all duration-500 hover:shadow-xl border-2",
-            isCompleted ? "border-green-400 bg-green-50/30 dark:bg-green-900/10" : "border-transparent hover:border-primary/20"
+            isCompleted ? "border-green-400 bg-green-50/30 dark:bg-green-900/10" :
+                "border-border/60 hover:border-primary/50 bg-card"
         )}>
             {/* Celebration Overlay */}
             {isCompleted && (
@@ -124,7 +125,7 @@ const JarVisualization = ({ goal }) => {
                                                 Target: {timeLeft}
                                             </p>
                                         )}
-                                        {dailySavings && (
+                                        {dailySavings > 0 && (
                                             <p className="text-xs font-medium text-primary">
                                                 Save ₹{dailySavings}/day to stay on track
                                             </p>

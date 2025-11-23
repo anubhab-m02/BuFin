@@ -13,12 +13,12 @@ const GoalsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-end pb-6 border-b border-border/40">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Goals & Jars</h1>
-                    <p className="text-muted-foreground">Your path to guilt-free spending.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Goals & Jars</h1>
+                    <p className="text-muted-foreground mt-1">Your path to guilt-free spending.</p>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90">
+                <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm">
                     <Plus className="mr-2 h-4 w-4" />
                     New Jar
                 </Button>
@@ -26,7 +26,11 @@ const GoalsPage = () => {
 
             <div className="grid gap-6 md:grid-cols-12 h-[calc(100vh-12rem)]">
                 {/* Savings Jars Section */}
-                <div className="md:col-span-8 space-y-6 overflow-y-auto pr-2 pb-10">
+                <div className="md:col-span-8 space-y-4 overflow-y-auto pr-2 pb-10">
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-lg font-semibold text-foreground/80">Your Savings Jars</h2>
+                        <span className="text-xs text-muted-foreground">{savingsGoals.length} Active</span>
+                    </div>
                     {savingsGoals.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-primary/30 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10">
                             <div className="p-4 bg-primary/10 rounded-full mb-4">

@@ -60,7 +60,7 @@ const ImpulseControl = () => {
     };
 
     return (
-        <Card className="h-full border-l-4 border-l-primary/20 shadow-sm bg-card rounded-xl overflow-hidden">
+        <Card className="h-full border-l-4 border-l-primary/20 shadow-sm bg-card rounded-xl overflow-hidden flex flex-col">
             <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
                 <CardTitle className="flex items-center gap-2 text-foreground text-base">
                     <Hourglass className="h-5 w-5 text-primary" />
@@ -157,10 +157,10 @@ const ImpulseControl = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="w-full h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => deleteWishlistItem(item.id)}
+                                                    className="w-full h-8 text-xs text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                                    onClick={() => handleRemoved(item)}
                                                 >
-                                                    <Trash2 className="h-3 w-3 mr-1" /> Remove
+                                                    <XCircle className="h-3 w-3 mr-1" /> Don't Buy (Savings Win)
                                                 </Button>
                                             )}
                                         </div>
