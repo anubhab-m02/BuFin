@@ -89,8 +89,9 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="e.g., 'Spent ₹150 on lunch' or 'Received ₹5000 bonus'"
-                        className="bg-background"
+                        placeholder="Tell AI to add a transaction..."
+                        className="pl-10 pr-12 h-12 text-sm border-none shadow-lg rounded-2xl focus-visible:ring-primary/30 bg-background"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                         disabled={isLoading}
                     />
                     <Button type="submit" disabled={isLoading || !input.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground">

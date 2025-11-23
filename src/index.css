@@ -142,10 +142,11 @@
 /* Global Resets & Typography */
 body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 /* Utility for consistent "Box" styling */
 .card-base {
-    @apply bg-background border border-border rounded-lg shadow-sm;
+    @apply bg-background border-none shadow-lg rounded-2xl;
 }

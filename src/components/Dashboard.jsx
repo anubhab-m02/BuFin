@@ -11,7 +11,7 @@ import EmptyState from './EmptyState';
 export const FinancialSummaryCard = () => {
     const { balance, income, expense } = useFinancial();
     return (
-        <Card className="h-full shadow-sm">
+        <Card className="h-full border-none shadow-lg rounded-2xl hover:shadow-xl transition-shadow">
             <CardContent className="h-full flex flex-col justify-between p-5">
                 {/* Balance */}
                 <div className="space-y-1">
@@ -130,9 +130,11 @@ export const RecentTransactions = () => {
                 <div className="px-5 py-2 space-y-1">
                     {sortedTransactions.slice(0, 3).map((t) => (
                         <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/40 last:border-0 group">
-                            <div className="flex flex-col gap-0.5 overflow-hidden">
-                                <p className="font-medium truncate text-sm">{t.category}</p>
-                                <p className="text-xs text-muted-foreground truncate">{t.description || t.merchant}</p>
+                            <div className="flex flex-col gap-1 overflow-hidden">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground w-fit uppercase tracking-wider">
+                                    {t.category}
+                                </span>
+                                <p className="text-xs text-muted-foreground truncate font-medium">{t.description || t.merchant}</p>
                             </div>
                             <div className="flex items-center gap-3 pl-2 shrink-0">
                                 <div className={`font-bold text-sm ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>

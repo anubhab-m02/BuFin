@@ -90,7 +90,7 @@ const SpendingMonitor = () => {
     }
 
     return (
-        <Card className="bg-card shadow-sm h-full flex flex-col">
+        <Card className="h-full border-none shadow-lg rounded-2xl hover:shadow-xl transition-shadow bg-card flex flex-col">
             <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-xs font-semibold flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
                     <Activity className="h-3.5 w-3.5 text-primary animate-pulse" />

@@ -39,13 +39,20 @@ const ProtectedRoute = ({ children }) => {
 const AppLayout = () => {
   return (
     <FinancialProvider>
-      <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
-        {/* Left Navigation */}
-        <Navigation />
+      <div className="min-h-screen bg-secondary/30 flex flex-col md:flex-row overflow-hidden p-0 md:p-4 gap-4">
+        {/* Left Navigation - Floating Box Style */}
+        <aside className="hidden md:block w-64 shrink-0 h-[calc(100vh-2rem)] sticky top-4">
+          <Navigation />
+        </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+        {/* Mobile Navigation (Bottom Bar) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+          <Navigation />
+        </div>
+
+        {/* Main Content Area - Canvas Mode (No Card) */}
+        <main className="flex-1 flex flex-col h-[calc(100vh-2rem)] overflow-hidden relative">
+          <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
             <div className="max-w-6xl mx-auto">
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
