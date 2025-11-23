@@ -110,13 +110,17 @@ export const RecentTransactions = () => {
     const navigate = useNavigate();
 
     // Robust sort: Date descending, then ID descending (for same-day items)
-    const sortedTransactions = [...transactions].sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        if (dateA > dateB) return -1;
-        if (dateA < dateB) return 1;
-        return b.id - a.id; // Fallback to ID if dates are equal
-    });
+    // Also filter out future transactions
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sortedTransactions = transactions
+        .filter(t => t.date <= todayStr)
+        .sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            if (dateA > dateB) return -1;
+            if (dateA < dateB) return 1;
+            return b.id - a.id; // Fallback to ID if dates are equal
+        });
 
     return (
         <Card className="h-full flex flex-col shadow-sm">
