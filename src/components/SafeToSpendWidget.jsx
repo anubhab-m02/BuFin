@@ -4,18 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Calculator } from 'lucide-react';
 
 const SafeToSpendWidget = () => {
-    const { balance, recurringPlans, debts, isPrivacyMode, togglePrivacyMode } = useFinancial();
+    const { balance, recurringPlans, debts, isPrivacyMode, togglePrivacyMode, transactions } = useFinancial();
 
     // Calculate days remaining in month
     const today = new Date();
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const daysRemaining = Math.max(1, lastDay.getDate() - today.getDate());
 
-    // Calculate upcoming fixed costs (Predictive)
-    // We want to know what is *left* to pay this month.
-    // If today is 15th, and Rent (1st) is paid, don't count it.
-    // If Netflix (20th) is coming, count it.
-    const upcomingFixed = recurringPlans
+    // Helper to check if a date is in the current month and in the future
+    const isFutureThisMonth = (dateStr) => {
+        const d = new Date(dateStr);
+        const now = new Date();
+        // Check if same month and year
+        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+        // Check if future
+        return d.getDate() > now.getDate();
+    };
+
+    // 1. Recurring Fixed Costs (Predictive)
+    const upcomingRecurringFixed = recurringPlans
         .filter(p => {
             if (p.type !== 'expense') return false;
 
@@ -27,21 +34,25 @@ const SafeToSpendWidget = () => {
                 expectedDay = d.getDate();
             }
 
-            // Check End Date
             if (p.endDate) {
                 const end = new Date(p.endDate);
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
                 if (current > end) return false;
             }
 
-            // Only count if the expected day is AFTER today
             return expectedDay > today.getDate();
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Also consider expected INCOME for the rest of the month?
-    // "The balance should reflect the Current Day balance + Expected Income - Expected Expenses"
-    const upcomingIncome = recurringPlans
+    // 2. One-off Future Expenses (from Ledger/Planner)
+    const upcomingOneOffExpense = transactions
+        .filter(t => t.type === 'expense' && isFutureThisMonth(t.date))
+        .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const totalUpcomingExpenses = upcomingRecurringFixed + upcomingOneOffExpense;
+
+    // 3. Recurring Income (Predictive)
+    const upcomingRecurringIncome = recurringPlans
         .filter(p => {
             if (p.type !== 'income') return false;
 
@@ -53,7 +64,6 @@ const SafeToSpendWidget = () => {
                 expectedDay = d.getDate();
             }
 
-            // Check End Date
             if (p.endDate) {
                 const end = new Date(p.endDate);
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
@@ -64,15 +74,21 @@ const SafeToSpendWidget = () => {
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Calculate debt obligations (payable) - Assuming immediate/overdue or this month?
-    // Let's keep it simple: Active debts are "liabilities" that *could* be called in.
+    // 4. One-off Future Income (from Ledger/Planner)
+    const upcomingOneOffIncome = transactions
+        .filter(t => t.type === 'income' && isFutureThisMonth(t.date))
+        .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const totalUpcomingIncome = upcomingRecurringIncome + upcomingOneOffIncome;
+
+    // Calculate debt obligations (payable)
     const debtPayable = debts
         .filter(d => d.direction === 'payable' && d.status === 'active')
         .reduce((acc, curr) => acc + curr.amount, 0);
 
     // Predictive Safe Balance
-    // Current Balance + Future Income - Future Bills - Debts
-    const projectedBalance = balance + upcomingIncome - upcomingFixed - debtPayable;
+    // Current Balance + Future Income - Future Expenses - Debts
+    const projectedBalance = balance + totalUpcomingIncome - totalUpcomingExpenses - debtPayable;
 
     // Safe Daily = Projected / Days Remaining
     // If projected is negative, safe is 0.
@@ -106,7 +122,7 @@ const SafeToSpendWidget = () => {
                     </div>
                     <div>
                         <p className="text-muted-foreground">Upcoming Bills</p>
-                        <p className="font-semibold text-red-500">-{formatCurrency(upcomingFixed)}</p>
+                        <p className="font-semibold text-red-500">-{formatCurrency(totalUpcomingExpenses)}</p>
                     </div>
                 </div>
             </CardContent>

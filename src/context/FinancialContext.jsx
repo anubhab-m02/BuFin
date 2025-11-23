@@ -303,16 +303,24 @@ export const FinancialProvider = ({ children }) => {
   };
 
   // Derived State
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const todayStr = getTodayStr();
+
   const balance = (user?.current_balance || 0) + transactions.reduce((acc, curr) => {
+    if (curr.date > todayStr) return acc; // Ignore future transactions
     return curr.type === 'income' ? acc + curr.amount : acc - curr.amount;
   }, 0);
 
   const income = transactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.type === 'income' && t.date <= todayStr)
     .reduce((acc, curr) => acc + curr.amount, 0);
 
   const expense = transactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' && t.date <= todayStr)
     .reduce((acc, curr) => acc + curr.amount, 0);
 
   const togglePrivacyMode = () => setIsPrivacyMode(prev => !prev);

@@ -52,6 +52,10 @@ const TransactionTable = () => {
 
     // Filter
     const filteredData = rawData.filter(item => {
+        // Always filter out future transactions from the Ledger
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (item.date > todayStr) return false;
+
         if (filterType === 'all') return true;
         if (filterType === 'debt') return true; // Already switched source
         return item.type === filterType;

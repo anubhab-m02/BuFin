@@ -5,6 +5,7 @@ import DebtTracker from '../components/DebtTracker';
 import WishlistWidget from '../components/WishlistWidget';
 import FiscalCalendar from '../components/FiscalCalendar';
 import SavingsGoalsWidget from '../components/SavingsGoalsWidget';
+import FutureTransactions from '../components/FutureTransactions';
 
 const PlannerPage = () => {
     return (
@@ -22,6 +23,9 @@ const PlannerPage = () => {
                 <div className="md:col-span-8 grid gap-6 md:grid-cols-2">
                     <div className="md:col-span-2">
                         <FiscalCalendar />
+                    </div>
+                    <div className="md:col-span-2">
+                        <FutureTransactions />
                     </div>
                     <RecurringManager />
                     <div className="space-y-6">
