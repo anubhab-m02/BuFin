@@ -10,6 +10,7 @@ import Dialog from '../components/ui/dialog';
 import { Select } from '../components/ui/select';
 import { User, Shield, Calendar, LogOut, Edit2, Download, Wallet, Target, Brain, AlertTriangle, Moon, Sun, Laptop, Lock, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
+import Achievements from '../components/Achievements';
 
 const ProfilePage = () => {
     const { isPrivacyMode, togglePrivacyMode } = useFinancial();
@@ -193,6 +194,11 @@ const ProfilePage = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Achievements Section */}
+                <div className="md:col-span-2">
+                    <Achievements />
+                </div>
 
                 {/* AI Personalization Card */}
                 <Card className="md:col-span-2 border-primary/20 bg-primary/5">
