@@ -67,7 +67,7 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
     };
 
     return (
-        <Card className="border-border bg-card shadow-sm h-full">
+        <Card className="h-full border-none shadow-lg rounded-2xl bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="flex items-center gap-2 text-foreground">
                     <Sparkles className="h-5 w-5 text-primary" />
@@ -90,7 +90,7 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Tell AI to add a transaction..."
-                        className="pl-10 pr-12 h-12 text-sm border-none shadow-lg rounded-2xl focus-visible:ring-primary/30 bg-background"
+                        className="pl-10 pr-12 h-10 text-sm shadow-sm border-primary/20 focus-visible:ring-primary/30 bg-background"
                         onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                         disabled={isLoading}
                     />
