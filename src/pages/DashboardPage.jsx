@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { FinancialSummaryCard, ExpenseBreakdown, RecentTransactions } from '../components/Dashboard';
 import NaturalLanguageInput from '../components/NaturalLanguageInput';
 import BudgetHealthBar from '../components/BudgetHealthBar';
@@ -9,14 +10,24 @@ import AddTransactionForm from '../components/AddTransactionForm';
 import SafeToSpendWidget from '../components/SafeToSpendWidget';
 
 const DashboardPage = () => {
+    const { user } = useAuth();
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+
+    // Get first name for greeting
+    const firstName = user?.full_name?.split(' ')[0] || 'there';
 
     return (
         <div className="space-y-4">
-
+            {/* Greeting Header */}
+            <div className="flex items-center justify-between py-2">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Hi, {firstName}! 👋</h1>
+                    <p className="text-muted-foreground">Here's your financial overview for today.</p>
+                </div>
+            </div>
 
             {/* Bento Grid - Viewport Fit */}
-            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-3 h-[calc(100vh-6rem)] min-h-[600px]">
+            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-3 h-[calc(100vh-10rem)] min-h-[600px]">
                 {/* Row 1: AI Quick Add (Span 4, Fixed Height) */}
                 <div className="md:col-span-4 h-fit">
                     <NaturalLanguageInput onManualEntry={() => setIsTransactionModalOpen(true)} />
