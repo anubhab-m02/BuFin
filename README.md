@@ -191,15 +191,6 @@ An interactive planning tool that shows:
 - **No Third-Party Tracking**: Your financial data stays on your machine
 - **Secure API**: Backend uses FastAPI with proper validation
 
-## 🎯 Roadmap
-
-- [ ] Multi-currency support
-- [ ] Bank account integration
-- [ ] Budget templates
-- [ ] Export to CSV/PDF
-- [ ] Mobile app (React Native)
-- [ ] Collaborative budgets
-- [ ] Advanced analytics dashboard
 
 ## 🤝 Contributing
 
