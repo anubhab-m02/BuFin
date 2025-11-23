@@ -136,6 +136,11 @@ export const api = {
             headers,
             body: JSON.stringify(plan),
         });
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            throw new Error('Session expired');
+        }
         if (!response.ok) throw new Error('Failed to create recurring plan');
         return response.json();
     },
@@ -290,4 +295,18 @@ export const api = {
         if (!response.ok) throw new Error('Coach chat failed');
         return response.json();
     }
+};
+
+// Helper to handle 401s globally (optional improvement)
+const handleResponse = async (response) => {
+    if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please login again.');
+    }
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'API request failed');
+    }
+    return response.json();
 };
