@@ -270,7 +270,14 @@ export const FinancialProvider = ({ children }) => {
   // Savings Goals
   const addSavingsGoal = (goal) => {
     // MVP: Local state only for now, or mock API
-    const newGoal = { ...goal, id: Date.now().toString(), currentAmount: 0 };
+    const newGoal = {
+      ...goal,
+      id: Date.now().toString(),
+      currentAmount: 0,
+      targetDate: goal.targetDate || null,
+      icon: goal.icon || 'PiggyBank',
+      fundingSource: goal.fundingSource || 'manual'
+    };
     setSavingsGoals(prev => [...prev, newGoal]);
   };
 
@@ -315,6 +322,12 @@ export const FinancialProvider = ({ children }) => {
     return curr.type === 'income' ? acc + curr.amount : acc - curr.amount;
   }, 0);
 
+  // Untouched Savings (Sum of all Jars)
+  const untouchedSavings = savingsGoals.reduce((acc, goal) => acc + (goal.currentAmount || 0), 0);
+
+  // Safe Balance (Liquid Cash)
+  const safeBalance = balance - untouchedSavings;
+
   const income = transactions
     .filter(t => t.type === 'income' && t.date <= todayStr)
     .reduce((acc, curr) => acc + curr.amount, 0);
@@ -343,7 +356,10 @@ export const FinancialProvider = ({ children }) => {
       wishlist,
       addWishlistItem,
       deleteWishlistItem,
-      balance,
+      deleteWishlistItem,
+      balance, // Total Net Worth
+      safeBalance, // Spendable Cash (Net Worth - Jars)
+      untouchedSavings, // Total in Jars
       income,
       expense,
       categories,

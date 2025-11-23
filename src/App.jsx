@@ -3,10 +3,12 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { FinancialProvider } from './context/FinancialContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navigation from './components/Navigation';
 import DashboardPage from './pages/DashboardPage';
 import LedgerPage from './pages/LedgerPage';
 import PlannerPage from './pages/PlannerPage';
+import GoalsPage from './pages/GoalsPage';
 import InsightsPage from './pages/InsightsPage';
 import ProfilePage from './pages/ProfilePage';
 import CoachPage from './pages/CoachPage';
@@ -36,9 +38,10 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const AppLayout = () => {
+// Modified AppLayout to accept children and integrate Navigation differently
+const AppLayout = ({ children }) => {
   return (
-    <FinancialProvider>
+    <FinancialProvider> {/* FinancialProvider moved inside AppLayout */}
       <div className="min-h-screen bg-secondary/30 flex flex-col md:flex-row overflow-hidden p-0 md:p-4 gap-4">
         {/* Left Navigation - Floating Box Style */}
         <aside className="hidden md:block w-64 shrink-0 h-[calc(100vh-2rem)] sticky top-4">
@@ -54,14 +57,7 @@ const AppLayout = () => {
         <main className="flex-1 flex flex-col h-[calc(100vh-2rem)] overflow-hidden relative">
           <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
             <div className="max-w-6xl mx-auto">
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/ledger" element={<LedgerPage />} />
-                <Route path="/planner" element={<PlannerPage />} />
-                <Route path="/insights" element={<InsightsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/coach" element={<CoachPage />} />
-              </Routes>
+              {children} {/* Render children here */}
             </div>
           </div>
         </main>
@@ -83,11 +79,16 @@ function App() {
             <OnboardingPage />
           </ProtectedRoute>
         } />
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        } />
+        {/* Updated routes to use AppLayout as a wrapper for page components */}
+        <Route path="/" element={<ProtectedRoute><AppLayout><DashboardPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/ledger" element={<ProtectedRoute><AppLayout><LedgerPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/planner" element={<ProtectedRoute><AppLayout><PlannerPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/goals" element={<ProtectedRoute><AppLayout><GoalsPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/insights" element={<ProtectedRoute><AppLayout><InsightsPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
+        <Route path="/coach" element={<ProtectedRoute><AppLayout><CoachPage /></AppLayout></ProtectedRoute>} />
+        {/* Catch-all route for any other path, redirecting to dashboard or handling 404 */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>
   );

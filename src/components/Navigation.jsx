@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Calendar, PieChart, User, Sparkles, Settings, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, Settings, User, Target, Wallet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -11,10 +11,11 @@ const Navigation = () => {
 
     const navItems = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-        { name: 'Transactions', path: '/ledger', icon: BookOpen }, // Renamed from Ledger for reference match
+        { name: 'Ledger', path: '/ledger', icon: FileText },
         { name: 'Planner', path: '/planner', icon: Calendar },
+        { name: 'Goals', path: '/goals', icon: Target },
         { name: 'Insights', path: '/insights', icon: PieChart },
-        { name: 'AI Coach', path: '/coach', icon: Sparkles },
+        { name: 'Coach', path: '/coach', icon: MessageSquareText },
     ];
 
     const bottomItems = [
@@ -86,7 +87,7 @@ const Navigation = () => {
                     <Avatar className="h-9 w-9 border border-border">
                         <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name}`} />
                         <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
-                    </Avatar>
+                    </Avatar >
                     <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-medium truncate text-foreground">{user?.full_name || 'User'}</p>
                         <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
@@ -100,9 +101,9 @@ const Navigation = () => {
                     >
                         <LogOut className="h-4 w-4" />
                     </Button>
-                </div>
-            </div>
-        </nav>
+                </div >
+            </div >
+        </nav >
     );
 };
 
