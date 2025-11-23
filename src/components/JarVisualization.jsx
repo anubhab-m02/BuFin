@@ -3,7 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2 } from 'lucide-react';
+import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
 
@@ -11,7 +11,7 @@ const ICONS = {
     PiggyBank, Travel: Plane, Tech: Laptop, Home, Car, Education: GraduationCap, Health: Heart, Other: Star, Investment: TrendingUp
 };
 
-const JarVisualization = ({ goal }) => {
+const JarVisualization = ({ goal, onEdit }) => {
     const { updateSavingsGoal, deleteSavingsGoal } = useFinancial();
     const [amount, setAmount] = useState('');
     const [showMilestone, setShowMilestone] = useState(false);
@@ -58,14 +58,7 @@ const JarVisualization = ({ goal }) => {
             isCompleted ? "border-green-400 bg-green-50/30 dark:bg-green-900/10" :
                 "border-border/60 hover:border-primary/50 bg-card"
         )}>
-            {/* Celebration Overlay */}
-            {isCompleted && (
-                <div className="absolute top-0 right-0 p-2 animate-in zoom-in duration-500">
-                    <div className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 p-2 rounded-full shadow-sm">
-                        <Trophy className="h-5 w-5" />
-                    </div>
-                </div>
-            )}
+
 
             <CardContent className="p-0 h-full flex flex-col">
                 <div className="flex flex-1 p-5 gap-4">
@@ -98,14 +91,33 @@ const JarVisualization = ({ goal }) => {
                                         {goal.type === 'investment' ? 'Investment' : 'Savings Goal'}
                                     </p>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 -mt-1 -mr-2 text-muted-foreground hover:text-destructive"
-                                    onClick={() => deleteSavingsGoal(goal.id)}
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
+                                <div className="flex items-start gap-2 relative z-10">
+                                    {isCompleted && (
+                                        <div className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 p-1.5 rounded-full shadow-sm animate-in zoom-in">
+                                            <Trophy className="h-4 w-4" />
+                                        </div>
+                                    )}
+                                    <div className="flex gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                            onClick={onEdit}
+                                            title="Edit Goal"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => deleteSavingsGoal(goal.id)}
+                                            title="Delete Goal"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="mt-3 space-y-1">

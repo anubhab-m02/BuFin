@@ -18,25 +18,32 @@ const ICONS = [
     { name: 'Other', icon: Star },
 ];
 
-const JarCreationForm = ({ onSuccess }) => {
-    const { addSavingsGoal } = useFinancial();
+const JarCreationForm = ({ initialData, onSuccess }) => {
+    const { addSavingsGoal, editSavingsGoal } = useFinancial();
     const [formData, setFormData] = useState({
-        name: '',
-        targetAmount: '',
-        targetDate: '',
-        icon: 'PiggyBank',
+        name: initialData?.name || '',
+        targetAmount: initialData?.targetAmount || '',
+        targetDate: initialData?.targetDate || '',
+        icon: initialData?.icon || 'PiggyBank',
         fundingSource: 'manual',
-        type: 'savings',
-        projectedReturnRate: ''
+        type: initialData?.type || 'savings',
+        projectedReturnRate: initialData?.projectedReturnRate || ''
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        addSavingsGoal({
+        const goalData = {
             ...formData,
             targetAmount: parseFloat(formData.targetAmount),
             projectedReturnRate: formData.type === 'investment' ? parseFloat(formData.projectedReturnRate) : 0
-        });
+        };
+
+        if (initialData && initialData.id) {
+            editSavingsGoal(initialData.id, goalData);
+        } else {
+            addSavingsGoal(goalData);
+        }
+
         if (onSuccess) onSuccess();
     };
 
@@ -131,7 +138,7 @@ const JarCreationForm = ({ onSuccess }) => {
                 </div>
             </div>
 
-            <Button type="submit" className="w-full">Create Jar</Button>
+            <Button type="submit" className="w-full">{initialData ? 'Update Jar' : 'Create Jar'}</Button>
         </form>
     );
 };
