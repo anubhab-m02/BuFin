@@ -6,10 +6,10 @@ import { Calculator } from 'lucide-react';
 const SafeToSpendWidget = () => {
     const { balance, recurringPlans, debts, isPrivacyMode, togglePrivacyMode, transactions } = useFinancial();
 
-    // Calculate days remaining in month
+    // Calculate days remaining in month (inclusive of today)
     const today = new Date();
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const daysRemaining = Math.max(1, lastDay.getDate() - today.getDate());
+    const daysRemaining = Math.max(1, lastDay.getDate() - today.getDate() + 1);
 
     // Helper to check if a date is in the current month and in the future
     const isFutureThisMonth = (dateStr) => {
@@ -21,6 +21,7 @@ const SafeToSpendWidget = () => {
         return d.getDate() > now.getDate();
     };
 
+    // ... (Recurring logic unchanged) ...
     // 1. Recurring Fixed Costs (Predictive)
     const upcomingRecurringFixed = recurringPlans
         .filter(p => {
@@ -81,9 +82,16 @@ const SafeToSpendWidget = () => {
 
     const totalUpcomingIncome = upcomingRecurringIncome + upcomingOneOffIncome;
 
-    // Calculate debt obligations (payable)
+    // Calculate debt obligations (payable) due THIS MONTH or Past Due
     const debtPayable = debts
-        .filter(d => d.direction === 'payable' && d.status === 'active')
+        .filter(d => {
+            if (d.direction !== 'payable' || d.status !== 'active') return false;
+            if (!d.dueDate) return true; // Assume immediate if no date
+            const due = new Date(d.dueDate);
+            const now = new Date();
+            // Due in past or this month
+            return due <= lastDay;
+        })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
     // Predictive Safe Balance (Optimistic - includes future income)
