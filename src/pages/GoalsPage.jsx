@@ -15,10 +15,10 @@ const GoalsPage = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Goals & Savings</h1>
-                    <p className="text-muted-foreground">Manage your savings jars and impulse control.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary">Goals & Jars</h1>
+                    <p className="text-muted-foreground">Your path to guilt-free spending.</p>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)}>
+                <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90">
                     <Plus className="mr-2 h-4 w-4" />
                     New Jar
                 </Button>
@@ -26,14 +26,22 @@ const GoalsPage = () => {
 
             <div className="grid gap-6 md:grid-cols-12 h-[calc(100vh-12rem)]">
                 {/* Savings Jars Section */}
-                <div className="md:col-span-8 space-y-6 overflow-y-auto pr-2">
+                <div className="md:col-span-8 space-y-6 overflow-y-auto pr-2 pb-10">
                     {savingsGoals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-2xl bg-card/50">
-                            <p className="text-muted-foreground mb-4">No jars created yet.</p>
-                            <Button variant="outline" onClick={() => setIsCreateOpen(true)}>Create your first Jar</Button>
+                        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-primary/30 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10">
+                            <div className="p-4 bg-primary/10 rounded-full mb-4">
+                                <Plus className="h-8 w-8 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">Start Your First Savings Jar!</h3>
+                            <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
+                                AI Suggestion: Create an "Emergency Fund" jar to build financial security.
+                            </p>
+                            <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90">
+                                Create Emergency Fund Jar
+                            </Button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {savingsGoals.map(goal => (
                                 <JarVisualization key={goal.id} goal={goal} />
                             ))}
@@ -41,8 +49,8 @@ const GoalsPage = () => {
                     )}
                 </div>
 
-                {/* Sidebar: Impulse Control & Micro-Savings */}
-                <div className="md:col-span-4 space-y-6 h-full flex flex-col">
+                {/* Sidebar: Impulse Control */}
+                <div className="md:col-span-4 h-full">
                     <ImpulseControl />
                 </div>
             </div>

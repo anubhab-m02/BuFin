@@ -3,7 +3,8 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Hourglass, ShoppingBag, Trash2, CheckCircle } from 'lucide-react';
+import { Hourglass, ShoppingBag, Trash2, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 const ImpulseControl = () => {
     const { wishlist, addWishlistItem, deleteWishlistItem, addTransaction } = useFinancial();
@@ -30,7 +31,7 @@ const ImpulseControl = () => {
         deleteWishlistItem(item.id);
     };
 
-    // Helper to calculate time remaining
+    // Helper to calculate time remaining in HH:MM:SS format
     const getTimeRemaining = (addedAt) => {
         const now = new Date();
         const added = new Date(addedAt);
@@ -41,84 +42,128 @@ const ImpulseControl = () => {
 
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours}h ${minutes}m`;
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
 
-    // Force re-render every minute to update timers
+    // Force re-render every second to update timers
     const [, setTick] = useState(0);
     useEffect(() => {
-        const timer = setInterval(() => setTick(t => t + 1), 60000);
+        const timer = setInterval(() => setTick(t => t + 1), 1000); // Update every second
         return () => clearInterval(timer);
     }, []);
 
+    const handleRemoved = (item) => {
+        // Celebrate savings win
+        deleteWishlistItem(item.id);
+        // Could add a notification/toast here celebrating the save
+    };
+
     return (
-        <Card className="h-full border-none shadow-md bg-card">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
+        <Card className="h-full border-l-4 border-l-primary/20 shadow-sm bg-card rounded-xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
+                <CardTitle className="flex items-center gap-2 text-foreground text-base">
                     <Hourglass className="h-5 w-5 text-primary" />
-                    Impulse Control (48h Rule)
+                    Impulse Control
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">Wait 48 hours before buying to avoid regret.</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4">
                 <form onSubmit={handleAdd} className="flex gap-2">
                     <Input
                         placeholder="Item Name"
                         value={newItem}
                         onChange={(e) => setNewItem(e.target.value)}
-                        className="flex-grow"
+                        className="flex-grow h-9 bg-background"
                     />
                     <Input
                         type="number"
                         placeholder="Cost"
                         value={newCost}
                         onChange={(e) => setNewCost(e.target.value)}
-                        className="w-24"
+                        className="w-20 h-9 bg-background"
                     />
-                    <Button type="submit" size="icon" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Button type="submit" size="icon" className="h-9 w-9 bg-primary hover:bg-primary/90">
                         <ShoppingBag className="h-4 w-4" />
                     </Button>
                 </form>
 
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[calc(100vh-24rem)] overflow-y-auto pr-1">
                     {wishlist.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="p-3 bg-secondary/30 rounded-full w-fit mx-auto mb-3">
-                                <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                        <div className="text-center py-8 px-4 bg-secondary/20 rounded-xl border border-dashed border-border">
+                            <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-3">
+                                <BrainCircuit className="h-6 w-6 text-primary" />
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                Add items here to cool down before buying.
+                            <p className="text-sm font-medium text-foreground mb-1">
+                                Ready to test your control?
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                "Ask the Purchase Analyst if you can afford that new item, and defer it here!"
                             </p>
                         </div>
                     ) : (
                         wishlist.map(item => {
                             const timeRemaining = getTimeRemaining(item.addedAt);
+                            const isExpired = timeRemaining === null;
+
                             return (
-                                <div key={item.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl border border-border/50 hover:bg-secondary/50 transition-colors">
-                                    <div>
-                                        <p className="font-medium text-sm text-foreground">{item.name}</p>
-                                        <p className="text-xs text-muted-foreground">₹{item.cost.toFixed(2)}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {timeRemaining ? (
-                                            <span className="text-xs font-mono bg-secondary px-2 py-1 rounded text-muted-foreground">
-                                                Wait {timeRemaining}
-                                            </span>
-                                        ) : (
-                                            <Button
-                                                size="sm"
-                                                className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
-                                                onClick={() => handleBuy(item)}
-                                                title="Buy Now"
-                                            >
-                                                <CheckCircle className="h-3 w-3 mr-1" /> Buy
-                                            </Button>
-                                        )}
-                                        <button
-                                            onClick={() => deleteWishlistItem(item.id)}
-                                            className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                <div key={item.id} className="group relative bg-background rounded-xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden">
+                                    {/* Timer Bar */}
+                                    {!isExpired && (
+                                        <div className="absolute top-0 left-0 right-0 h-1 bg-secondary">
+                                            <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
+                                        </div>
+                                    )}
+
+                                    <div className="p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h4 className="font-semibold text-sm text-foreground">{item.name}</h4>
+                                                <p className="text-xs text-muted-foreground">₹{item.cost.toFixed(2)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                {isExpired ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                        Ready
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-mono text-lg font-bold text-primary tracking-tight">
+                                                        {timeRemaining}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            {isExpired ? (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        className="flex-1 h-8 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                                                        onClick={() => handleBuy(item)}
+                                                    >
+                                                        <CheckCircle className="h-3 w-3 mr-1" /> Transfer & Buy
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 h-8 text-xs hover:bg-secondary"
+                                                        onClick={() => handleRemoved(item)}
+                                                    >
+                                                        <XCircle className="h-3 w-3 mr-1" /> Don't Buy
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => deleteWishlistItem(item.id)}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-1" /> Remove
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );

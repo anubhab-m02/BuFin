@@ -53,16 +53,18 @@ export const FinancialProvider = ({ children }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [txs, plans, dbt, wish] = await Promise.all([
+        const [txs, plans, dbt, wish, goals] = await Promise.all([
           api.getTransactions(),
           api.getRecurringPlans(),
           api.getDebts(),
-          api.getWishlist()
+          api.getWishlist(),
+          api.getGoals()
         ]);
         setTransactions(txs);
         setRecurringPlans(plans);
         setDebts(dbt);
         setWishlist(wish);
+        setSavingsGoals(goals);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
       }
@@ -268,26 +270,36 @@ export const FinancialProvider = ({ children }) => {
   };
 
   // Savings Goals
-  const addSavingsGoal = (goal) => {
-    // MVP: Local state only for now, or mock API
-    const newGoal = {
-      ...goal,
-      id: Date.now().toString(),
-      currentAmount: 0,
-      targetDate: goal.targetDate || null,
-      icon: goal.icon || 'PiggyBank',
-      fundingSource: goal.fundingSource || 'manual'
-    };
-    setSavingsGoals(prev => [...prev, newGoal]);
+  const addSavingsGoal = async (goal) => {
+    try {
+      const newGoal = await api.createGoal(goal);
+      setSavingsGoals(prev => [...prev, newGoal]);
+    } catch (error) {
+      console.error("Failed to add savings goal:", error);
+    }
   };
 
-  const updateSavingsGoal = (id, amountToAdd) => {
-    setSavingsGoals(prev => prev.map(g => {
-      if (g.id === id) {
-        return { ...g, currentAmount: g.currentAmount + amountToAdd };
-      }
-      return g;
-    }));
+  const updateSavingsGoal = async (id, amountToAdd) => {
+    try {
+      const goal = savingsGoals.find(g => g.id === id);
+      if (!goal) return;
+
+      const updatedGoal = await api.updateGoal(id, {
+        currentAmount: goal.currentAmount + amountToAdd
+      });
+      setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
+    } catch (error) {
+      console.error("Failed to update savings goal:", error);
+    }
+  };
+
+  const deleteSavingsGoal = async (id) => {
+    try {
+      await api.deleteGoal(id);
+      setSavingsGoals(prev => prev.filter(g => g.id !== id));
+    } catch (error) {
+      console.error("Failed to delete savings goal:", error);
+    }
   };
 
   // Categories (Client-side only for now as per MVP)
@@ -372,6 +384,7 @@ export const FinancialProvider = ({ children }) => {
       savingsGoals,
       addSavingsGoal,
       updateSavingsGoal,
+      deleteSavingsGoal,
       ignoredMerchants,
       ignoreMerchant
     }}>
