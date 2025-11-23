@@ -7,7 +7,10 @@ import FutureTransactions from '../components/FutureTransactions';
 const PlannerPage = () => {
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight text-primary">Planner</h1>
+            <div className="pb-2">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">Planner</h1>
+                <p className="text-muted-foreground mt-1">Manage your recurring commitments and future expenses.</p>
+            </div>
 
             <div className="h-[calc(100vh-8rem)] grid gap-6 md:grid-cols-12">
                 {/* Main Timeline Area */}

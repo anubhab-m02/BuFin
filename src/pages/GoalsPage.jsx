@@ -24,9 +24,9 @@ const GoalsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-end pb-6 border-b border-border/40">
+            <div className="flex justify-between items-end pb-2">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Goals & Jars</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary">Goals & Jars</h1>
                     <p className="text-muted-foreground mt-1">Your path to guilt-free spending.</p>
                 </div>
                 <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 shadow-sm">

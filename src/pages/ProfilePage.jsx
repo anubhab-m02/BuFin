@@ -119,10 +119,10 @@ const ProfilePage = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-2">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-primary">Profile & Settings</h1>
-                    <p className="text-muted-foreground">Manage your account, AI persona, and preferences</p>
+                    <p className="text-muted-foreground mt-1">Manage your account, AI persona, and preferences.</p>
                 </div>
                 <Button variant="destructive" size="sm" onClick={logout} className="gap-2">
                     <LogOut className="h-4 w-4" />

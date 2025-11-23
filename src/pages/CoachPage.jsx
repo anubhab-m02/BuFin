@@ -94,9 +94,8 @@ const CoachPage = () => {
 
     return (
         <div className="h-full flex flex-col gap-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <Sparkles className="h-8 w-8 text-primary" />
+            <div className="pb-2">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">
                     Financial Coach
                 </h1>
                 <p className="text-muted-foreground mt-1">

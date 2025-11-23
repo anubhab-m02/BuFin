@@ -19,11 +19,9 @@ const DashboardPage = () => {
     return (
         <div className="space-y-4">
             {/* Greeting Header */}
-            <div className="flex items-center justify-between py-2">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Hi, {firstName}! 👋</h1>
-                    <p className="text-muted-foreground">Here's your financial overview for today.</p>
-                </div>
+            <div className="pb-2">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">Hi, {firstName}! 👋</h1>
+                <p className="text-muted-foreground mt-1">Here's your financial overview for today.</p>
             </div>
 
             {/* Bento Grid - Viewport Fit */}
