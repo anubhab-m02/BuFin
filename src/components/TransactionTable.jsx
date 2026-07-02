@@ -7,9 +7,10 @@ import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
 import { AddDebtForm } from './PlannerForms';
 import EmptyState from './EmptyState';
+import { Skeleton } from './ui/skeleton';
 
 const TransactionTable = () => {
-    const { transactions, deleteTransaction, isPrivacyMode, debts, categories } = useFinancial();
+    const { transactions, deleteTransaction, isPrivacyMode, debts, categories, isDataLoading } = useFinancial();
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [splitTransaction, setSplitTransaction] = useState(null);
     const [viewingTransaction, setViewingTransaction] = useState(null);
@@ -155,7 +156,17 @@ const TransactionTable = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {dataWithBalance.length === 0 ? (
+                                {isDataLoading ? (
+                                    [0, 1, 2, 3, 4].map((i) => (
+                                        <tr key={i} className="border-b last:border-0">
+                                            {Array.from({ length: 7 }).map((_, j) => (
+                                                <td key={j} className="px-4 py-3">
+                                                    <Skeleton className="h-4 w-full max-w-[100px]" />
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))
+                                ) : dataWithBalance.length === 0 ? (
                                     <tr>
                                         <td colSpan="7" className="p-4">
                                             <EmptyState

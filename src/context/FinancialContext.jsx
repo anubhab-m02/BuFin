@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { todayLocalStr } from '../lib/utils';
+import { useToast } from './ToastContext';
 
 const FinancialContext = createContext();
 
@@ -15,7 +16,9 @@ export const useFinancial = () => {
 
 export const FinancialProvider = ({ children }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   // State
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
   const [debts, setDebts] = useState([]);
@@ -54,6 +57,7 @@ export const FinancialProvider = ({ children }) => {
   // Initial Fetch
   useEffect(() => {
     const fetchData = async () => {
+      setIsDataLoading(true);
       try {
         const [txs, plans, dbt, wish, goals] = await Promise.all([
           api.getTransactions(),
@@ -69,10 +73,17 @@ export const FinancialProvider = ({ children }) => {
         setSavingsGoals(goals);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
+        toast({
+          title: 'Could not load your data',
+          description: 'Check that the backend is running and try refreshing.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsDataLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [toast]);
 
   // Actions
   const addTransaction = async (transaction) => {
@@ -406,6 +417,7 @@ export const FinancialProvider = ({ children }) => {
 
   return (
     <FinancialContext.Provider value={{
+      isDataLoading,
       transactions,
       addTransaction,
       updateTransaction,

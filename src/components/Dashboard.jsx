@@ -7,9 +7,28 @@ import { TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
 import JargonBuster from './JargonBuster';
 import { Button } from './ui/button';
 import EmptyState from './EmptyState';
+import { Skeleton } from './ui/skeleton';
 
 export const FinancialSummaryCard = () => {
-    const { balance, income, expense } = useFinancial();
+    const { balance, income, expense, isDataLoading } = useFinancial();
+
+    if (isDataLoading) {
+        return (
+            <Card className="h-full border-none shadow-lg rounded-2xl">
+                <CardContent className="h-full flex flex-col justify-between p-5">
+                    <div className="space-y-2">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-8 w-32" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <Card className="h-full border-none shadow-lg rounded-2xl hover:shadow-xl transition-shadow">
             <CardContent className="h-full flex flex-col justify-between p-5">
@@ -51,7 +70,7 @@ export const FinancialSummaryCard = () => {
 };
 
 export const ExpenseBreakdown = () => {
-    const { transactions } = useFinancial();
+    const { transactions, isDataLoading } = useFinancial();
     const chartData = transactions
         .filter(t => t.type === 'expense')
         .reduce((acc, curr) => {
@@ -72,7 +91,11 @@ export const ExpenseBreakdown = () => {
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expense Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 p-2">
-                {chartData.length > 0 ? (
+                {isDataLoading ? (
+                    <div className="h-full w-full flex items-center justify-center">
+                        <Skeleton className="h-32 w-32 rounded-full" />
+                    </div>
+                ) : chartData.length > 0 ? (
                     <div className="h-full w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -106,7 +129,7 @@ export const ExpenseBreakdown = () => {
 };
 
 export const RecentTransactions = () => {
-    const { transactions, deleteTransaction } = useFinancial();
+    const { transactions, deleteTransaction, isDataLoading } = useFinancial();
     const navigate = useNavigate();
 
     // Robust sort: Date descending, then ID descending (for same-day items)
@@ -138,7 +161,20 @@ export const RecentTransactions = () => {
             </CardHeader>
             <CardContent className="flex-1 p-0 overflow-hidden">
                 <div className="px-5 py-2 space-y-1">
-                    {sortedTransactions.slice(0, 3).map((t) => (
+                    {isDataLoading && (
+                        <div className="space-y-3 py-2">
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} className="flex items-center justify-between py-1">
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-16" />
+                                        <Skeleton className="h-3 w-28" />
+                                    </div>
+                                    <Skeleton className="h-4 w-12" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {!isDataLoading && sortedTransactions.slice(0, 3).map((t) => (
                         <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/40 last:border-0 group">
                             <div className="flex flex-col gap-1 overflow-hidden">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground w-fit uppercase tracking-wider">
@@ -161,7 +197,7 @@ export const RecentTransactions = () => {
                             </div>
                         </div>
                     ))}
-                    {transactions.length === 0 && (
+                    {!isDataLoading && transactions.length === 0 && (
                         <div className="py-12 flex flex-col items-center justify-center text-center px-4">
                             <div className="p-3 rounded-full bg-muted mb-3">
                                 <Wallet className="h-5 w-5 text-muted-foreground" />
