@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
 
@@ -18,6 +18,7 @@ export const FinancialProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
   const [debts, setDebts] = useState([]);
+  const repayingDebtIds = useRef(new Set());
 
   const [wishlist, setWishlist] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]); // { id, name, targetAmount, currentAmount }
@@ -213,6 +214,9 @@ export const FinancialProvider = ({ children }) => {
   const repayDebt = async (id) => {
     const debt = debts.find(d => d.id === id);
     if (!debt) return;
+    // Guard against double-clicks / network retries creating duplicate repayment transactions.
+    if (debt.status === 'repaid' || repayingDebtIds.current.has(id)) return;
+    repayingDebtIds.current.add(id);
 
     try {
       // 1. Mark as Repaid
@@ -245,6 +249,8 @@ export const FinancialProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to repay debt:", error);
+    } finally {
+      repayingDebtIds.current.delete(id);
     }
   };
 
