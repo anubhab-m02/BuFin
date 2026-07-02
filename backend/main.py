@@ -12,7 +12,7 @@ from routers import auth, goals, transactions, recurring, debts, ai, budgets
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="BuFin API", version="1.2.0")
+app = FastAPI(title="BuFin API", version="1.3.0")
 
 # CORS Middleware
 app.add_middleware(
