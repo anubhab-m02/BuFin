@@ -3,11 +3,78 @@ import { useNavigate } from 'react-router-dom';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Trash2, Wallet2 } from 'lucide-react';
 import JargonBuster from './JargonBuster';
 import { Button } from './ui/button';
 import EmptyState from './EmptyState';
 import { Skeleton } from './ui/skeleton';
+import { ThresholdProgress } from './ui/progress';
+
+export const BudgetSummaryCard = () => {
+    const { budgets, transactions, isDataLoading } = useFinancial();
+    const navigate = useNavigate();
+
+    const now = new Date();
+    const withSpend = budgets.map(b => {
+        const spent = transactions
+            .filter(t => {
+                if (t.type !== 'expense' || t.category !== b.category) return false;
+                const d = new Date(t.date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            })
+            .reduce((acc, t) => acc + t.amount, 0);
+        return { ...b, spent, pct: b.monthlyLimit > 0 ? (spent / b.monthlyLimit) * 100 : 0 };
+    });
+
+    const overBudget = withSpend.filter(b => b.pct >= 100).sort((a, b) => b.pct - a.pct);
+
+    if (isDataLoading) {
+        return (
+            <Card className="h-full shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Budgets</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="h-full shadow-sm cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => navigate('/budgets')}>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Wallet2 className="h-4 w-4 text-muted-foreground" />
+                    Budgets
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                {budgets.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No budgets set — tap to add category limits.</p>
+                ) : overBudget.length === 0 ? (
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">All {budgets.length} categories on track this month.</p>
+                ) : (
+                    <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                            {overBudget.length} of {budgets.length} categor{overBudget.length === 1 ? 'y' : 'ies'} over budget
+                        </p>
+                        {overBudget.slice(0, 2).map(b => (
+                            <div key={b.id} className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                    <span className="font-medium">{b.category}</span>
+                                    <span className="text-red-500">{Math.round(b.pct)}%</span>
+                                </div>
+                                <ThresholdProgress value={b.pct} className="h-2" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
 
 export const FinancialSummaryCard = () => {
     const { balance, income, expense, isDataLoading } = useFinancial();

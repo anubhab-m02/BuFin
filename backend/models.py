@@ -63,6 +63,14 @@ class Goal(Base):
     type = Column(String, default="savings") # 'savings' or 'investment'
     projectedReturnRate = Column(Float, default=0.0) # For investment goals
 
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    category = Column(String)
+    monthlyLimit = Column(Float)
+
 class User(Base):
     __tablename__ = "users"
 

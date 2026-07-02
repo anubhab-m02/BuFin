@@ -8,11 +8,11 @@ import models, schemas, auth_utils
 from database import SessionLocal, engine, get_db
 import uuid
 from datetime import timedelta
-from routers import auth, goals, transactions, recurring, debts, ai
+from routers import auth, goals, transactions, recurring, debts, ai, budgets
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="BuFin API", version="1.1.0")
+app = FastAPI(title="BuFin API", version="1.2.0")
 
 # CORS Middleware
 app.add_middleware(
@@ -29,6 +29,7 @@ app.include_router(transactions.router, prefix="/api", tags=["transactions"])
 app.include_router(recurring.router, prefix="/api", tags=["recurring"])
 app.include_router(debts.router, prefix="/api", tags=["debts"])
 app.include_router(ai.router, prefix="/api", tags=["ai"])
+app.include_router(budgets.router, prefix="/api", tags=["budgets"])
 
 from google.api_core.exceptions import ResourceExhausted
 
