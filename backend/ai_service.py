@@ -2,6 +2,7 @@ import google.generativeai as genai
 import os
 import json
 import re
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,30 @@ if not API_KEY:
     print("Warning: GEMINI_API_KEY not found in environment variables.")
 else:
     genai.configure(api_key=API_KEY)
+
+# Gemini 3 Flash is the current frontier "flash" tier as of this integration; 2.5 Flash is
+# kept as the fallback model name for the lightweight calls that also try a local model first.
+GEMINI_REASONING_MODEL = os.getenv("GEMINI_REASONING_MODEL", "gemini-3-flash")
+GEMINI_FALLBACK_MODEL = "gemini-2.5-flash"
+
+# Narrow, structured-extraction/templated tasks (transaction classification, tips, alerts) are
+# routed to a local Ollama model first - no frontier reasoning needed, and it's free/instant/private.
+# Falls back to Gemini automatically if Ollama isn't running or the local model's output doesn't parse.
+OLLAMA_ENABLED = os.getenv("OLLAMA_ENABLED", "true").lower() not in ("false", "0", "no")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4-mini")
+
+
+def _call_ollama(prompt: str, timeout: int = 20) -> str:
+    """Send a single-turn prompt to the local Ollama model. Raises on any failure
+    (connection refused, timeout, non-2xx) so callers can fall back to Gemini."""
+    response = requests.post(
+        f"{OLLAMA_HOST}/api/generate",
+        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json().get("response", "")
 
 DATA_ANALYST_PROMPT = """
 You are an advanced financial parser. I will give you a natural language command.
@@ -123,29 +148,36 @@ def _extract_json_array(text: str) -> str:
     return text[start:]
 
 
-async def classify_transaction(text: str):
-    if not API_KEY:
-        raise Exception("API Key missing")
+def _parse_action_array(text_response: str):
+    json_str = _extract_json_array(text_response)
+    data = json.loads(json_str)
+    if isinstance(data, dict):
+        data = [data]
+    return data
 
+
+async def classify_transaction(text: str):
     import datetime
     today_str = datetime.date.today().isoformat()
 
     # Inject today's date into prompt for relative date parsing
     formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    if OLLAMA_ENABLED:
+        try:
+            raw = _call_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:")
+            return _parse_action_array(raw)
+        except Exception as e:
+            print(f"Local model classification failed, falling back to Gemini: {e}")
+
+    if not API_KEY:
+        raise Exception("API Key missing")
+
+    model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
     response = model.generate_content([formatted_prompt, text])
 
     try:
-        text_response = response.text
-        json_str = _extract_json_array(text_response)
-        data = json.loads(json_str)
-
-        # Ensure it's a list
-        if isinstance(data, dict):
-            data = [data]
-
-        return data
+        return _parse_action_array(response.text)
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
         print(f"Raw response: {response.text}")
@@ -155,7 +187,9 @@ async def analyze_purchase(query: str, context: dict):
     if not API_KEY:
         raise Exception("API Key missing")
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # Affordability trade-off analysis benefits from real reasoning quality, worth the
+    # small price bump over the flash-lite tier used for pure classification tasks.
+    model = genai.GenerativeModel(GEMINI_REASONING_MODEL)
     
     context_str = json.dumps(context)
     prompt = f"""
@@ -180,11 +214,6 @@ async def analyze_purchase(query: str, context: dict):
     return response.text.strip()
 
 async def generate_spending_alert(transactions: list, balance: float, recurring_plans: list, today: str = None):
-    if not API_KEY:
-        return None
-
-    model = genai.GenerativeModel('gemini-2.5-flash')
-
     # Use the client's local calendar date if provided, so frontend and backend agree
     # on what "today" is instead of each computing it independently (can diverge near
     # midnight or across timezones between browser and server).
@@ -271,39 +300,60 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     "Spending is on track today, keep it up!"
     """
     
+    if OLLAMA_ENABLED:
+        try:
+            return _call_ollama(prompt).strip()
+        except Exception as e:
+            print(f"Local model alert generation failed, falling back to Gemini: {e}")
+
+    if not API_KEY:
+        return None
+
     try:
+        model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         print(f"Alert generation failed: {e}")
         return None
 
-async def generate_financial_tips(transactions: list, balance: float):
-    if not API_KEY:
-        raise Exception("API Key missing")
+DEFAULT_TIPS = ["Track your daily expenses to identify leaks.", "Try to save 20% of your income.", "Review your subscriptions monthly."]
 
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
+
+def _parse_tip_list(text: str):
+    json_str = text.replace('```json', '').replace('```', '').strip()
+    return json.loads(json_str)
+
+
+async def generate_financial_tips(transactions: list, balance: float):
     recent_transactions = transactions[:10]
     prompt = f"""
-    You are a financial coach. Based on the following recent transactions and balance (₹{balance}), 
+    You are a financial coach. Based on the following recent transactions and balance (₹{balance}),
     generate 3 short, actionable, and specific financial tips.
     Focus on "variable" spending if possible.
-    
+
     Transactions: {json.dumps(recent_transactions)}
-    
+
     Output strictly a JSON array of strings, e.g.:
     ["Tip 1...", "Tip 2...", "Tip 3..."]
     """
-    
+
+    if OLLAMA_ENABLED:
+        try:
+            return _parse_tip_list(_call_ollama(prompt))
+        except Exception as e:
+            print(f"Local model tips generation failed, falling back to Gemini: {e}")
+
+    if not API_KEY:
+        return DEFAULT_TIPS
+
     try:
+        model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
-        text = response.text
-        json_str = text.replace('```json', '').replace('```', '').strip()
-        return json.loads(json_str)
+        return _parse_tip_list(response.text)
     except Exception as e:
         print(f"Error generating tips: {e}")
-        return ["Track your daily expenses to identify leaks.", "Try to save 20% of your income.", "Review your subscriptions monthly."]
+        return DEFAULT_TIPS
 
 async def coach_chat(message: str, mode: str, context: dict):
     if not API_KEY:
@@ -391,9 +441,7 @@ async def coach_chat(message: str, mode: str, context: dict):
     """
 
     # Use REST API directly to support google_search tool reliably
-    import requests
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_REASONING_MODEL}:generateContent?key={API_KEY}"
     
     payload = {
         "contents": [{
