@@ -41,7 +41,7 @@ const SafeToSpendWidget = () => {
                 if (current > end) return false;
             }
 
-            return expectedDay > today.getDate();
+            return expectedDay >= today.getDate();
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -71,7 +71,7 @@ const SafeToSpendWidget = () => {
                 if (current > end) return false;
             }
 
-            return expectedDay > today.getDate();
+            return expectedDay >= today.getDate();
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
