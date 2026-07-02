@@ -28,3 +28,6 @@ backend/*.db
 # Vite
 dist-ssr
 *.local
+
+# Claude Code project notes (local only)
+CLAUDE.md
