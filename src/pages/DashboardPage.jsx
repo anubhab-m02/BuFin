@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FinancialSummaryCard, ExpenseBreakdown, RecentTransactions } from '../components/Dashboard';
+import { FinancialSummaryCard, ExpenseBreakdown, RecentTransactions, BudgetSummaryCard } from '../components/Dashboard';
 import NaturalLanguageInput from '../components/NaturalLanguageInput';
 import BudgetHealthBar from '../components/BudgetHealthBar';
 import PurchaseSimulator from '../components/PurchaseSimulator';
@@ -42,12 +42,15 @@ const DashboardPage = () => {
                     <SpendingMonitor />
                 </div>
 
-                {/* Row 3: Financial Summary (2) & Simulator (5) */}
+                {/* Row 3: Financial Summary (2), Budget Summary (2) & Simulator (3) */}
                 <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-7 gap-3">
                     <div className="md:col-span-2">
                         <FinancialSummaryCard />
                     </div>
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-2">
+                        <BudgetSummaryCard />
+                    </div>
+                    <div className="md:col-span-3">
                         <PurchaseSimulator />
                     </div>
                 </div>
