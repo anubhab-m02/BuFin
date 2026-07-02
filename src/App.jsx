@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage';
 import LedgerPage from './pages/LedgerPage';
 import PlannerPage from './pages/PlannerPage';
 import GoalsPage from './pages/GoalsPage';
+import BudgetsPage from './pages/BudgetsPage';
 import InsightsPage from './pages/InsightsPage';
 import ProfilePage from './pages/ProfilePage';
 import CoachPage from './pages/CoachPage';
@@ -84,6 +85,7 @@ function App() {
         <Route path="/ledger" element={<ProtectedRoute><AppLayout><LedgerPage /></AppLayout></ProtectedRoute>} />
         <Route path="/planner" element={<ProtectedRoute><AppLayout><PlannerPage /></AppLayout></ProtectedRoute>} />
         <Route path="/goals" element={<ProtectedRoute><AppLayout><GoalsPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/budgets" element={<ProtectedRoute><AppLayout><BudgetsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><AppLayout><InsightsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
         <Route path="/coach" element={<ProtectedRoute><AppLayout><CoachPage /></AppLayout></ProtectedRoute>} />

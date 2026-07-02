@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, Settings, User, Target, Wallet } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, Settings, User, Target, Wallet, Wallet2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -14,6 +14,7 @@ const Navigation = () => {
         { name: 'Ledger', path: '/ledger', icon: FileText },
         { name: 'Planner', path: '/planner', icon: Calendar },
         { name: 'Goals', path: '/goals', icon: Target },
+        { name: 'Budgets', path: '/budgets', icon: Wallet2 },
         { name: 'Insights', path: '/insights', icon: PieChart },
         { name: 'Coach', path: '/coach', icon: MessageSquareText },
     ];
