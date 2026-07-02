@@ -187,8 +187,10 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
             if expected_date_val == 'last':
                 expected_day = days_in_month
             elif expected_date_val == 'last-working':
-                # Simplified: just assume last day for safety in backend or 28th
-                expected_day = days_in_month
+                last_date = datetime.date(now.year, now.month, days_in_month)
+                while last_date.weekday() >= 5:  # Sat=5, Sun=6
+                    last_date -= datetime.timedelta(days=1)
+                expected_day = last_date.day
             else:
                 expected_day = int(expected_date_val)
             
@@ -200,7 +202,7 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
                 if current_occurrence > end_date:
                     continue
 
-            if expected_day > now.day:
+            if expected_day >= now.day:
                 total_recurring += p['amount']
         except Exception as e:
             print(f"Error processing recurring plan {p.get('name')}: {e}")
