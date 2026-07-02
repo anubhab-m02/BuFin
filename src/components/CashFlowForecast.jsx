@@ -3,6 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import { addDays, startOfWeek, endOfWeek, isSameDay, format } from 'date-fns';
+import { resolveExpectedDay } from '../lib/utils';
 
 const CashFlowForecast = () => {
     const { balance, recurringPlans, transactions, debts, isPrivacyMode } = useFinancial();
@@ -28,15 +29,7 @@ const CashFlowForecast = () => {
 
                 // 1. Recurring Plans
                 recurringPlans.forEach(plan => {
-                    let planDay = parseInt(plan.expectedDate);
-                    // Handle special dates
-                    if (plan.expectedDate === 'last') {
-                        planDay = new Date(year, month + 1, 0).getDate();
-                    } else if (plan.expectedDate === 'last-working') {
-                        let last = new Date(year, month + 1, 0);
-                        while (last.getDay() === 0 || last.getDay() === 6) last.setDate(last.getDate() - 1);
-                        planDay = last.getDate();
-                    }
+                    const planDay = resolveExpectedDay(plan.expectedDate, year, month);
 
                     // Check End Date
                     if (plan.endDate && currentDay > new Date(plan.endDate)) return;

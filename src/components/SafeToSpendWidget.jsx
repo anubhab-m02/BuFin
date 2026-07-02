@@ -2,6 +2,7 @@ import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Calculator } from 'lucide-react';
+import { resolveExpectedDay } from '../lib/utils';
 
 const SafeToSpendWidget = () => {
     const { balance, recurringPlans, debts, isPrivacyMode, togglePrivacyMode, transactions } = useFinancial();
@@ -27,13 +28,7 @@ const SafeToSpendWidget = () => {
         .filter(p => {
             if (p.type !== 'expense') return false;
 
-            let expectedDay = parseInt(p.expectedDate);
-            if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
-            else if (p.expectedDate === 'last-working') {
-                let d = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-                expectedDay = d.getDate();
-            }
+            let expectedDay = resolveExpectedDay(p.expectedDate, today.getFullYear(), today.getMonth());
 
             if (p.endDate) {
                 const end = new Date(p.endDate);
@@ -57,13 +52,7 @@ const SafeToSpendWidget = () => {
         .filter(p => {
             if (p.type !== 'income') return false;
 
-            let expectedDay = parseInt(p.expectedDate);
-            if (p.expectedDate === 'last') expectedDay = lastDay.getDate();
-            else if (p.expectedDate === 'last-working') {
-                let d = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-                expectedDay = d.getDate();
-            }
+            let expectedDay = resolveExpectedDay(p.expectedDate, today.getFullYear(), today.getMonth());
 
             if (p.endDate) {
                 const end = new Date(p.endDate);

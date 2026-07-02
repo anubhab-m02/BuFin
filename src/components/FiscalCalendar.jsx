@@ -3,7 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, resolveExpectedDay } from '../lib/utils';
 import Dialog from './ui/dialog';
 
 const FiscalCalendar = () => {
@@ -29,19 +29,7 @@ const FiscalCalendar = () => {
 
         // Recurring Plans
         recurringPlans.forEach(plan => {
-            let planDay = parseInt(plan.expectedDate);
-
-            // Handle "last day of month" logic
-            if (plan.expectedDate === 'last') {
-                planDay = daysInMonth;
-            } else if (plan.expectedDate === 'last-working') {
-                // Calculate last working day (Mon-Fri)
-                let d = new Date(year, month, daysInMonth);
-                while (d.getDay() === 0 || d.getDay() === 6) { // 0=Sun, 6=Sat
-                    d.setDate(d.getDate() - 1);
-                }
-                planDay = d.getDate();
-            }
+            const planDay = resolveExpectedDay(plan.expectedDate, year, month);
 
             // Check End Date
             if (plan.endDate) {
