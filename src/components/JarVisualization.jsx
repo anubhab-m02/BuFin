@@ -54,8 +54,8 @@ const JarVisualization = ({ goal, onEdit }) => {
 
     return (
         <Card className={cn(
-            "relative overflow-hidden transition-all duration-500 hover:shadow-xl border-2",
-            isCompleted ? "border-green-400 bg-green-50/30 dark:bg-green-900/10" :
+            "relative overflow-hidden transition-colors duration-normal hover:shadow-xl border-2",
+            isCompleted ? "border-success bg-success/10" :
                 "border-border/60 hover:border-primary/50 bg-card"
         )}>
 
@@ -63,11 +63,11 @@ const JarVisualization = ({ goal, onEdit }) => {
             <CardContent className="p-0 h-full flex flex-col">
                 <div className="flex flex-1 p-5 gap-4">
                     {/* Vertical Liquid Progress */}
-                    <div className="relative w-16 bg-secondary/50 rounded-2xl overflow-hidden flex-shrink-0 border border-border/50">
+                    <div className="relative w-16 bg-secondary/50 rounded-lg overflow-hidden flex-shrink-0 border border-border/50">
                         <div
                             className={cn(
-                                "absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out",
-                                isCompleted ? "bg-green-500" : "bg-primary"
+                                "absolute bottom-0 left-0 right-0 transition-all duration-slow ease-out",
+                                isCompleted ? "bg-success" : "bg-primary"
                             )}
                             style={{ height: `${progress}%` }}
                         />
@@ -93,7 +93,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                 </div>
                                 <div className="flex items-start gap-2 relative z-10">
                                     {isCompleted && (
-                                        <div className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 p-1.5 rounded-full shadow-sm animate-in zoom-in">
+                                        <div className="bg-success/15 text-success p-1.5 rounded-full shadow-sm animate-in zoom-in">
                                             <Trophy className="h-4 w-4" />
                                         </div>
                                     )}
@@ -121,13 +121,13 @@ const JarVisualization = ({ goal, onEdit }) => {
                             </div>
 
                             <div className="mt-3 space-y-1">
-                                <div className="flex items-baseline gap-1">
+                                <div className="flex items-baseline gap-1 tabular-nums">
                                     <span className="text-2xl font-bold">₹{goal.currentAmount.toLocaleString()}</span>
                                     <span className="text-xs text-muted-foreground">/ ₹{goal.targetAmount.toLocaleString()}</span>
                                 </div>
 
                                 {isCompleted ? (
-                                    <p className="text-sm font-medium text-green-600 flex items-center gap-1">
+                                    <p className="text-sm font-medium text-success flex items-center gap-1">
                                         Goal Reached! 🎉
                                     </p>
                                 ) : (
@@ -146,7 +146,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                 )}
 
                                 {goal.type === 'investment' && projectedValue && (
-                                    <p className="text-xs text-emerald-600 mt-1 font-medium">
+                                    <p className="text-xs text-success mt-1 font-medium tabular-nums">
                                         Est. Value: ₹{projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     </p>
                                 )}

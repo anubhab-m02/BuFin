@@ -9,6 +9,7 @@ import { MessageSquare, Send, Sparkles, TrendingUp, GraduationCap, ShoppingBag, 
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import PageHeader from '../components/PageHeader';
 
 const MODES = [
     {
@@ -94,14 +95,7 @@ const CoachPage = () => {
 
     return (
         <div className="h-full flex flex-col gap-6">
-            <div className="pb-2">
-                <h1 className="text-3xl font-bold tracking-tight text-primary">
-                    Financial Coach
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Your personal AI expert for every financial decision.
-                </p>
-            </div>
+            <PageHeader title="Financial Coach" subtitle="Your personal AI expert for every financial decision." />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {MODES.map(mode => (

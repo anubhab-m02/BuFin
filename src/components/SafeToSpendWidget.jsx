@@ -99,7 +99,7 @@ const SafeToSpendWidget = () => {
     };
 
     return (
-        <Card className="bg-card border-border shadow-sm h-full">
+        <Card variant="elevated" className="bg-card border-border h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Calculator className="h-4 w-4" />
@@ -107,7 +107,7 @@ const SafeToSpendWidget = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-4xl font-bold text-primary">
+                <div className="text-4xl font-bold text-primary tabular-nums">
                     {formatCurrency(dailySafeSpend)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -117,11 +117,11 @@ const SafeToSpendWidget = () => {
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <p className="text-muted-foreground">Projected End-Month</p>
-                        <p className="font-semibold text-foreground">{formatCurrency(projectedEndMonth)}</p>
+                        <p className="font-semibold text-foreground tabular-nums">{formatCurrency(projectedEndMonth)}</p>
                     </div>
                     <div>
                         <p className="text-muted-foreground">Upcoming Bills</p>
-                        <p className="font-semibold text-red-500">-{formatCurrency(totalUpcomingExpenses)}</p>
+                        <p className="font-semibold text-destructive tabular-nums">-{formatCurrency(totalUpcomingExpenses)}</p>
                     </div>
                 </div>
             </CardContent>

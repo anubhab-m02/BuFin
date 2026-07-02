@@ -3,14 +3,12 @@ import CommitmentsHub from '../components/CommitmentsHub';
 import FiscalCalendar from '../components/FiscalCalendar';
 import CashFlowForecast from '../components/CashFlowForecast';
 import FutureTransactions from '../components/FutureTransactions';
+import PageHeader from '../components/PageHeader';
 
 const PlannerPage = () => {
     return (
         <div className="space-y-6">
-            <div className="pb-2">
-                <h1 className="text-3xl font-bold tracking-tight text-primary">Planner</h1>
-                <p className="text-muted-foreground mt-1">Manage your recurring commitments and future expenses.</p>
-            </div>
+            <PageHeader title="Planner" subtitle="Manage your recurring commitments and future expenses." />
 
             <div className="h-[calc(100vh-8rem)] grid gap-6 md:grid-cols-12">
                 {/* Main Timeline Area */}

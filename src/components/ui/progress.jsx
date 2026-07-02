@@ -11,7 +11,7 @@ const Progress = React.forwardRef(({ className, value, ...props }, ref) => (
         {...props}
     >
         <div
-            className="h-full w-full flex-1 bg-primary transition-all"
+            className="h-full w-full flex-1 bg-primary transition-transform duration-slow"
             style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
         />
     </div>
@@ -22,7 +22,7 @@ Progress.displayName = "Progress";
 // (0-100, uncapped) approaches/exceeds 100. Used for budget-vs-actual and similar limit bars.
 const ThresholdProgress = React.forwardRef(({ className, value = 0, ...props }, ref) => {
     const pct = Math.max(0, value);
-    const colorClass = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+    const colorClass = pct >= 100 ? 'bg-destructive' : pct >= 80 ? 'bg-warning' : 'bg-success';
     return (
         <div
             ref={ref}
@@ -33,7 +33,7 @@ const ThresholdProgress = React.forwardRef(({ className, value = 0, ...props }, 
             {...props}
         >
             <div
-                className={cn("h-full flex-1 transition-all", colorClass)}
+                className={cn("h-full flex-1 transition-[width,background-color] duration-slow", colorClass)}
                 style={{ width: `${Math.min(100, pct)}%` }}
             />
         </div>

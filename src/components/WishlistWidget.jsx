@@ -101,7 +101,7 @@ const WishlistWidget = () => {
                                         ) : (
                                             <Button
                                                 size="sm"
-                                                className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
+                                                className="h-7 px-2 bg-success hover:bg-success/90 text-success-foreground"
                                                 onClick={() => handleBuy(item)}
                                                 title="Buy Now"
                                             >

@@ -36,7 +36,7 @@ const DebtTracker = ({ compact }) => {
                 activeDebts.map(debt => (
                     <div key={debt.id} className="flex items-center justify-between border-b pb-2 last:border-0 group">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${debt.direction === 'receivable' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            <div className={`p-2 rounded-full ${debt.direction === 'receivable' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                                 {debt.direction === 'receivable' ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                             </div>
                             <div>
@@ -45,7 +45,7 @@ const DebtTracker = ({ compact }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`font-bold whitespace-nowrap ${debt.direction === 'receivable' ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`font-bold whitespace-nowrap tabular-nums ${debt.direction === 'receivable' ? 'text-success' : 'text-destructive'}`}>
                                 {formatCurrency(debt.amount)}
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -53,7 +53,7 @@ const DebtTracker = ({ compact }) => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className={`h-7 w-7 ${debt.direction === 'receivable' ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                                        className={`h-7 w-7 ${debt.direction === 'receivable' ? 'text-success hover:bg-success/10' : 'text-destructive hover:bg-destructive/10'}`}
                                         title={debt.direction === 'receivable' ? "Mark as Received" : "Mark as Repaid"}
                                         onClick={() => repayDebt(debt.id)}
                                     >
@@ -71,7 +71,7 @@ const DebtTracker = ({ compact }) => {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => deleteDebt(debt.id)}
                                 >
                                     <Trash2 className="h-4 w-4" />

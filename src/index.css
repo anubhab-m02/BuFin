@@ -5,6 +5,12 @@
     --color-background: var(--background);
     --color-foreground: var(--foreground);
 
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
 
@@ -30,6 +36,13 @@
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
 
+    /* Chart Palette - referenced by src/lib/chartTheme.js, adapts per light/dark below */
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
     /* Radius */
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -44,6 +57,14 @@
     --background: #ffffff;
     --foreground: #09090b;
     /* Zinc 950 */
+
+    /* Card surface - was previously undefined (bg-card/text-card-foreground resolved to nothing) */
+    --card: #ffffff;
+    --card-foreground: #09090b;
+
+    /* Popover/tooltip surface - was also previously undefined */
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
 
     /* Primary Blue - Strong, Trustworthy */
     --primary: #2563eb;
@@ -93,12 +114,39 @@
 
     --radius: 0.5rem;
     /* 8px - Cleaner, sharper look */
+
+    /* Chart Palette - categorical, distinct from primary so charts don't blend into UI chrome */
+    --chart-1: #2563eb;
+    /* Blue 600 */
+    --chart-2: #10b981;
+    /* Emerald 500 */
+    --chart-3: #f59e0b;
+    /* Amber 500 */
+    --chart-4: #8b5cf6;
+    /* Violet 500 */
+    --chart-5: #ec4899;
+    /* Pink 500 */
+
+    /* Motion scale - use via transition-[var(--motion-*)] or the .duration-fast/-normal/-slow utilities below */
+    --motion-fast: 150ms;
+    --motion-normal: 300ms;
+    --motion-slow: 500ms;
 }
 
 /* Dark Mode Support (Class-based for manual toggle) */
 .dark {
     --background: #09090b;
     /* Zinc 950 */
+
+    /* Card surface - slightly lighter than the page background for subtle elevation */
+    --card: #18181b;
+    /* Zinc 900 */
+    --card-foreground: #fafafa;
+
+    --popover: #18181b;
+    /* Zinc 900 */
+    --popover-foreground: #fafafa;
+
     --foreground: #fafafa;
     /* Zinc 50 */
 
@@ -121,15 +169,22 @@
     --accent-foreground: #fafafa;
     /* Zinc 50 */
 
-    --destructive: #7f1d1d;
-    /* Red 900 */
-    --destructive-foreground: #fef2f2;
-    /* Red 50 */
+    /* Previously Red/Emerald 900 - nearly invisible against a near-black background.
+       400-level shades stay vivid enough to read as "danger"/"success" in dark mode. */
+    --destructive: #f87171;
+    /* Red 400 */
+    --destructive-foreground: #450a0a;
+    /* Red 950, for text placed directly on the destructive color */
 
-    --success: #064e3b;
-    /* Emerald 900 */
-    --success-foreground: #ecfdf5;
-    /* Emerald 50 */
+    --success: #34d399;
+    /* Emerald 400 */
+    --success-foreground: #022c22;
+    /* Emerald 950 */
+
+    --warning: #fbbf24;
+    /* Amber 400 */
+    --warning-foreground: #451a03;
+    /* Amber 950 */
 
     --border: #27272a;
     /* Zinc 800 */
@@ -137,6 +192,18 @@
     /* Zinc 800 */
     --ring: #3b82f6;
     /* Blue 500 */
+
+    /* Chart Palette - lighter shades for visibility against the dark background */
+    --chart-1: #60a5fa;
+    /* Blue 400 */
+    --chart-2: #34d399;
+    /* Emerald 400 */
+    --chart-3: #fbbf24;
+    /* Amber 400 */
+    --chart-4: #a78bfa;
+    /* Violet 400 */
+    --chart-5: #f472b6;
+    /* Pink 400 */
 }
 
 /* Global Resets & Typography */
@@ -149,4 +216,17 @@ body {
 /* Utility for consistent "Box" styling */
 .card-base {
     @apply bg-background border-none shadow-lg rounded-2xl;
+}
+
+/* Motion scale - pair with a transition-* utility, e.g. `transition-colors duration-fast` */
+.duration-fast {
+    transition-duration: var(--motion-fast);
+}
+
+.duration-normal {
+    transition-duration: var(--motion-normal);
+}
+
+.duration-slow {
+    transition-duration: var(--motion-slow);
 }

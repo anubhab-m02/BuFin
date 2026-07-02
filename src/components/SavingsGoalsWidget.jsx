@@ -45,7 +45,7 @@ const SavingsGoalsWidget = () => {
                                 </div>
                                 <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-green-500 transition-all duration-500"
+                                        className="h-full bg-success transition-all duration-slow"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>

@@ -15,9 +15,9 @@ const SegmentedControl = ({ options, value, onChange, className }) => {
                         type="button"
                         onClick={() => onChange(option.value)}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                            "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-normal",
                             isActive
-                                ? "bg-background text-foreground shadow-sm ring-1 ring-black/5"
+                                ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                         )}
                     >

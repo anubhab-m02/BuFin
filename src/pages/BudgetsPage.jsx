@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ThresholdProgress } from '../components/ui/progress';
 import { Trash2, Plus, Wallet2 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
+import { cn } from '../lib/utils';
+import PageHeader from '../components/PageHeader';
 
 const BudgetsPage = () => {
     const { budgets, addBudget, updateBudget, deleteBudget, transactions, categories, isPrivacyMode } = useFinancial();
@@ -56,10 +58,7 @@ const BudgetsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="pb-2">
-                <h1 className="text-3xl font-bold tracking-tight text-primary">Budgets</h1>
-                <p className="text-muted-foreground mt-1">Set a monthly limit per category and track actual spend against it.</p>
-            </div>
+            <PageHeader title="Budgets" subtitle="Set a monthly limit per category and track actual spend against it." />
 
             <Card>
                 <CardHeader>
@@ -138,7 +137,7 @@ const BudgetsPage = () => {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
                                                 onClick={() => deleteBudget(budget.id)}
                                                 title="Delete budget"
                                             >
@@ -150,7 +149,7 @@ const BudgetsPage = () => {
                                     <ThresholdProgress value={pct} />
 
                                     <div className="flex items-center justify-between text-xs">
-                                        <span className={pct >= 100 ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
+                                        <span className={cn('tabular-nums', pct >= 100 ? 'text-destructive font-medium' : 'text-muted-foreground')}>
                                             {formatCurrency(spent)} spent this month
                                         </span>
                                         <span className="text-muted-foreground">{Math.round(pct)}%</span>

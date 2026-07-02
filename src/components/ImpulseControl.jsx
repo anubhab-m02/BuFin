@@ -123,7 +123,7 @@ const ImpulseControl = () => {
                                             </div>
                                             <div className="text-right">
                                                 {isExpired ? (
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                                                         Ready
                                                     </span>
                                                 ) : (
@@ -157,7 +157,7 @@ const ImpulseControl = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="w-full h-8 text-xs text-muted-foreground hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                                    className="w-full h-8 text-xs text-muted-foreground hover:text-success hover:bg-success/10"
                                                     onClick={() => handleRemoved(item)}
                                                 >
                                                     <XCircle className="h-3 w-3 mr-1" /> Don't Buy (Savings Win)

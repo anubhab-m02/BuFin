@@ -53,7 +53,7 @@ const FutureTransactions = () => {
                     {futureTransactions.map(t => (
                         <div key={t.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl hover:bg-secondary/50 transition-colors group">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${t.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                <div className={`p-2 rounded-full ${t.type === 'income' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                                     {t.type === 'income' ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                                 </div>
                                 <div>
@@ -62,7 +62,7 @@ const FutureTransactions = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className={`font-semibold text-sm ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                <div className={`font-semibold text-sm tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                                     {t.type === 'income' ? '+' : '-'}₹{t.amount.toLocaleString()}
                                 </div>
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -78,7 +78,7 @@ const FutureTransactions = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
                                         onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
                                         title="Delete"
                                     >

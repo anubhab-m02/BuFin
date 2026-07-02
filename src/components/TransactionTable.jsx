@@ -124,7 +124,7 @@ const TransactionTable = () => {
                     <CardTitle>Transaction History</CardTitle>
                     <div className="flex gap-2">
                         <select
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                            className="h-9 rounded-lg border border-input bg-background px-3 text-sm transition-colors duration-fast"
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
                         >
@@ -194,7 +194,7 @@ const TransactionTable = () => {
                                             <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate" title={t.description}>
                                                 {t.description || '-'}
                                             </td>
-                                            <td className={`px-4 py-3 text-right font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                            <td className={`px-4 py-3 text-right font-bold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                                                 {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                                             </td>
                                             <td className="px-4 py-3 text-right text-muted-foreground font-mono text-xs">
@@ -225,7 +225,7 @@ const TransactionTable = () => {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                                                 onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
                                                                 title="Delete"
                                                             >
@@ -256,7 +256,7 @@ const TransactionTable = () => {
                                 <h3 className="text-lg font-bold">{viewingTransaction.description || 'No Title'}</h3>
                                 <p className="text-sm text-muted-foreground">{formatDate(viewingTransaction.date)}</p>
                             </div>
-                            <div className={`text-xl font-bold ${viewingTransaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`text-xl font-bold tabular-nums ${viewingTransaction.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                                 {viewingTransaction.type === 'income' ? '+' : '-'}{formatCurrency(viewingTransaction.amount)}
                             </div>
                         </div>

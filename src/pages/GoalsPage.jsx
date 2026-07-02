@@ -6,6 +6,7 @@ import Dialog from '../components/ui/dialog';
 import JarVisualization from '../components/JarVisualization';
 import JarCreationForm from '../components/JarCreationForm';
 import ImpulseControl from '../components/ImpulseControl';
+import PageHeader from '../components/PageHeader';
 
 const GoalsPage = () => {
     const { savingsGoals } = useFinancial();
@@ -24,16 +25,16 @@ const GoalsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-end pb-2">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Goals & Jars</h1>
-                    <p className="text-muted-foreground mt-1">Your path to guilt-free spending.</p>
-                </div>
-                <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 shadow-sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Jar
-                </Button>
-            </div>
+            <PageHeader
+                title="Goals & Jars"
+                subtitle="Your path to guilt-free spending."
+                action={
+                    <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 shadow-sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Jar
+                    </Button>
+                }
+            />
 
             <div className="grid gap-6 md:grid-cols-12 h-[calc(100vh-12rem)]">
                 {/* Savings Jars Section */}

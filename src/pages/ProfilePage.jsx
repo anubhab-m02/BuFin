@@ -11,6 +11,7 @@ import { Select } from '../components/ui/select';
 import { User, Shield, Calendar, LogOut, Edit2, Download, Wallet, Target, Brain, AlertTriangle, Moon, Sun, Laptop, Lock, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import Achievements from '../components/Achievements';
+import PageHeader from '../components/PageHeader';
 
 const ProfilePage = () => {
     const { isPrivacyMode, togglePrivacyMode } = useFinancial();
@@ -119,16 +120,16 @@ const ProfilePage = () => {
 
     return (
         <div className="space-y-6 pb-20">
-            <div className="flex items-center justify-between pb-2">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Profile & Settings</h1>
-                    <p className="text-muted-foreground mt-1">Manage your account, AI persona, and preferences.</p>
-                </div>
-                <Button variant="destructive" size="sm" onClick={logout} className="gap-2">
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                </Button>
-            </div>
+            <PageHeader
+                title="Profile & Settings"
+                subtitle="Manage your account, AI persona, and preferences."
+                action={
+                    <Button variant="destructive" size="sm" onClick={logout} className="gap-2">
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                    </Button>
+                }
+            />
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Identity Card */}
