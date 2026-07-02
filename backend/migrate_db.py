@@ -9,5 +9,11 @@ try:
 except Exception as e:
     print(f"Error (might already exist): {e}")
 
+try:
+    cursor.execute("ALTER TABLE transactions ADD COLUMN linked_debt_id VARCHAR")
+    print("Successfully added linked_debt_id column.")
+except Exception as e:
+    print(f"Error (might already exist): {e}")
+
 conn.commit()
 conn.close()

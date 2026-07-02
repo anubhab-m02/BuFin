@@ -15,6 +15,7 @@ class Transaction(Base):
     type = Column(String) # 'income' or 'expense'
     necessity = Column(String) # 'fixed' or 'variable'
     remarks = Column(String, nullable=True)
+    linked_debt_id = Column(String, ForeignKey("debts.id"), nullable=True) # set for auto-created debt repayment transactions
 
 class RecurringPlan(Base):
     __tablename__ = "recurring_plans"

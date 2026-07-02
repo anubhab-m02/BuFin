@@ -110,6 +110,16 @@ export const FinancialProvider = ({ children }) => {
 
   const deleteTransaction = async (id) => {
     try {
+      // If this transaction was auto-created by repaying a debt, revert the debt
+      // to 'active' so it doesn't stay silently marked repaid with no matching transaction.
+      const tx = transactions.find(t => t.id === id);
+      if (tx?.linked_debt_id) {
+        const linkedDebt = debts.find(d => d.id === tx.linked_debt_id);
+        if (linkedDebt && linkedDebt.status === 'repaid') {
+          await updateDebt(linkedDebt.id, { ...linkedDebt, status: 'active' });
+        }
+      }
+
       await api.deleteTransaction(id);
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (error) {
@@ -233,7 +243,8 @@ export const FinancialProvider = ({ children }) => {
           description: `Repaid ${debt.personName}`,
           type: 'expense',
           date: new Date().toISOString(),
-          necessity: 'essential'
+          necessity: 'essential',
+          linked_debt_id: debt.id
         });
       } else if (debt.direction === 'receivable') {
         // They Repay Me -> Income
@@ -244,7 +255,8 @@ export const FinancialProvider = ({ children }) => {
           description: `Repayment from ${debt.personName}`,
           type: 'income',
           date: new Date().toISOString(),
-          necessity: 'variable'
+          necessity: 'variable',
+          linked_debt_id: debt.id
         });
       }
     } catch (error) {

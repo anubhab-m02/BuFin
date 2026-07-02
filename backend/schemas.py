@@ -56,6 +56,7 @@ class TransactionBase(BaseModel):
     necessity: str = 'variable'
     date: str
     remarks: Optional[str] = None
+    linked_debt_id: Optional[str] = None
 
 class TransactionCreate(TransactionBase):
     id: Optional[str] = None
