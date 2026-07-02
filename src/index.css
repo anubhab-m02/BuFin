@@ -43,6 +43,9 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    --color-surface-hero: var(--surface-hero);
+    --color-surface-hero-foreground: var(--surface-hero-foreground);
+
     /* Radius */
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -131,6 +134,11 @@
     --motion-fast: 150ms;
     --motion-normal: 300ms;
     --motion-slow: 500ms;
+
+    /* Hero surface - the Dashboard's safe-to-spend gauge zone. A subtle primary-tinted
+       wash so it reads as "the important number" without needing a heavier shadow. */
+    --surface-hero: #eff4ff;
+    --surface-hero-foreground: var(--foreground);
 }
 
 /* Dark Mode Support (Class-based for manual toggle) */
@@ -204,6 +212,11 @@
     /* Violet 400 */
     --chart-5: #f472b6;
     /* Pink 400 */
+
+    /* Hero surface - dark mode drops hairline borders in favor of elevation, so this needs
+       to read clearly against --card (#18181b) via a blue-tinted radial wash instead. */
+    --surface-hero: #16192b;
+    --surface-hero-foreground: var(--foreground);
 }
 
 /* Global Resets & Typography */
@@ -229,4 +242,21 @@ body {
 
 .duration-slow {
     transition-duration: var(--motion-slow);
+}
+
+/* Dashboard hero zone - the safe-to-spend gauge card. Radial wash keeps it feeling like
+   "the important number" rather than just another card in the grid. */
+.bg-surface-hero {
+    background-color: var(--surface-hero);
+    background-image: radial-gradient(ellipse at top left, color-mix(in srgb, var(--primary) 12%, transparent), transparent 60%);
+    color: var(--surface-hero-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
