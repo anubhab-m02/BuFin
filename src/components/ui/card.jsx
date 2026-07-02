@@ -1,10 +1,22 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
+// `variant="elevated"` is for the single hero card per page (e.g. Safe-to-Spend on the
+// Dashboard) - everything else should stay `default` so the elevated card actually reads
+// as more important instead of every card competing for the same visual weight.
+const cardVariants = {
+    default: "shadow-sm",
+    elevated: "shadow-md",
+}
+
+const Card = React.forwardRef(({ className, variant = "default", ...props }, ref) => (
     <div
         ref={ref}
-        className={cn("rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:bg-primary/5", className)}
+        className={cn(
+            "rounded-lg border border-border bg-card text-card-foreground transition-colors duration-normal hover:bg-primary/5",
+            cardVariants[variant],
+            className
+        )}
         {...props}
     />
 ))
