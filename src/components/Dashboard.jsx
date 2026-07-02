@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import EmptyState from './EmptyState';
 import { Skeleton } from './ui/skeleton';
 import { ThresholdProgress } from './ui/progress';
+import { CHART_COLORS, chartTooltipStyle } from '../lib/chartTheme';
 
 export const BudgetSummaryCard = () => {
     const { budgets, transactions, isDataLoading } = useFinancial();
@@ -150,8 +151,6 @@ export const ExpenseBreakdown = () => {
             return acc;
         }, []);
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
     return (
         <Card className="h-full flex flex-col shadow-sm">
             <CardHeader className="pb-2 pt-4 px-5">
@@ -172,16 +171,15 @@ export const ExpenseBreakdown = () => {
                                     cy="50%"
                                     innerRadius={50}
                                     outerRadius={70}
-                                    fill="#8884d8"
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
                                     {chartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
-                                <Legend verticalAlign="middle" align="right" layout="vertical" iconSize={8} wrapperStyle={{ fontSize: '10px' }} />
+                                <Tooltip contentStyle={chartTooltipStyle} />
+                                <Legend verticalAlign="middle" align="right" layout="vertical" iconSize={8} wrapperStyle={{ fontSize: '10px', color: 'var(--foreground)' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
