@@ -82,7 +82,7 @@ export const FinancialSummaryCard = () => {
 
     if (isDataLoading) {
         return (
-            <Card className="h-full border-none shadow-lg rounded-2xl">
+            <Card className="h-full">
                 <CardContent className="h-full flex flex-col justify-between p-5">
                     <div className="space-y-2">
                         <Skeleton className="h-3 w-24" />
@@ -98,7 +98,7 @@ export const FinancialSummaryCard = () => {
     }
 
     return (
-        <Card className="h-full border-none shadow-lg rounded-2xl hover:shadow-xl transition-shadow">
+        <Card className="h-full">
             <CardContent className="h-full flex flex-col justify-between p-5">
                 {/* Balance */}
                 <div className="space-y-1">

@@ -99,7 +99,7 @@ const SafeToSpendWidget = () => {
     };
 
     return (
-        <Card className="bg-card border-border shadow-sm h-full">
+        <Card variant="elevated" className="bg-card border-border h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Calculator className="h-4 w-4" />

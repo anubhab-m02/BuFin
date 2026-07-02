@@ -22,7 +22,7 @@ const DashboardPage = () => {
             <PageHeader title={`Hi, ${firstName}`} subtitle="Here's your financial overview for today." />
 
             {/* Bento Grid - Viewport Fit */}
-            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-3 h-[calc(100vh-10rem)] min-h-[600px]">
+            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-4 h-[calc(100vh-10rem)] min-h-[600px]">
                 {/* Row 1: AI Quick Add (Span 4, Fixed Height) */}
                 <div className="md:col-span-4 h-fit">
                     <NaturalLanguageInput onManualEntry={() => setIsTransactionModalOpen(true)} />
@@ -40,7 +40,7 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Row 3: Financial Summary (2), Budget Summary (2) & Simulator (3) */}
-                <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-7 gap-3">
+                <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-7 gap-4">
                     <div className="md:col-span-2">
                         <FinancialSummaryCard />
                     </div>
