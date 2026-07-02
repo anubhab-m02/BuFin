@@ -62,7 +62,7 @@ export const SpendingComparisonWidget = () => {
                         <div key={item.category} className="space-y-1">
                             <div className="flex justify-between text-sm">
                                 <span className="font-medium">{item.category}</span>
-                                <span className={item.diff > 0 ? "text-red-500" : "text-green-500"}>
+                                <span className={item.diff > 0 ? "text-destructive" : "text-success"}>
                                     {item.diff > 0 ? `+${item.percent}% higher` : `${Math.abs(item.percent)}% lower`}
                                 </span>
                             </div>

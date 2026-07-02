@@ -165,8 +165,8 @@ const FiscalCalendar = () => {
                                                 className={cn(
                                                     "text-[10px] px-1 py-0.5 rounded truncate flex justify-between items-center flex-shrink-0",
                                                     item.type === 'income'
-                                                        ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                                                        : "bg-red-500/10 text-red-700 dark:text-red-400"
+                                                        ? "bg-success/10 text-success"
+                                                        : "bg-destructive/10 text-destructive"
                                                 )}
                                                 title={`${item.name} - ₹${item.amount}`}
                                             >
@@ -211,8 +211,8 @@ const FiscalCalendar = () => {
                                         </div>
                                     </div>
                                     <span className={cn(
-                                        "font-bold text-sm",
-                                        item.type === 'income' ? "text-green-600" : "text-red-600"
+                                        "font-bold text-sm tabular-nums",
+                                        item.type === 'income' ? "text-success" : "text-destructive"
                                     )}>
                                         {item.type === 'income' ? '+' : '-'}₹{item.amount.toFixed(2)}
                                     </span>

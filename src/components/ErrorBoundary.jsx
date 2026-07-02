@@ -18,23 +18,23 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
-                    <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8 border border-red-200">
-                        <h1 className="text-2xl font-bold text-red-700 mb-4">Something went wrong.</h1>
-                        <p className="text-gray-600 mb-4">The application encountered a critical error and could not render.</p>
+                <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                    <div className="max-w-2xl w-full bg-card text-card-foreground rounded-lg shadow-lg p-8 border border-destructive/30">
+                        <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong.</h1>
+                        <p className="text-muted-foreground mb-4">The application encountered a critical error and could not render.</p>
 
-                        <div className="bg-gray-100 p-4 rounded overflow-auto max-h-64 mb-6">
-                            <code className="text-sm text-red-600 font-mono block mb-2">
+                        <div className="bg-secondary p-4 rounded-md overflow-auto max-h-64 mb-6">
+                            <code className="text-sm text-destructive font-mono block mb-2">
                                 {this.state.error && this.state.error.toString()}
                             </code>
-                            <pre className="text-xs text-gray-500 font-mono">
+                            <pre className="text-xs text-muted-foreground font-mono">
                                 {this.state.errorInfo && this.state.errorInfo.componentStack}
                             </pre>
                         </div>
 
                         <button
                             onClick={() => window.location.reload()}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors"
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold py-2 px-4 rounded-lg transition-colors duration-fast"
                         >
                             Reload Application
                         </button>

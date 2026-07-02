@@ -8,6 +8,9 @@
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
 
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
 
@@ -58,6 +61,10 @@
     /* Card surface - was previously undefined (bg-card/text-card-foreground resolved to nothing) */
     --card: #ffffff;
     --card-foreground: #09090b;
+
+    /* Popover/tooltip surface - was also previously undefined */
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
 
     /* Primary Blue - Strong, Trustworthy */
     --primary: #2563eb;
@@ -135,6 +142,10 @@
     --card: #18181b;
     /* Zinc 900 */
     --card-foreground: #fafafa;
+
+    --popover: #18181b;
+    /* Zinc 900 */
+    --popover-foreground: #fafafa;
 
     --foreground: #fafafa;
     /* Zinc 50 */

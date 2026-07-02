@@ -38,7 +38,7 @@ const RecurringManager = ({ compact }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`font-bold whitespace-nowrap ${plan.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`font-bold whitespace-nowrap tabular-nums ${plan.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                                 {plan.type === 'income' ? '+' : '-'}{formatCurrency(plan.amount).replace('₹', '')}
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -57,7 +57,7 @@ const RecurringManager = ({ compact }) => {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => deleteRecurringPlan(plan.id)}
                                 >
                                     <Trash2 className="h-4 w-4" />

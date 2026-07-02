@@ -153,7 +153,7 @@ const InsightsDashboard = () => {
                                         Detected Potential Subscriptions
                                     </div>
                                     {subscriptions.map((sub, index) => (
-                                        <div key={`new- ${index} `} className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20 group">
+                                        <div key={`new- ${index} `} className="flex items-center justify-between p-3 bg-warning/10 rounded-lg border border-warning/20 group">
                                             <div>
                                                 <p className="font-medium text-foreground">{sub.name}</p>
                                                 <p className="text-xs text-muted-foreground">
@@ -161,12 +161,12 @@ const InsightsDashboard = () => {
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <div className="font-bold text-yellow-600">₹{sub.amount.toFixed(2)}</div>
+                                                <div className="font-bold text-warning tabular-nums">₹{sub.amount.toFixed(2)}</div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-7 w-7 text-green-600 hover:bg-green-100"
+                                                        className="h-7 w-7 text-success hover:bg-success/10"
                                                         onClick={() => handleAddSubscription(sub)}
                                                         title="Add to Planner"
                                                     >

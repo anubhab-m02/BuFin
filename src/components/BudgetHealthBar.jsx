@@ -79,7 +79,7 @@ const BudgetHealthBar = () => {
                     </div>
 
                     {wantsPct > 30 && (
-                        <p className="text-xs text-red-500 font-medium">
+                        <p className="text-xs text-destructive font-medium">
                             Warning: Your "Wants" exceed 30% of your income!
                         </p>
                     )}

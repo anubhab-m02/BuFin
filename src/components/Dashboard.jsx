@@ -54,7 +54,7 @@ export const BudgetSummaryCard = () => {
                 {budgets.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No budgets set — tap to add category limits.</p>
                 ) : overBudget.length === 0 ? (
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">All {budgets.length} categories on track this month.</p>
+                    <p className="text-sm text-success font-medium">All {budgets.length} categories on track this month.</p>
                 ) : (
                     <div className="space-y-2">
                         <p className="text-xs text-muted-foreground">
@@ -64,7 +64,7 @@ export const BudgetSummaryCard = () => {
                             <div key={b.id} className="space-y-1">
                                 <div className="flex justify-between text-xs">
                                     <span className="font-medium">{b.category}</span>
-                                    <span className="text-red-500">{Math.round(b.pct)}%</span>
+                                    <span className="text-destructive tabular-nums">{Math.round(b.pct)}%</span>
                                 </div>
                                 <ThresholdProgress value={b.pct} className="h-2" />
                             </div>
@@ -105,30 +105,30 @@ export const FinancialSummaryCard = () => {
                         <span className="text-xs font-semibold uppercase tracking-wider">Net Balance</span>
                         <Wallet className="h-3.5 w-3.5" />
                     </div>
-                    <div className="text-3xl font-bold tracking-tight">₹{balance.toFixed(0)}</div>
+                    <div className="text-3xl font-bold tracking-tight tabular-nums">₹{balance.toFixed(0)}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                     {/* Income */}
                     <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <div className="p-1 rounded-full bg-green-500/10">
-                                <TrendingUp className="h-3 w-3 text-green-600" />
+                            <div className="p-1 rounded-full bg-success/10">
+                                <TrendingUp className="h-3 w-3 text-success" />
                             </div>
                             <span className="text-[10px] font-semibold uppercase">Income</span>
                         </div>
-                        <div className="text-lg font-semibold text-green-600 dark:text-green-400">+₹{income.toFixed(0)}</div>
+                        <div className="text-lg font-semibold text-success tabular-nums">+₹{income.toFixed(0)}</div>
                     </div>
 
                     {/* Expenses */}
                     <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <div className="p-1 rounded-full bg-red-500/10">
-                                <TrendingDown className="h-3 w-3 text-red-600" />
+                            <div className="p-1 rounded-full bg-destructive/10">
+                                <TrendingDown className="h-3 w-3 text-destructive" />
                             </div>
                             <span className="text-[10px] font-semibold uppercase">Expense</span>
                         </div>
-                        <div className="text-lg font-semibold text-red-600 dark:text-red-400">-₹{expense.toFixed(0)}</div>
+                        <div className="text-lg font-semibold text-destructive tabular-nums">-₹{expense.toFixed(0)}</div>
                     </div>
                 </div>
             </CardContent>
@@ -250,13 +250,13 @@ export const RecentTransactions = () => {
                                 <p className="text-xs text-muted-foreground truncate font-medium">{t.description || t.merchant}</p>
                             </div>
                             <div className="flex items-center gap-3 pl-2 shrink-0">
-                                <div className={`font-bold text-sm ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                <div className={`font-bold text-sm tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                                     {t.type === 'income' ? '+' : '-'}₹{t.amount.toFixed(0)}
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
+                                    className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => deleteTransaction(t.id)}
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />

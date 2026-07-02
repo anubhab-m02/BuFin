@@ -115,12 +115,12 @@ const CashFlowForecast = () => {
                                 style={{ bottom: `${heightPct}%` }}
                             >
                                 <div className="font-semibold mb-0.5">{format(week.weekStart, 'MMM d')} - {format(addDays(week.weekStart, 6), 'MMM d')}</div>
-                                <div className={`text-xs font-bold ${week.balance < 0 ? 'text-red-500' : 'text-primary'}`}>
+                                <div className={`text-xs font-bold tabular-nums ${week.balance < 0 ? 'text-destructive' : 'text-primary'}`}>
                                     {isPrivacyMode ? '••••' : `₹${week.balance.toLocaleString()}`}
                                 </div>
-                                <div className="text-muted-foreground mt-0.5 flex gap-2">
-                                    <span className="text-green-500">+{isPrivacyMode ? '••' : (week.income / 1000).toFixed(1)}k</span>
-                                    <span className="text-red-500">-{isPrivacyMode ? '••' : (week.expense / 1000).toFixed(1)}k</span>
+                                <div className="text-muted-foreground mt-0.5 flex gap-2 tabular-nums">
+                                    <span className="text-success">+{isPrivacyMode ? '••' : (week.income / 1000).toFixed(1)}k</span>
+                                    <span className="text-destructive">-{isPrivacyMode ? '••' : (week.expense / 1000).toFixed(1)}k</span>
                                 </div>
                                 {/* Tooltip Arrow */}
                                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-popover/95 border-r border-b border-border/50 rotate-45"></div>
@@ -128,10 +128,10 @@ const CashFlowForecast = () => {
 
                             {/* Bar */}
                             <div
-                                className={`w-full rounded-t-lg transition-all duration-500 relative overflow-hidden ${week.balance < 0 ? 'bg-gradient-to-t from-red-500/80 to-red-400' :
-                                        week.isDanger ? 'bg-gradient-to-t from-yellow-500/80 to-yellow-400' :
+                                className={`w-full rounded-t-lg transition-all duration-slow relative overflow-hidden ${week.balance < 0 ? 'bg-gradient-to-t from-destructive/80 to-destructive/60' :
+                                        week.isDanger ? 'bg-gradient-to-t from-warning/80 to-warning/60' :
                                             'bg-gradient-to-t from-primary/80 to-primary/40'
-                                    } group-hover:brightness-110 group-hover:shadow-[0_0_15px_rgba(var(--primary),0.3)]`}
+                                    } group-hover:brightness-110`}
                                 style={{ height: `${heightPct}%` }}
                             >
                                 {/* Shine Effect */}

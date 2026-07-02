@@ -4,8 +4,8 @@ import { cn } from '../../lib/utils';
 
 const VARIANT_STYLES = {
     default: 'border-border bg-card text-card-foreground',
-    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-    destructive: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
+    success: 'border-success/30 bg-success/10 text-success',
+    destructive: 'border-destructive/30 bg-destructive/10 text-destructive',
 };
 
 const VARIANT_ICONS = {
