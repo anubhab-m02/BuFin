@@ -104,3 +104,14 @@ class WishlistItemCreate(WishlistItemBase):
 class WishlistItem(WishlistItemBase):
     id: str
     model_config = ConfigDict(from_attributes=True)
+
+class BudgetBase(BaseModel):
+    category: str
+    monthlyLimit: float
+
+class BudgetCreate(BudgetBase):
+    id: Optional[str] = None
+
+class Budget(BudgetBase):
+    id: str
+    model_config = ConfigDict(from_attributes=True)
