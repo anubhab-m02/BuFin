@@ -8,6 +8,7 @@ import SpendingMonitor from '../components/SpendingMonitor';
 import Dialog from '../components/ui/dialog';
 import AddTransactionForm from '../components/AddTransactionForm';
 import SafeToSpendWidget from '../components/SafeToSpendWidget';
+import PageHeader from '../components/PageHeader';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -18,11 +19,7 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-4">
-            {/* Greeting Header */}
-            <div className="pb-2">
-                <h1 className="text-3xl font-bold tracking-tight text-primary">Hi, {firstName}! 👋</h1>
-                <p className="text-muted-foreground mt-1">Here's your financial overview for today.</p>
-            </div>
+            <PageHeader title={`Hi, ${firstName}`} subtitle="Here's your financial overview for today." />
 
             {/* Bento Grid - Viewport Fit */}
             <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-3 h-[calc(100vh-10rem)] min-h-[600px]">

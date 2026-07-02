@@ -8,6 +8,7 @@ import { ThresholdProgress } from '../components/ui/progress';
 import { Trash2, Plus, Wallet2 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { cn } from '../lib/utils';
+import PageHeader from '../components/PageHeader';
 
 const BudgetsPage = () => {
     const { budgets, addBudget, updateBudget, deleteBudget, transactions, categories, isPrivacyMode } = useFinancial();
@@ -57,10 +58,7 @@ const BudgetsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="pb-2">
-                <h1 className="text-3xl font-bold tracking-tight text-primary">Budgets</h1>
-                <p className="text-muted-foreground mt-1">Set a monthly limit per category and track actual spend against it.</p>
-            </div>
+            <PageHeader title="Budgets" subtitle="Set a monthly limit per category and track actual spend against it." />
 
             <Card>
                 <CardHeader>
