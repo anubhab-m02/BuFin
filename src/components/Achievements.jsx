@@ -43,17 +43,26 @@ const Achievements = () => {
         {
             id: 'big_saver',
             title: 'Big Saver',
-            description: 'Saved over 10,000',
+            description: 'Saved over 10,000 across multiple deposits',
             icon: TrendingUp,
-            condition: () => savingsGoals.reduce((acc, g) => acc + g.currentAmount, 0) > 10000,
+            // Require the total to be built up from several separate deposits, not a single
+            // instant lump-sum transfer that would unlock this the moment a goal is created.
+            condition: () => {
+                const deposits = transactions.filter(t => t.category === 'Savings' && t.type === 'expense');
+                const total = deposits.reduce((acc, t) => acc + t.amount, 0);
+                const distinctDays = new Set(deposits.map(t => (t.date || '').slice(0, 10))).size;
+                return total > 10000 && distinctDays >= 3;
+            },
             color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/20'
         },
         {
             id: 'consistent',
             title: 'Consistent Tracker',
-            description: 'Logged 50+ transactions',
+            description: 'Logged transactions on 30+ different days',
             icon: Award,
-            condition: () => transactions.length >= 50,
+            // Count distinct days, not raw transaction count, so this can't be unlocked by
+            // bulk-creating many transactions in a single sitting.
+            condition: () => new Set(transactions.map(t => (t.date || '').slice(0, 10))).size >= 30,
             color: 'text-orange-500 bg-orange-100 dark:bg-orange-900/20'
         }
     ];
