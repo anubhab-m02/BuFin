@@ -39,17 +39,21 @@ export const detectLeaks = (transactions) => {
         const pastMonths = Object.values(history[category] || {});
 
         if (pastMonths.length > 0) {
-            // Historical Comparison
+            // Historical Comparison. The absolute floor scales with the category's own
+            // average instead of a flat ₹500, so low-budget categories can still trigger
+            // a real percentage-based overspend (a flat floor made that impossible).
             const average = pastMonths.reduce((a, b) => a + b, 0) / pastMonths.length;
-            if (currentAmount > average * 1.3 && (currentAmount - average) > 500) {
+            const overage = currentAmount - average;
+            const absoluteFloor = Math.max(150, average * 0.1);
+            if (currentAmount > average * 1.2 && overage > absoluteFloor) {
                 const merchants = merchantBreakdown[category] || {};
                 const topMerchant = Object.entries(merchants).sort((a, b) => b[1] - a[1])[0];
                 const culpritName = topMerchant ? topMerchant[0] : 'Unknown';
-                const percentOver = Math.round(((currentAmount - average) / average) * 100);
+                const percentOver = Math.round((overage / average) * 100);
 
                 leaks.push({
                     category,
-                    amount: currentAmount - average,
+                    amount: overage,
                     suggestion: `Your ${category} spending is ${percentOver}% over average, driven by ${culpritName}.`
                 });
             }
@@ -88,12 +92,17 @@ export const findSubscriptions = (transactions, recurringPlans = []) => {
         }, {});
 
     const candidates = [];
+    const MIN_SUBSCRIPTION_SPAN_DAYS = 15; // filters out same-day/near-duplicate entries
 
-    // 2. Identify patterns (>= 2 occurrences)
+    // 2. Identify patterns (>= 2 occurrences, spread out over time)
     for (const [name, group] of Object.entries(groups)) {
         if (group.length >= 2) {
             const sorted = group.sort((a, b) => new Date(a.date) - new Date(b.date));
             const lastTx = sorted[sorted.length - 1];
+            const firstTx = sorted[0];
+
+            const spanDays = (new Date(lastTx.date) - new Date(firstTx.date)) / (1000 * 60 * 60 * 24);
+            if (spanDays < MIN_SUBSCRIPTION_SPAN_DAYS) continue;
 
             // Check amount consistency
             const amounts = group.map(t => t.amount);
