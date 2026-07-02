@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
+import { todayLocalStr } from '../lib/utils';
 
 const FinancialContext = createContext();
 
@@ -374,15 +375,14 @@ export const FinancialProvider = ({ children }) => {
   };
 
   // Derived State
-  const getTodayStr = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  const todayStr = getTodayStr();
+  const todayStr = todayLocalStr();
+  // Transaction dates can be plain "YYYY-MM-DD" or full ISO timestamps (e.g. from
+  // `new Date().toISOString()`). Comparing full strings against a plain date string
+  // breaks ("...T18:30:00.000Z" > "2026-07-02" is true), so compare the date portion only.
+  const dateOnly = (d) => (d || '').slice(0, 10);
 
   const balance = (user?.current_balance || 0) + transactions.reduce((acc, curr) => {
-    if (curr.date > todayStr) return acc; // Ignore future transactions
+    if (dateOnly(curr.date) > todayStr) return acc; // Ignore future transactions
     return curr.type === 'income' ? acc + curr.amount : acc - curr.amount;
   }, 0);
 
@@ -395,11 +395,11 @@ export const FinancialProvider = ({ children }) => {
   const safeBalance = balance;
 
   const income = transactions
-    .filter(t => t.type === 'income' && t.date <= todayStr)
+    .filter(t => t.type === 'income' && dateOnly(t.date) <= todayStr)
     .reduce((acc, curr) => acc + curr.amount, 0);
 
   const expense = transactions
-    .filter(t => t.type === 'expense' && t.date <= todayStr)
+    .filter(t => t.type === 'expense' && dateOnly(t.date) <= todayStr)
     .reduce((acc, curr) => acc + curr.amount, 0);
 
   const togglePrivacyMode = () => setIsPrivacyMode(prev => !prev);
