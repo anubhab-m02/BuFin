@@ -315,11 +315,11 @@ export const api = {
         if (!response.ok) throw new Error('AI analysis failed');
         return response.json();
     },
-    generateSpendingAlert: async (transactions, balance, recurringPlans) => {
+    generateSpendingAlert: async (transactions, balance, recurringPlans, today) => {
         const response = await fetch(`${API_URL}/ai/alert`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transactions, balance, recurringPlans }),
+            body: JSON.stringify({ transactions, balance, recurringPlans, today }),
         });
         if (!response.ok) return null;
         return response.json();

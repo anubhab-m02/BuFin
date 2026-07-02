@@ -24,11 +24,12 @@ async def analyze_purchase(request: dict):
 
 @router.post("/ai/alert")
 async def generate_alert(request: dict):
-    # Expects {"transactions": [...], "balance": 100, "recurringPlans": [...]}
+    # Expects {"transactions": [...], "balance": 100, "recurringPlans": [...], "today": "YYYY-MM-DD"}
     transactions = request.get("transactions")
     balance = request.get("balance")
     recurring_plans = request.get("recurringPlans")
-    return await ai_service.generate_spending_alert(transactions, balance, recurring_plans)
+    today = request.get("today")
+    return await ai_service.generate_spending_alert(transactions, balance, recurring_plans, today)
 
 @router.post("/ai/tips")
 async def generate_tips(request: dict):

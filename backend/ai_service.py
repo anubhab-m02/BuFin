@@ -179,22 +179,27 @@ async def analyze_purchase(query: str, context: dict):
     response = model.generate_content(prompt)
     return response.text.strip()
 
-async def generate_spending_alert(transactions: list, balance: float, recurring_plans: list):
+async def generate_spending_alert(transactions: list, balance: float, recurring_plans: list, today: str = None):
     if not API_KEY:
         return None
 
     model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    # Filter for today's transactions (assuming transactions have ISO date string)
-    # In Python we might need to handle date parsing, but let's assume string matching for MVP parity
+
+    # Use the client's local calendar date if provided, so frontend and backend agree
+    # on what "today" is instead of each computing it independently (can diverge near
+    # midnight or across timezones between browser and server).
     import datetime
-    today = datetime.date.today().isoformat()
-    
+    if today:
+        today_date = datetime.date.fromisoformat(today)
+    else:
+        today_date = datetime.date.today()
+    today = today_date.isoformat()
+
     todays_transactions = [t for t in transactions if t['date'].startswith(today) and t['type'] == 'expense']
     spent_today = sum(t['amount'] for t in todays_transactions)
-    
+
     # Calculate daily safe-to-spend (Conservative: Balance - Upcoming Expenses)
-    now = datetime.datetime.now()
+    now = today_date
     import calendar
     _, days_in_month = calendar.monthrange(now.year, now.month)
     days_remaining = max(1, days_in_month - now.day + 1)
@@ -240,7 +245,7 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     for t in transactions:
         try:
             t_date = datetime.date.fromisoformat(t['date'])
-            if t['type'] == 'expense' and t_date > datetime.date.today() and t_date.month == now.month:
+            if t['type'] == 'expense' and t_date > today_date and t_date.month == now.month:
                 future_one_offs += t['amount']
         except:
             pass

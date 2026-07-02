@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Activity, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { todayLocalStr } from '../lib/utils';
 
 const SpendingMonitor = () => {
     const { transactions, balance, recurringPlans } = useFinancial();
 
 
     // Create a hash of today's transactions to detect changes (edits/deletes)
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = todayLocalStr();
     const todayTxHash = transactions
         .filter(t => t.date.startsWith(todayStr))
         .map(t => `${t.id}-${t.amount}-${t.type}`)
@@ -59,7 +60,7 @@ const SpendingMonitor = () => {
 
             // If no cache or data changed, fetch new alert
             try {
-                const result = await generateSpendingAlert(transactions, balance, recurringPlans);
+                const result = await generateSpendingAlert(transactions, balance, recurringPlans, todayStr);
                 if (mounted) {
                     setAlert(result);
                     // Update cache

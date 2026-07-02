@@ -28,9 +28,9 @@ export const analyzePurchase = async (query, financialContext) => {
     }
 };
 
-export const generateSpendingAlert = async (transactions, balance, recurringPlans) => {
+export const generateSpendingAlert = async (transactions, balance, recurringPlans, today) => {
     try {
-        return await api.generateSpendingAlert(transactions, balance, recurringPlans);
+        return await api.generateSpendingAlert(transactions, balance, recurringPlans, today);
     } catch (error) {
         console.error("Alert generation failed", error);
         return null;
