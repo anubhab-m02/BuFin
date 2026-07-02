@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional, List
 
 # --- User Schemas ---
@@ -37,8 +37,7 @@ class User(UserBase):
     risk_tolerance: Optional[str] = "low"
     goals: Optional[str] = "[]" # JSON string
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
@@ -63,8 +62,7 @@ class TransactionCreate(TransactionBase):
 
 class Transaction(TransactionBase):
     id: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RecurringPlanBase(BaseModel):
     name: str
@@ -79,8 +77,7 @@ class RecurringPlanCreate(RecurringPlanBase):
 
 class RecurringPlan(RecurringPlanBase):
     id: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DebtBase(BaseModel):
     personName: str
@@ -94,8 +91,7 @@ class DebtCreate(DebtBase):
 
 class Debt(DebtBase):
     id: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WishlistItemBase(BaseModel):
     name: str
@@ -107,5 +103,4 @@ class WishlistItemCreate(WishlistItemBase):
 
 class WishlistItem(WishlistItemBase):
     id: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

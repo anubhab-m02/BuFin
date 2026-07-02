@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from database import get_db
 import models
 from .auth import get_current_user
@@ -34,8 +34,7 @@ class GoalResponse(GoalBase):
     user_id: str
     currentAmount: float
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class WishlistItemBase(BaseModel):
     name: str
@@ -49,8 +48,7 @@ class WishlistItemResponse(WishlistItemBase):
     user_id: str
     addedAt: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Goals Endpoints ---
 
