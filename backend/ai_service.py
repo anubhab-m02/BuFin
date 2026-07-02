@@ -1,6 +1,7 @@
 import google.generativeai as genai
 import os
 import json
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -88,37 +89,62 @@ IMPORTANT:
 - Current Date Reference: {today_date}
 """
 
+def _extract_json_array(text: str) -> str:
+    """Extract the first balanced top-level JSON array from a model response,
+    tolerating surrounding prose and markdown code fences."""
+    text = re.sub(r'^```(?:json)?\s*|\s*```$', '', text.strip(), flags=re.MULTILINE).strip()
+
+    start = text.find('[')
+    if start == -1:
+        return text
+
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == '\\':
+                escape = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch == '[':
+                depth += 1
+            elif ch == ']':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i + 1]
+
+    return text[start:]
+
+
 async def classify_transaction(text: str):
     if not API_KEY:
         raise Exception("API Key missing")
-    
+
     import datetime
     today_str = datetime.date.today().isoformat()
-    
-    import re
-    
+
     # Inject today's date into prompt for relative date parsing
     formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
 
     model = genai.GenerativeModel('gemini-2.5-flash')
     response = model.generate_content([formatted_prompt, text])
-    
+
     try:
         text_response = response.text
-        # Robust JSON extraction using regex
-        match = re.search(r'\[.*\]', text_response, re.DOTALL)
-        if match:
-            json_str = match.group(0)
-        else:
-            # Fallback to simple stripping if regex fails (e.g. if it's a single object not in array, though prompt asks for array)
-            json_str = text_response.replace('```json', '').replace('```', '').strip()
-            
+        json_str = _extract_json_array(text_response)
         data = json.loads(json_str)
-        
+
         # Ensure it's a list
         if isinstance(data, dict):
             data = [data]
-            
+
         return data
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
