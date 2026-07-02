@@ -22,6 +22,7 @@ export const FinancialProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [recurringPlans, setRecurringPlans] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const repayingDebtIds = useRef(new Set());
 
   const [wishlist, setWishlist] = useState([]);
@@ -59,18 +60,20 @@ export const FinancialProvider = ({ children }) => {
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
-        const [txs, plans, dbt, wish, goals] = await Promise.all([
+        const [txs, plans, dbt, wish, goals, budgetList] = await Promise.all([
           api.getTransactions(),
           api.getRecurringPlans(),
           api.getDebts(),
           api.getWishlist(),
-          api.getGoals()
+          api.getGoals(),
+          api.getBudgets()
         ]);
         setTransactions(txs);
         setRecurringPlans(plans);
         setDebts(dbt);
         setWishlist(wish);
         setSavingsGoals(goals);
+        setBudgets(budgetList);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
         toast({
@@ -230,6 +233,41 @@ export const FinancialProvider = ({ children }) => {
       setDebts(prev => prev.filter(d => d.id !== id));
     } catch (error) {
       console.error("Failed to delete debt:", error);
+    }
+  };
+
+  const addBudget = async (budget) => {
+    try {
+      const newBudget = await api.createBudget(budget);
+      setBudgets(prev => [...prev, newBudget]);
+    } catch (error) {
+      console.error("Failed to add budget:", error);
+      toast({
+        title: 'Could not save budget',
+        description: error.message === 'Failed to create budget'
+          ? 'You may already have a budget set for this category.'
+          : 'Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const updateBudget = async (id, updatedBudget) => {
+    try {
+      const updated = await api.updateBudget(id, updatedBudget);
+      setBudgets(prev => prev.map(b => b.id === id ? updated : b));
+    } catch (error) {
+      console.error("Failed to update budget:", error);
+      toast({ title: 'Could not update budget', variant: 'destructive' });
+    }
+  };
+
+  const deleteBudget = async (id) => {
+    try {
+      await api.deleteBudget(id);
+      setBudgets(prev => prev.filter(b => b.id !== id));
+    } catch (error) {
+      console.error("Failed to delete budget:", error);
     }
   };
 
@@ -429,6 +467,10 @@ export const FinancialProvider = ({ children }) => {
       updateDebt,
       deleteDebt,
       repayDebt,
+      budgets,
+      addBudget,
+      updateBudget,
+      deleteBudget,
       updateRecurringPlan,
       deleteRecurringPlan,
       wishlist,

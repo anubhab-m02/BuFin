@@ -215,6 +215,51 @@ export const api = {
         if (!response.ok) throw new Error('Failed to update debt');
         return response.json();
     },
+    getBudgets: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/budgets`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch budgets');
+        return response.json();
+    },
+    createBudget: async (budget) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/budgets`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(budget),
+        });
+        if (!response.ok) throw new Error('Failed to create budget');
+        return response.json();
+    },
+    updateBudget: async (id, budget) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/budgets/${id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(budget),
+        });
+        if (!response.ok) throw new Error('Failed to update budget');
+        return response.json();
+    },
+    deleteBudget: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/budgets/${id}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete budget');
+        return response.json();
+    },
 
     // Goals
     getGoals: async () => {
