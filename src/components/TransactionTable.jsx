@@ -9,6 +9,7 @@ import AddTransactionForm from './AddTransactionForm';
 import { AddDebtForm } from './PlannerForms';
 import EmptyState from './EmptyState';
 import { Skeleton } from './ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getCategoryMeta } from '../lib/categoryMeta';
 import { formatSignedMoney } from '../lib/money';
 
@@ -89,16 +90,17 @@ const TransactionTable = () => {
                             className="pl-9"
                         />
                     </div>
-                    <select
-                        className="h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors duration-fast"
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                    >
-                        <option value="all">All Transactions</option>
-                        <option value="income">Income Only</option>
-                        <option value="expense">Expense Only</option>
-                        <option value="debt">Debts (Owed)</option>
-                    </select>
+                    <Select value={filterType} onValueChange={setFilterType} className="sm:w-48">
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Transactions</SelectItem>
+                            <SelectItem value="income">Income Only</SelectItem>
+                            <SelectItem value="expense">Expense Only</SelectItem>
+                            <SelectItem value="debt">Debts (Owed)</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </CardHeader>
                 <CardContent className="divide-y divide-border">
                     {isDataLoading ? (
@@ -129,7 +131,7 @@ const TransactionTable = () => {
                                         return (
                                             <div
                                                 key={t.id}
-                                                className="flex items-center gap-3 py-3 cursor-pointer group"
+                                                className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-lg cursor-pointer group hover:bg-secondary/40 transition-colors duration-fast"
                                                 onClick={() => setViewingTransaction(t)}
                                             >
                                                 <div
@@ -166,15 +168,17 @@ const TransactionTable = () => {
                                                         >
                                                             <Edit2 className="h-4 w-4" />
                                                         </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
-                                                            onClick={() => setSplitTransaction(t)}
-                                                            title="Split Bill"
-                                                        >
-                                                            <UserPlus className="h-4 w-4" />
-                                                        </Button>
+                                                        {t.type === 'expense' && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
+                                                                onClick={() => setSplitTransaction(t)}
+                                                                title="Split Bill"
+                                                            >
+                                                                <UserPlus className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
