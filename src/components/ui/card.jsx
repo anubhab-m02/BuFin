@@ -13,7 +13,7 @@ const Card = React.forwardRef(({ className, variant = "default", ...props }, ref
     <div
         ref={ref}
         className={cn(
-            "rounded-lg border border-border bg-card text-card-foreground transition-colors duration-normal hover:bg-primary/5",
+            "rounded-lg border border-border bg-card text-card-foreground transition-colors duration-normal",
             cardVariants[variant],
             className
         )}

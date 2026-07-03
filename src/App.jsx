@@ -44,15 +44,9 @@ const AppLayout = ({ children }) => {
   return (
     <FinancialProvider> {/* FinancialProvider moved inside AppLayout */}
       <div className="min-h-screen bg-secondary/30 flex flex-col md:flex-row overflow-hidden p-0 md:p-4 gap-4">
-        {/* Left Navigation - Floating Box Style */}
-        <aside className="hidden md:block w-64 shrink-0 h-[calc(100vh-2rem)] sticky top-4">
-          <Navigation />
-        </aside>
-
-        {/* Mobile Navigation (Bottom Bar) */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-          <Navigation />
-        </div>
+        {/* Navigation renders both the desktop sidebar and mobile bottom bar internally
+            (each gated by its own responsive classes) - mounted once, not duplicated. */}
+        <Navigation />
 
         {/* Main Content Area - Canvas Mode (No Card) */}
         <main className="flex-1 flex flex-col h-[calc(100vh-2rem)] overflow-hidden relative">

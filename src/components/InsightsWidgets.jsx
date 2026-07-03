@@ -4,59 +4,55 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
+// Compares this month's spend per category against the user's OWN historical average for
+// that category (not a fabricated "average user" benchmark - there's no real user base to
+// compare against, and presenting made-up numbers as data would be actively misleading).
 export const SpendingComparisonWidget = () => {
-    const { transactions, categories } = useFinancial();
+    const { transactions } = useFinancial();
 
-    // 1. Calculate User's Spending by Category for THIS Month
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    const userSpending = transactions
-        .filter(t => {
+    const currentMonthSpending = {};
+    const historyByCategory = {};
+
+    transactions
+        .filter(t => t.type === 'expense')
+        .forEach(t => {
             const d = new Date(t.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.type === 'expense';
-        })
-        .reduce((acc, t) => {
-            acc[t.category] = (acc[t.category] || 0) + t.amount;
-            return acc;
-        }, {});
+            const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                currentMonthSpending[t.category] = (currentMonthSpending[t.category] || 0) + t.amount;
+            } else {
+                if (!historyByCategory[t.category]) historyByCategory[t.category] = {};
+                historyByCategory[t.category][monthKey] = (historyByCategory[t.category][monthKey] || 0) + t.amount;
+            }
+        });
 
-    // 2. Dummy "Average User" Data (Benchmarks)
-    const averageUserSpending = {
-        'Food': 5000,
-        'Transport': 2000,
-        'Shopping': 3000,
-        'Utilities': 1500,
-        'Entertainment': 1000,
-        'Health': 500,
-        'Education': 1000,
-        'Travel': 0,
-        'Savings': 0,
-        'Housing': 8000
-    };
-
-    // 3. Compare Top 3 Categories
-    const comparisons = Object.keys(userSpending)
-        .map(cat => {
-            const user = userSpending[cat] || 0;
-            const avg = averageUserSpending[cat] || 2000; // Default fallback
+    const comparisons = Object.entries(currentMonthSpending)
+        .map(([category, user]) => {
+            const pastMonths = Object.values(historyByCategory[category] || {});
+            if (pastMonths.length === 0) return null; // no history yet to compare against
+            const avg = pastMonths.reduce((a, b) => a + b, 0) / pastMonths.length;
             const diff = user - avg;
-            const percent = avg === 0 ? 100 : ((diff / avg) * 100).toFixed(0);
-            return { category: cat, user, avg, diff, percent };
+            const percent = avg === 0 ? 100 : Math.round((diff / avg) * 100);
+            return { category, user, avg, diff, percent };
         })
-        .sort((a, b) => b.user - a.user) // Sort by highest user spending
+        .filter(Boolean)
+        .sort((a, b) => b.user - a.user)
         .slice(0, 3);
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                    <Users className="h-4 w-4" /> You vs. Average BuFin User
+                    <Users className="h-4 w-4" /> This Month vs. Your Average
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 {comparisons.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Add expenses to see comparisons.</p>
+                    <p className="text-sm text-muted-foreground">Not enough history yet - comparisons appear once a category has at least one prior month of spending.</p>
                 ) : (
                     comparisons.map((item) => (
                         <div key={item.category} className="space-y-1">
@@ -67,9 +63,6 @@ export const SpendingComparisonWidget = () => {
                                 </span>
                             </div>
                             <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex">
-                                {/* Visualizing User vs Avg is tricky in one bar. Let's just show User bar relative to max? 
-                                    Actually, let's do a simple text comparison for now as requested.
-                                */}
                                 <div
                                     className="h-full bg-primary"
                                     style={{ width: `${Math.min(100, (item.user / (item.user + item.avg)) * 100)}%` }}
@@ -79,9 +72,9 @@ export const SpendingComparisonWidget = () => {
                                     style={{ width: `${Math.min(100, (item.avg / (item.user + item.avg)) * 100)}%` }}
                                 />
                             </div>
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>You: ₹{item.user}</span>
-                                <span>Avg: ₹{item.avg}</span>
+                            <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                                <span>You: ₹{item.user.toFixed(0)}</span>
+                                <span>Your avg: ₹{item.avg.toFixed(0)}</span>
                             </div>
                         </div>
                     ))

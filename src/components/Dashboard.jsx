@@ -152,7 +152,7 @@ export const ExpenseBreakdown = () => {
         }, []);
 
     return (
-        <Card className="h-full flex flex-col shadow-sm">
+        <Card className="h-[420px] flex flex-col shadow-sm">
             <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expense Breakdown</CardTitle>
             </CardHeader>
@@ -192,103 +192,3 @@ export const ExpenseBreakdown = () => {
         </Card>
     );
 };
-
-export const RecentTransactions = () => {
-    const { transactions, deleteTransaction, isDataLoading } = useFinancial();
-    const navigate = useNavigate();
-
-    // Robust sort: Date descending, then ID descending (for same-day items)
-    // Also filter out future transactions
-    // Use LOCAL time for "today"
-    const d = new Date();
-    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const sortedTransactions = transactions
-        .filter(t => {
-            // Normalize transaction date to YYYY-MM-DD to handle ISO strings with time
-            const tDate = t.date.split('T')[0];
-            return tDate <= todayStr;
-        })
-        .sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            if (dateA > dateB) return -1;
-            if (dateA < dateB) return 1;
-            return b.id - a.id; // Fallback to ID if dates are equal
-        });
-
-    return (
-        <Card className="h-full flex flex-col shadow-sm">
-            <CardHeader className="py-4 px-5 flex flex-row items-center justify-between border-b border-border/40 bg-muted/20">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent Transactions</CardTitle>
-                <Button variant="ghost" className="h-auto p-0 text-xs font-medium text-primary hover:text-primary/80" onClick={() => navigate('/ledger')}>
-                    View All
-                </Button>
-            </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden">
-                <div className="px-5 py-2 space-y-1">
-                    {isDataLoading && (
-                        <div className="space-y-3 py-2">
-                            {[0, 1, 2].map((i) => (
-                                <div key={i} className="flex items-center justify-between py-1">
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-4 w-16" />
-                                        <Skeleton className="h-3 w-28" />
-                                    </div>
-                                    <Skeleton className="h-4 w-12" />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {!isDataLoading && sortedTransactions.slice(0, 3).map((t) => (
-                        <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/40 last:border-0 group">
-                            <div className="flex flex-col gap-1 overflow-hidden">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-secondary text-secondary-foreground w-fit uppercase tracking-wider">
-                                    {t.category}
-                                </span>
-                                <p className="text-xs text-muted-foreground truncate font-medium">{t.description || t.merchant}</p>
-                            </div>
-                            <div className="flex items-center gap-3 pl-2 shrink-0">
-                                <div className={`font-bold text-sm tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                                    {t.type === 'income' ? '+' : '-'}₹{t.amount.toFixed(0)}
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => deleteTransaction(t.id)}
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                    {!isDataLoading && transactions.length === 0 && (
-                        <div className="py-12 flex flex-col items-center justify-center text-center px-4">
-                            <div className="p-3 rounded-full bg-muted mb-3">
-                                <Wallet className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                            <p className="text-sm font-medium text-muted-foreground">No recent activity</p>
-                            <p className="text-xs text-muted-foreground/70 mt-1">Your latest transactions will appear here.</p>
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const Dashboard = () => {
-    return (
-        <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-1">
-                <FinancialSummaryCard />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-                <ExpenseBreakdown />
-                <RecentTransactions />
-            </div>
-        </div>
-    );
-};
-
-export default Dashboard;

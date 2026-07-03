@@ -9,6 +9,8 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
 import { Check, ChevronRight, ChevronLeft, Wallet, Target, Brain } from 'lucide-react';
+import SafeToSpendGauge from '../components/SafeToSpendGauge';
+import { formatMoney } from '../lib/money';
 
 const OnboardingPage = () => {
     const { user, login, refreshUser } = useAuth(); // We might need to refresh user data
@@ -31,6 +33,18 @@ const OnboardingPage = () => {
 
     const handleNext = () => setStep(prev => prev + 1);
     const handleBack = () => setStep(prev => prev - 1);
+
+    // Live preview of the user's first safe-to-spend number, using a simplified version of
+    // the real formula (no recurring/debt data exists yet at this point in signup) - this is
+    // deliberately the same gauge shown on the Dashboard, so onboarding previews the actual
+    // product instead of a generic illustration.
+    const previewDailySpend = (() => {
+        const balance = parseFloat(formData.current_balance) || 0;
+        const savingsGoal = parseFloat(formData.savings_goal) || 0;
+        const today = new Date();
+        const daysRemaining = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
+        return Math.max(0, (balance - savingsGoal) / daysRemaining);
+    })();
 
     const handleSubmit = async () => {
         setLoading(true);
@@ -60,7 +74,22 @@ const OnboardingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="min-h-screen bg-background flex">
+            <div className="hidden md:flex md:w-1/2 lg:w-2/5 bg-surface-hero flex-col items-center justify-center p-12 text-center">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-6">
+                    Your safe-to-spend preview
+                </p>
+                <SafeToSpendGauge pct={step === 3 ? 100 : 40} size={200} />
+                <div className="text-4xl font-bold tabular-nums -mt-4 mb-2">
+                    {step === 1 ? '—' : formatMoney(previewDailySpend)}
+                </div>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                    {step === 1 && 'Fill in your balance to see your number take shape.'}
+                    {step === 2 && "This updates as you set your savings goal - it's the actual number you'll see every day."}
+                    {step === 3 && "That's what you're safe to spend today. It'll get more accurate as you add bills and debts."}
+                </p>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-4">
             <Card className="w-full max-w-lg border-border shadow-xl">
                 <CardHeader className="text-center">
                     <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -181,6 +210,7 @@ const OnboardingPage = () => {
                     )}
                 </CardFooter>
             </Card>
+            </div>
         </div>
     );
 };

@@ -69,8 +69,6 @@ const InsightsDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-tight">AI Insights</h2>
-
             <div className="grid gap-4 md:grid-cols-2">
                 {/* Leak Detector */}
                 <Card className="border-border bg-card">

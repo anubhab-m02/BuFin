@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { api } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { MessageSquare, Send, Sparkles, TrendingUp, GraduationCap, ShoppingBag, User, Bot } from 'lucide-react';
+import { Send, TrendingUp, GraduationCap, ShoppingBag, User, Bot, ChevronDown, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,30 +17,27 @@ const MODES = [
         title: 'Purchase Analyst',
         description: 'Decide on big purchases with trade-offs & alternatives.',
         icon: ShoppingBag,
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/20',
-        placeholder: 'e.g., "Should I buy the iPhone 16 or wait?"'
+        color: 'var(--chart-1)',
+        placeholder: 'e.g., "Should I buy the iPhone 16 or wait?"',
+        starters: ['Can I afford a ₹40,000 laptop right now?', 'iPhone 16 vs waiting for next year?', 'Should I lease or buy a car?']
     },
     {
         id: 'strategist',
         title: 'Savings Strategist',
         description: 'Plan targets & investments based on your profile.',
         icon: TrendingUp,
-        color: 'text-green-500',
-        bgColor: 'bg-green-500/10',
-        borderColor: 'border-green-500/20',
-        placeholder: 'e.g., "How do I save for a house in 5 years?"'
+        color: 'var(--chart-2)',
+        placeholder: 'e.g., "How do I save for a house in 5 years?"',
+        starters: ['How do I save for a house in 5 years?', 'What should my emergency fund be?', 'Where should I put my next bonus?']
     },
     {
         id: 'educator',
         title: 'Financial Educator',
         description: 'Learn concepts simply with clear analogies.',
         icon: GraduationCap,
-        color: 'text-purple-500',
-        bgColor: 'bg-purple-500/10',
-        borderColor: 'border-purple-500/20',
-        placeholder: 'e.g., "What is an SIP and how does it work?"'
+        color: 'var(--chart-4)',
+        placeholder: 'e.g., "What is an SIP and how does it work?"',
+        starters: ['What is an SIP and how does it work?', 'Explain the 50/30/20 rule simply', 'What\'s the difference between a stock and a mutual fund?']
     }
 ];
 
@@ -52,7 +49,9 @@ const CoachPage = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
     const scrollRef = useRef(null);
+    const modeMenuRef = useRef(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -60,8 +59,20 @@ const CoachPage = () => {
         }
     }, [messages]);
 
+    useEffect(() => {
+        if (!isModeMenuOpen) return;
+        const handleClickOutside = (e) => {
+            if (modeMenuRef.current && !modeMenuRef.current.contains(e.target)) {
+                setIsModeMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isModeMenuOpen]);
+
     const handleModeSelect = (mode) => {
         setSelectedMode(mode);
+        setIsModeMenuOpen(false);
         setMessages([
             { role: 'assistant', content: `Hello! I'm your ${mode.title}. ${mode.description} How can I help?` }
         ]);
@@ -69,9 +80,10 @@ const CoachPage = () => {
 
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!input.trim() || isLoading) return;
+        const text = e.starterText || input;
+        if (!text.trim() || isLoading) return;
 
-        const userMsg = { role: 'user', content: input };
+        const userMsg = { role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsLoading(true);
@@ -97,27 +109,56 @@ const CoachPage = () => {
         <div className="h-full flex flex-col gap-6">
             <PageHeader title="Financial Coach" subtitle="Your personal AI expert for every financial decision." />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {MODES.map(mode => (
-                    <Card
-                        key={mode.id}
-                        className={cn(
-                            "cursor-pointer transition-all hover:shadow-md border-2",
-                            selectedMode.id === mode.id ? `${mode.borderColor} ${mode.bgColor}` : "border-transparent hover:border-border"
-                        )}
-                        onClick={() => handleModeSelect(mode)}
+            {/* Mode switcher sits outside the chat Card - the Card needs overflow-hidden for
+                its own scroll containment, which would otherwise clip this dropdown. */}
+            <div className="flex items-center justify-between gap-3 relative" ref={modeMenuRef}>
+                <button
+                    type="button"
+                    onClick={() => setIsModeMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                    aria-haspopup="listbox"
+                    aria-expanded={isModeMenuOpen}
+                >
+                    <div
+                        className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
                     >
-                        <CardHeader className="p-4">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <mode.icon className={cn("h-5 w-5", mode.color)} />
-                                {mode.title}
-                            </CardTitle>
-                            <CardDescription className="text-xs">
-                                {mode.description}
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                ))}
+                        <selectedMode.icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
+                </button>
+                <p className="hidden sm:block text-xs text-muted-foreground text-right">{selectedMode.description}</p>
+
+                {isModeMenuOpen && (
+                    <div
+                        role="listbox"
+                        className="absolute left-0 top-full mt-1 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover shadow-lg p-1.5 animate-in fade-in slide-in-from-top-1 duration-fast"
+                    >
+                        {MODES.map((mode) => (
+                            <button
+                                key={mode.id}
+                                type="button"
+                                role="option"
+                                aria-selected={mode.id === selectedMode.id}
+                                onClick={() => handleModeSelect(mode)}
+                                className="w-full flex items-start gap-3 p-2.5 rounded-lg text-left hover:bg-secondary transition-colors duration-fast"
+                            >
+                                <div
+                                    className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${mode.color} 15%, transparent)`, color: mode.color }}
+                                >
+                                    <mode.icon className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground">{mode.title}</p>
+                                    <p className="text-xs text-muted-foreground">{mode.description}</p>
+                                </div>
+                                {mode.id === selectedMode.id && <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
@@ -126,8 +167,11 @@ const CoachPage = () => {
                         {messages.map((msg, i) => (
                             <div key={i} className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}>
                                 {msg.role === 'assistant' && (
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", selectedMode.bgColor)}>
-                                        <Bot className={cn("h-5 w-5", selectedMode.color)} />
+                                    <div
+                                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                        style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                                    >
+                                        <Bot className="h-5 w-5" />
                                     </div>
                                 )}
                                 <div className={cn(
@@ -180,10 +224,26 @@ const CoachPage = () => {
                                 )}
                             </div>
                         ))}
+                        {messages.length === 1 && !isLoading && (
+                            <div className="flex flex-wrap gap-2 pl-11">
+                                {selectedMode.starters.map((starter) => (
+                                    <button
+                                        key={starter}
+                                        onClick={() => handleSend({ preventDefault: () => { }, starterText: starter })}
+                                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-fast text-left"
+                                    >
+                                        {starter}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {isLoading && (
                             <div className="flex gap-3">
-                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", selectedMode.bgColor)}>
-                                    <Bot className={cn("h-5 w-5", selectedMode.color)} />
+                                <div
+                                    className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                                >
+                                    <Bot className="h-5 w-5" />
                                 </div>
                                 <div className="bg-secondary text-secondary-foreground rounded-2xl rounded-tl-none px-4 py-2 text-sm shadow-sm flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

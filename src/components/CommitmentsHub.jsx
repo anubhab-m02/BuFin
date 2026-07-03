@@ -13,7 +13,7 @@ const CommitmentsHub = () => {
     const [isAddOpen, setIsAddOpen] = useState(false);
 
     return (
-        <Card className="h-full border-none shadow-lg bg-card rounded-2xl flex flex-col">
+        <Card variant="elevated" className="h-full bg-card flex flex-col">
             <CardHeader className="pb-2 space-y-4">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold">Commitments</CardTitle>
@@ -32,7 +32,7 @@ const CommitmentsHub = () => {
                     <button
                         onClick={() => setActiveTab('recurring')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-normal",
                             activeTab === 'recurring'
                                 ? "bg-background text-primary shadow-sm"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
@@ -44,7 +44,7 @@ const CommitmentsHub = () => {
                     <button
                         onClick={() => setActiveTab('debts')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-normal",
                             activeTab === 'debts'
                                 ? "bg-background text-primary shadow-sm"
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"

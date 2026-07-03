@@ -1,64 +1,40 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FinancialSummaryCard, ExpenseBreakdown, RecentTransactions, BudgetSummaryCard } from '../components/Dashboard';
+import { FinancialSummaryCard, ExpenseBreakdown, BudgetSummaryCard } from '../components/Dashboard';
 import NaturalLanguageInput from '../components/NaturalLanguageInput';
-import BudgetHealthBar from '../components/BudgetHealthBar';
-import PurchaseSimulator from '../components/PurchaseSimulator';
-import SpendingMonitor from '../components/SpendingMonitor';
+import DashboardHero from '../components/DashboardHero';
+import MonthProjectionCard from '../components/MonthProjectionCard';
+import ActivityFeed from '../components/ActivityFeed';
 import Dialog from '../components/ui/dialog';
 import AddTransactionForm from '../components/AddTransactionForm';
-import SafeToSpendWidget from '../components/SafeToSpendWidget';
 import PageHeader from '../components/PageHeader';
 
 const DashboardPage = () => {
     const { user } = useAuth();
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
 
-    // Get first name for greeting
     const firstName = user?.full_name?.split(' ')[0] || 'there';
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-4">
             <PageHeader title={`Hi, ${firstName}`} subtitle="Here's your financial overview for today." />
 
-            {/* Bento Grid - Viewport Fit */}
-            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-[auto_auto_auto_1fr] gap-4 h-[calc(100vh-10rem)] min-h-[600px]">
-                {/* Row 1: AI Quick Add (Span 4, Fixed Height) */}
-                <div className="md:col-span-4 h-fit">
-                    <NaturalLanguageInput onManualEntry={() => setIsTransactionModalOpen(true)} />
-                </div>
+            {/* Hero zone: the safe-to-spend gauge answers "am I okay?" before anything else */}
+            <DashboardHero />
 
-                {/* Row 2: Safe-to-Spend, Budget Health, Spending Monitor (Flexible Height) */}
-                <div className="md:col-span-1">
-                    <SafeToSpendWidget />
-                </div>
-                <div className="md:col-span-2">
-                    <BudgetHealthBar />
-                </div>
-                <div className="md:col-span-1">
-                    <SpendingMonitor />
-                </div>
+            {/* AI Quick Add docked directly beneath the hero - see the number, log the expense */}
+            <NaturalLanguageInput onManualEntry={() => setIsTransactionModalOpen(true)} />
 
-                {/* Row 3: Financial Summary (2), Budget Summary (2) & Simulator (3) */}
-                <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-7 gap-4">
-                    <div className="md:col-span-2">
-                        <FinancialSummaryCard />
-                    </div>
-                    <div className="md:col-span-2">
-                        <BudgetSummaryCard />
-                    </div>
-                    <div className="md:col-span-3">
-                        <PurchaseSimulator />
-                    </div>
-                </div>
+            {/* Exactly 3 support cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <MonthProjectionCard />
+                <BudgetSummaryCard />
+                <FinancialSummaryCard />
+            </div>
 
-                {/* Row 4: Breakdown, Transactions (Flexible Height) */}
-                <div className="md:col-span-2 min-h-0 h-full overflow-hidden">
-                    <ExpenseBreakdown />
-                </div>
-                <div className="md:col-span-2 min-h-0 h-full overflow-hidden">
-                    <RecentTransactions />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ExpenseBreakdown />
+                <ActivityFeed />
             </div>
 
             <Dialog

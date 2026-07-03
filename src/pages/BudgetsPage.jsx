@@ -5,10 +5,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { ThresholdProgress } from '../components/ui/progress';
-import { Trash2, Plus, Wallet2 } from 'lucide-react';
+import { Trash2, Plus, Wallet2, Wallet, AlertTriangle } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { cn } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
+import { getCategoryMeta } from '../lib/categoryMeta';
+import { formatMoney } from '../lib/money';
 
 const BudgetsPage = () => {
     const { budgets, addBudget, updateBudget, deleteBudget, transactions, categories, isPrivacyMode } = useFinancial();
@@ -29,10 +31,7 @@ const BudgetsPage = () => {
         return acc;
     }, {});
 
-    const formatCurrency = (amount) => {
-        if (isPrivacyMode) return '••••••';
-        return `₹${amount.toFixed(0)}`;
-    };
+    const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
 
     const handleAdd = (e) => {
         e.preventDefault();
@@ -56,9 +55,45 @@ const BudgetsPage = () => {
         setEditingId(null);
     };
 
+    const totalBudgeted = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + (spentByCategory[b.category] || 0), 0);
+    const overBudgetCount = budgets.filter(b => b.monthlyLimit > 0 && (spentByCategory[b.category] || 0) >= b.monthlyLimit).length;
+
     return (
         <div className="space-y-6">
             <PageHeader title="Budgets" subtitle="Set a monthly limit per category and track actual spend against it." />
+
+            {budgets.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-primary/10 text-primary">
+                            <Wallet className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Total Budgeted</p>
+                            <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalBudgeted)}</p>
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-secondary text-foreground">
+                            <Wallet2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Spent This Month</p>
+                            <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalSpent)}</p>
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+                        <div className={cn('p-2 rounded-full', overBudgetCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>
+                            <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">Over Budget</p>
+                            <p className="text-lg font-semibold tabular-nums">{overBudgetCount} {overBudgetCount === 1 ? 'category' : 'categories'}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Card>
                 <CardHeader>
@@ -103,17 +138,26 @@ const BudgetsPage = () => {
                     description="Pick a category above and set a monthly limit to start tracking budget-vs-actual."
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {budgets.map((budget) => {
                         const spent = spentByCategory[budget.category] || 0;
                         const pct = budget.monthlyLimit > 0 ? (spent / budget.monthlyLimit) * 100 : 0;
                         const isEditing = editingId === budget.id;
+                        const meta = getCategoryMeta(budget.category);
 
                         return (
                             <Card key={budget.id} className="shadow-sm">
                                 <CardContent className="p-5 space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-foreground">{budget.category}</span>
+                                        <span className="font-semibold text-foreground flex items-center gap-2">
+                                            <span
+                                                className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                                                style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}
+                                            >
+                                                <meta.icon className="h-3.5 w-3.5" />
+                                            </span>
+                                            {budget.category}
+                                        </span>
                                         <div className="flex items-center gap-2">
                                             {isEditing ? (
                                                 <Input
