@@ -52,30 +52,30 @@ const DashboardHero = () => {
                     {daysRemaining} days left this month {spentToday > 0 && `• ${formatCurrency(spentToday)} spent today of ${formatCurrency(dailySafeSpend)} limit`}
                 </p>
 
-                <div className={cn('flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium mt-2 max-w-md', statusTone)}>
+                <div className={cn('flex items-start gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium mt-2 max-w-md text-left', statusTone)}>
                     {alertLoading ? (
                         <>
-                            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin mt-0.5" />
                             <span>Checking today's spending...</span>
                         </>
                     ) : alert ? (
                         <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             <span>{alert}</span>
                         </>
                     ) : isOverToday ? (
                         <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             <span>You're {formatCurrency(overAmountToday)} over today's safe limit.</span>
                         </>
                     ) : spentToday > 0 ? (
                         <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             <span>{formatCurrency(spentToday)} spent today, within your {formatCurrency(dailySafeSpend)} limit.</span>
                         </>
                     ) : (
                         <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                             <span>No spending logged yet today - you're on track.</span>
                         </>
                     )}

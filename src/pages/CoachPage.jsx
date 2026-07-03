@@ -109,56 +109,59 @@ const CoachPage = () => {
         <div className="h-full flex flex-col gap-6">
             <PageHeader title="Financial Coach" subtitle="Your personal AI expert for every financial decision." />
 
-            <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
-                <div className="flex items-center justify-between gap-3 p-3 border-b border-border relative" ref={modeMenuRef}>
-                    <button
-                        type="button"
-                        onClick={() => setIsModeMenuOpen((prev) => !prev)}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
-                        aria-haspopup="listbox"
-                        aria-expanded={isModeMenuOpen}
+            {/* Mode switcher sits outside the chat Card - the Card needs overflow-hidden for
+                its own scroll containment, which would otherwise clip this dropdown. */}
+            <div className="flex items-center justify-between gap-3 relative" ref={modeMenuRef}>
+                <button
+                    type="button"
+                    onClick={() => setIsModeMenuOpen((prev) => !prev)}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                    aria-haspopup="listbox"
+                    aria-expanded={isModeMenuOpen}
+                >
+                    <div
+                        className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
                     >
-                        <div
-                            className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
-                        >
-                            <selectedMode.icon className="h-4 w-4" />
-                        </div>
-                        <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
-                        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
-                    </button>
-                    <p className="hidden sm:block text-xs text-muted-foreground text-right">{selectedMode.description}</p>
+                        <selectedMode.icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
+                </button>
+                <p className="hidden sm:block text-xs text-muted-foreground text-right">{selectedMode.description}</p>
 
-                    {isModeMenuOpen && (
-                        <div
-                            role="listbox"
-                            className="absolute left-3 top-full mt-1 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover shadow-lg p-1.5 animate-in fade-in slide-in-from-top-1 duration-fast"
-                        >
-                            {MODES.map((mode) => (
-                                <button
-                                    key={mode.id}
-                                    type="button"
-                                    role="option"
-                                    aria-selected={mode.id === selectedMode.id}
-                                    onClick={() => handleModeSelect(mode)}
-                                    className="w-full flex items-start gap-3 p-2.5 rounded-lg text-left hover:bg-secondary transition-colors duration-fast"
+                {isModeMenuOpen && (
+                    <div
+                        role="listbox"
+                        className="absolute left-0 top-full mt-1 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover shadow-lg p-1.5 animate-in fade-in slide-in-from-top-1 duration-fast"
+                    >
+                        {MODES.map((mode) => (
+                            <button
+                                key={mode.id}
+                                type="button"
+                                role="option"
+                                aria-selected={mode.id === selectedMode.id}
+                                onClick={() => handleModeSelect(mode)}
+                                className="w-full flex items-start gap-3 p-2.5 rounded-lg text-left hover:bg-secondary transition-colors duration-fast"
+                            >
+                                <div
+                                    className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${mode.color} 15%, transparent)`, color: mode.color }}
                                 >
-                                    <div
-                                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
-                                        style={{ backgroundColor: `color-mix(in srgb, ${mode.color} 15%, transparent)`, color: mode.color }}
-                                    >
-                                        <mode.icon className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-foreground">{mode.title}</p>
-                                        <p className="text-xs text-muted-foreground">{mode.description}</p>
-                                    </div>
-                                    {mode.id === selectedMode.id && <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                                    <mode.icon className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground">{mode.title}</p>
+                                    <p className="text-xs text-muted-foreground">{mode.description}</p>
+                                </div>
+                                {mode.id === selectedMode.id && <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
                 <CardContent className="flex-1 flex flex-col p-0 h-full">
                     <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
                         {messages.map((msg, i) => (
