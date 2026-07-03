@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import AuthLayout from '../components/AuthLayout';
 
 const SignupPage = () => {
     const [fullName, setFullName] = useState('');
@@ -31,7 +32,7 @@ const SignupPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <AuthLayout>
             <Card className="w-full max-w-md border-border shadow-lg">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
@@ -91,7 +92,7 @@ const SignupPage = () => {
                     </form>
                 </CardContent>
             </Card>
-        </div>
+        </AuthLayout>
     );
 };
 
