@@ -42,14 +42,14 @@ const FutureTransactions = () => {
 
     return (
         <>
-            <Card className="border-none shadow-lg rounded-2xl bg-card h-full">
-                <CardHeader>
+            <Card className="border-none shadow-lg rounded-2xl bg-card h-full flex flex-col overflow-hidden">
+                <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                         <CalendarClock className="h-5 w-5 text-primary" />
                         Upcoming Transactions
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                     {futureTransactions.map(t => (
                         <div key={t.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-xl hover:bg-secondary/50 transition-colors group">
                             <div className="flex items-center gap-3">
