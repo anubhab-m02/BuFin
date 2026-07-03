@@ -56,6 +56,7 @@ class TransactionBase(BaseModel):
     date: str
     remarks: Optional[str] = None
     linked_debt_id: Optional[str] = None
+    source: str = 'manual'
 
 class TransactionCreate(TransactionBase):
     id: Optional[str] = None
@@ -63,6 +64,26 @@ class TransactionCreate(TransactionBase):
 class Transaction(TransactionBase):
     id: str
     model_config = ConfigDict(from_attributes=True)
+
+# --- Statement Import Schemas ---
+class ImportCandidate(BaseModel):
+    date: str
+    amount: float
+    type: str  # 'income' | 'expense'
+    merchant: Optional[str] = None
+    description: Optional[str] = None
+    category: str = 'Uncategorized'
+    is_duplicate: bool = False
+    duplicate_reason: Optional[str] = None
+
+class ImportParseResponse(BaseModel):
+    filename: str
+    source_type: str  # 'csv' | 'pdf'
+    candidates: List[ImportCandidate]
+    skipped_rows: int = 0
+
+class ImportCommitRequest(BaseModel):
+    transactions: List[TransactionCreate]
 
 class RecurringPlanBase(BaseModel):
     name: str

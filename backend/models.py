@@ -16,6 +16,7 @@ class Transaction(Base):
     necessity = Column(String) # 'fixed' or 'variable'
     remarks = Column(String, nullable=True)
     linked_debt_id = Column(String, ForeignKey("debts.id"), nullable=True) # set for auto-created debt repayment transactions
+    source = Column(String, default="manual") # 'manual' | 'imported' - provenance badge in the Ledger
 
 class RecurringPlan(Base):
     __tablename__ = "recurring_plans"
