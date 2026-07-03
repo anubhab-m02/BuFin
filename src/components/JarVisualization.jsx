@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
+import { getCategoryColor } from '../lib/categoryMeta';
 
 const ICONS = {
     PiggyBank, Travel: Plane, Tech: Laptop, Home, Car, Education: GraduationCap, Health: Heart, Other: Star, Investment: TrendingUp
@@ -16,6 +17,9 @@ const JarVisualization = ({ goal, onEdit }) => {
     const [amount, setAmount] = useState('');
     const [showMilestone, setShowMilestone] = useState(false);
     const Icon = ICONS[goal.icon] || Star;
+    // Stable per-goal accent, hashed from the goal name - same identity system used for
+    // transaction categories, so a jar's badge color doesn't change between renders.
+    const accentColor = getCategoryColor(goal.name);
     const progress = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
     const isCompleted = progress >= 100;
 
@@ -85,9 +89,16 @@ const JarVisualization = ({ goal, onEdit }) => {
                         <div>
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="font-bold text-lg leading-tight mb-1">{goal.name}</h3>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Icon className="h-3 w-3" />
+                                    <h3 className="font-bold text-lg leading-tight mb-1 flex items-center gap-2">
+                                        <span
+                                            className="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
+                                            style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 18%, transparent)`, color: accentColor }}
+                                        >
+                                            <Icon className="h-3.5 w-3.5" />
+                                        </span>
+                                        {goal.name}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground ml-8">
                                         {goal.type === 'investment' ? 'Investment' : 'Savings Goal'}
                                     </p>
                                 </div>

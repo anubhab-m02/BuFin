@@ -6,6 +6,8 @@ import { Input } from './ui/input';
 import { Hourglass, ShoppingBag, Trash2, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+const COOLDOWN_MS = 48 * 60 * 60 * 1000;
+
 const ImpulseControl = () => {
     const { wishlist, addWishlistItem, deleteWishlistItem, addTransaction } = useFinancial();
     const [newItem, setNewItem] = useState('');
@@ -35,8 +37,7 @@ const ImpulseControl = () => {
     const getTimeRemaining = (addedAt) => {
         const now = new Date();
         const added = new Date(addedAt);
-        const cooldown = 48 * 60 * 60 * 1000; // 48 hours in ms
-        const diff = cooldown - (now - added);
+        const diff = COOLDOWN_MS - (now - added);
 
         if (diff <= 0) return null; // Cooldown over
 
@@ -44,6 +45,13 @@ const ImpulseControl = () => {
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+
+    // Real elapsed-cooldown percentage, replacing the old static "100% width" fake timer bar.
+    const getElapsedPct = (addedAt) => {
+        const now = new Date();
+        const added = new Date(addedAt);
+        return Math.min(100, ((now - added) / COOLDOWN_MS) * 100);
     };
 
     // Force re-render every second to update timers
@@ -105,31 +113,36 @@ const ImpulseControl = () => {
                         wishlist.map(item => {
                             const timeRemaining = getTimeRemaining(item.addedAt);
                             const isExpired = timeRemaining === null;
+                            const elapsedPct = getElapsedPct(item.addedAt);
 
                             return (
                                 <div key={item.id} className="group relative bg-background rounded-xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden">
-                                    {/* Timer Bar */}
-                                    {!isExpired && (
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-secondary">
-                                            <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
-                                        </div>
-                                    )}
-
                                     <div className="p-4">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div>
-                                                <h4 className="font-semibold text-sm text-foreground">{item.name}</h4>
+                                        <div className="flex justify-between items-start mb-3 gap-3">
+                                            <div className="min-w-0">
+                                                <h4 className="font-semibold text-sm text-foreground truncate">{item.name}</h4>
                                                 <p className="text-xs text-muted-foreground">₹{item.cost.toFixed(2)}</p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right shrink-0">
                                                 {isExpired ? (
                                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                                                         Ready
                                                     </span>
                                                 ) : (
-                                                    <span className="font-mono text-lg font-bold text-primary tracking-tight">
-                                                        {timeRemaining}
-                                                    </span>
+                                                    <div className="relative w-14 h-14">
+                                                        <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
+                                                            <circle cx="28" cy="28" r="24" fill="none" stroke="var(--secondary)" strokeWidth="5" />
+                                                            <circle
+                                                                cx="28" cy="28" r="24" fill="none" stroke="var(--primary)" strokeWidth="5"
+                                                                strokeLinecap="round"
+                                                                strokeDasharray={`${(elapsedPct / 100) * 2 * Math.PI * 24} ${2 * Math.PI * 24}`}
+                                                                style={{ transition: 'stroke-dasharray var(--motion-slow) ease-out' }}
+                                                            />
+                                                        </svg>
+                                                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-bold text-foreground tabular-nums">
+                                                            {timeRemaining.slice(0, 5)}
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

@@ -7,6 +7,8 @@ import JarVisualization from '../components/JarVisualization';
 import JarCreationForm from '../components/JarCreationForm';
 import ImpulseControl from '../components/ImpulseControl';
 import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
+import { PiggyBank } from 'lucide-react';
 
 const GoalsPage = () => {
     const { savingsGoals } = useFinancial();
@@ -44,18 +46,14 @@ const GoalsPage = () => {
                         <span className="text-xs text-muted-foreground">{savingsGoals.length} Active</span>
                     </div>
                     {savingsGoals.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-primary/30 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10">
-                            <div className="p-4 bg-primary/10 rounded-full mb-4">
-                                <Plus className="h-8 w-8 text-primary" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-2">Start Your First Savings Jar!</h3>
-                            <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
-                                AI Suggestion: Create an "Emergency Fund" jar to build financial security.
-                            </p>
-                            <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
-                                Create Emergency Fund Jar
-                            </Button>
-                        </div>
+                        <EmptyState
+                            variant="hero"
+                            icon={PiggyBank}
+                            title="Start your first savings jar"
+                            description='AI Suggestion: create an "Emergency Fund" jar to build financial security.'
+                            actionLabel="Create Emergency Fund Jar"
+                            onAction={handleCreate}
+                        />
                     ) : (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {savingsGoals.map(goal => (
