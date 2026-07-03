@@ -5,12 +5,11 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { MessageSquare, Send, Sparkles, TrendingUp, GraduationCap, ShoppingBag, User, Bot } from 'lucide-react';
+import { Send, TrendingUp, GraduationCap, ShoppingBag, User, Bot, ChevronDown, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PageHeader from '../components/PageHeader';
-import SegmentedControl from '../components/ui/segmented-control';
 
 const MODES = [
     {
@@ -50,7 +49,9 @@ const CoachPage = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
     const scrollRef = useRef(null);
+    const modeMenuRef = useRef(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -58,8 +59,20 @@ const CoachPage = () => {
         }
     }, [messages]);
 
+    useEffect(() => {
+        if (!isModeMenuOpen) return;
+        const handleClickOutside = (e) => {
+            if (modeMenuRef.current && !modeMenuRef.current.contains(e.target)) {
+                setIsModeMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isModeMenuOpen]);
+
     const handleModeSelect = (mode) => {
         setSelectedMode(mode);
+        setIsModeMenuOpen(false);
         setMessages([
             { role: 'assistant', content: `Hello! I'm your ${mode.title}. ${mode.description} How can I help?` }
         ]);
@@ -96,17 +109,56 @@ const CoachPage = () => {
         <div className="h-full flex flex-col gap-6">
             <PageHeader title="Financial Coach" subtitle="Your personal AI expert for every financial decision." />
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <SegmentedControl
-                    options={MODES.map(m => ({ value: m.id, label: m.title, icon: m.icon }))}
-                    value={selectedMode.id}
-                    onChange={(id) => handleModeSelect(MODES.find(m => m.id === id))}
-                    className="w-full sm:w-auto"
-                />
-                <p className="text-xs text-muted-foreground">{selectedMode.description}</p>
-            </div>
-
             <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
+                <div className="flex items-center justify-between gap-3 p-3 border-b border-border relative" ref={modeMenuRef}>
+                    <button
+                        type="button"
+                        onClick={() => setIsModeMenuOpen((prev) => !prev)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                        aria-haspopup="listbox"
+                        aria-expanded={isModeMenuOpen}
+                    >
+                        <div
+                            className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                        >
+                            <selectedMode.icon className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
+                        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
+                    </button>
+                    <p className="hidden sm:block text-xs text-muted-foreground text-right">{selectedMode.description}</p>
+
+                    {isModeMenuOpen && (
+                        <div
+                            role="listbox"
+                            className="absolute left-3 top-full mt-1 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover shadow-lg p-1.5 animate-in fade-in slide-in-from-top-1 duration-fast"
+                        >
+                            {MODES.map((mode) => (
+                                <button
+                                    key={mode.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={mode.id === selectedMode.id}
+                                    onClick={() => handleModeSelect(mode)}
+                                    className="w-full flex items-start gap-3 p-2.5 rounded-lg text-left hover:bg-secondary transition-colors duration-fast"
+                                >
+                                    <div
+                                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                        style={{ backgroundColor: `color-mix(in srgb, ${mode.color} 15%, transparent)`, color: mode.color }}
+                                    >
+                                        <mode.icon className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-foreground">{mode.title}</p>
+                                        <p className="text-xs text-muted-foreground">{mode.description}</p>
+                                    </div>
+                                    {mode.id === selectedMode.id && <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 <CardContent className="flex-1 flex flex-col p-0 h-full">
                     <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
                         {messages.map((msg, i) => (
