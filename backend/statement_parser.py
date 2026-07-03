@@ -1,7 +1,7 @@
 import csv
 import io
 import re
-from datetime import datetime, date
+from datetime import datetime
 
 # Common bank-statement column name variants, lowercased. CSV parsing is fully
 # deterministic (no AI call) - it's fast, free, and bank CSV exports follow a small
@@ -26,11 +26,84 @@ CATEGORY_KEYWORDS = {
     "Rent": ["rent"],
     "Health": ["pharmacy", "hospital", "clinic", "apollo", "medplus"],
     "Salary": ["salary", "payroll"],
+    "Services": ["laundry", "dry clean", "tumbledry", "salon", "spa", "tailor"],
 }
 
 DATE_FORMATS = [
     "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y", "%d %b %Y", "%d %B %Y", "%b %d, %Y",
 ]
+
+# --- PII redaction -----------------------------------------------------------------
+# Indian bank/card statements routinely print account numbers, customer/CIF IDs, card
+# numbers, PAN, and registered phone numbers in headers, footers, and narration lines.
+# This runs on the FULL extracted text before any of it reaches an AI model (local or
+# cloud) - defense in depth, since Gemini is a third-party service and even the local
+# Ollama call shouldn't need to see this to extract transaction rows.
+_PAN_RE = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")
+_EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+_PHONE_RE = re.compile(r"(?<!\d)(?:\+?91[-\s]?)?[6-9]\d{9}(?!\d)")
+# Any standalone run of 9+ digits (account/card/customer-ID numbers). Bank transaction
+# reference numbers embedded in UPI narration (e.g. "P2M/609427137208/SWIGGY") also
+# match this and get masked too - harmless, since clean_merchant_name() below extracts
+# the merchant name from narration structurally, not from the digits.
+_LONG_DIGITS_RE = re.compile(r"(?<!\d)\d{9,18}(?!\d)")
+
+
+def _mask_keep_last4(match: re.Match) -> str:
+    digits = match.group(0)
+    return "X" * (len(digits) - 4) + digits[-4:]
+
+
+def redact_pii(text: str) -> str:
+    """Best-effort PII scrub of statement text before it reaches any AI model."""
+    if not text:
+        return text
+    text = _PAN_RE.sub("[REDACTED-PAN]", text)
+    text = _EMAIL_RE.sub("[REDACTED-EMAIL]", text)
+    text = _PHONE_RE.sub("[REDACTED-PHONE]", text)
+    text = _LONG_DIGITS_RE.sub(_mask_keep_last4, text)
+    return text
+
+
+# --- Merchant name cleanup ----------------------------------------------------------
+# Indian UPI/NEFT/IMPS narration is highly structured but not merchant-friendly, e.g.
+# "UPI/P2M/609427137208/SWIGGY" or "/UPI/ICICI Bank /UPI/P2M/646142018709/SWIGGY". This
+# is deterministic and far more reliable than asking an LLM to guess a clean name from
+# raw narration - regex extraction of the trailing name segment, applied to every row
+# from both the CSV and AI-parsed PDF paths, so bulk imports don't leave the user with
+# hundreds of rows to hand-edit.
+# Transaction-ID segment is optional (some narration omits it, e.g. "UPI/P2M/TUMBLEDRY")
+# and may already be redact_pii()-masked to XXXXXXXX1234 by the time this runs, since
+# redaction happens on the full text before any per-row parsing - match digits or X's.
+_UPI_RE = re.compile(r"UPI/(P2[AM])/(?:[\dX]+/)?([A-Za-z0-9 .&'_-]+)", re.IGNORECASE)
+_NEFT_IMPS_RE = re.compile(r"(?:NEFT|IMPS|RTGS)[-/][\w]*[-/]([A-Za-z][A-Za-z0-9 .&'_-]{2,})", re.IGNORECASE)
+
+# UPI "P2A" (person-to-account) is a peer transfer, not a merchant purchase - route
+# these to Transfers instead of leaving them Uncategorized, which is what a bulk
+# statement import would otherwise dump most peer payments into.
+_PEER_TRANSFER_MARKERS = ("p2a",)
+
+
+def clean_merchant_name(raw: str) -> tuple:
+    """Returns (clean_name, is_peer_transfer). Falls back to a trimmed/title-cased
+    version of the original text when no known narration pattern matches."""
+    raw = (raw or "").strip()
+    if not raw:
+        return "", False
+
+    m = _UPI_RE.search(raw)
+    if m:
+        kind, name = m.group(1).lower(), m.group(2).strip(" /.-")
+        return (name.title() if name else raw.strip()), (kind in _PEER_TRANSFER_MARKERS)
+
+    m = _NEFT_IMPS_RE.search(raw)
+    if m:
+        return m.group(1).strip(" /.-").title(), False
+
+    # Generic cleanup: collapse repeated slashes/spaces from bank-formatted narration.
+    cleaned = re.sub(r"[/\\]+", " ", raw)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:60], False
 
 
 def _normalize_header(h: str) -> str:
@@ -66,7 +139,9 @@ def _parse_amount(raw: str):
         return None
 
 
-def guess_category(description: str) -> str:
+def guess_category(description: str, is_peer_transfer: bool = False) -> str:
+    if is_peer_transfer:
+        return "Transfers"
     text = (description or "").lower()
     for category, keywords in CATEGORY_KEYWORDS.items():
         if any(kw in text for kw in keywords):
@@ -77,7 +152,7 @@ def guess_category(description: str) -> str:
 def parse_csv(content: bytes):
     """Returns (candidates: list[dict], skipped_rows: int). Each candidate matches
     schemas.ImportCandidate's shape (as a plain dict, caller wraps it in the schema)."""
-    text = content.decode("utf-8-sig", errors="replace")
+    text = redact_pii(content.decode("utf-8-sig", errors="replace"))
     reader = csv.DictReader(io.StringIO(text))
     headers = reader.fieldnames or []
 
@@ -98,7 +173,7 @@ def parse_csv(content: bytes):
 
     for row in reader:
         parsed_date = _parse_date(row.get(date_col, ""))
-        description = (row.get(desc_col, "") or "").strip() if desc_col else ""
+        raw_description = (row.get(desc_col, "") or "").strip() if desc_col else ""
 
         if amount_col:
             amount = _parse_amount(row.get(amount_col))
@@ -122,13 +197,14 @@ def parse_csv(content: bytes):
             skipped += 1
             continue
 
+        merchant, is_peer_transfer = clean_merchant_name(raw_description)
         candidates.append({
             "date": parsed_date,
             "amount": amount,
             "type": txn_type,
-            "merchant": description[:60] if description else None,
-            "description": description or None,
-            "category": guess_category(description),
+            "merchant": merchant or None,
+            "description": raw_description or None,
+            "category": guess_category(merchant, is_peer_transfer),
         })
 
     return candidates, skipped
@@ -138,3 +214,22 @@ def extract_pdf_text(content: bytes) -> str:
     from pypdf import PdfReader
     reader = PdfReader(io.BytesIO(content))
     return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def chunk_text_by_lines(text: str, max_chars: int) -> list:
+    """Splits text into line-respecting chunks, each under max_chars - used so a
+    multi-page statement gets sent across several AI calls instead of being silently
+    truncated to whatever fit in one prompt."""
+    lines = text.split("\n")
+    chunks = []
+    current, current_len = [], 0
+    for line in lines:
+        line_len = len(line) + 1
+        if current and current_len + line_len > max_chars:
+            chunks.append("\n".join(current))
+            current, current_len = [], 0
+        current.append(line)
+        current_len += line_len
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
