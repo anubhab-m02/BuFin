@@ -183,6 +183,52 @@ async def classify_transaction(text: str):
         print(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
 
+STATEMENT_PARSE_PROMPT = """
+You are a bank statement parser. Below is raw text extracted from a PDF bank/card statement.
+Extract every individual transaction line into a JSON array. Ignore headers, footers, balance
+summaries, and page numbers - only actual transaction rows.
+
+Each entry: { "date": "YYYY-MM-DD", "amount": float (always positive), "type": "expense"|"income",
+"description": str }
+
+Rules:
+- "type": "income" for credits/deposits, "expense" for debits/withdrawals/payments.
+- "amount": always positive; the "type" field carries the direction.
+- "description": the merchant/narration text as printed, trimmed.
+- If a date has no year, infer the most recent plausible year from context (statement period, if visible).
+- Skip lines that aren't real transactions (opening/closing balance, page headers, disclaimers).
+
+Return ONLY the JSON array, nothing else.
+
+Statement text:
+{statement_text}
+"""
+
+
+async def parse_statement_text(text: str):
+    """One AI call for the whole document (not per line) - PDFs don't have the reliable
+    column structure a CSV does, so this is where AI-assisted extraction earns its cost,
+    unlike per-row categorization which would be needlessly slow (see CSV path)."""
+    # Cap input size - a huge statement would blow the model's context and cost; a few
+    # thousand characters covers a multi-page statement's worth of transaction lines.
+    truncated = text[:15000]
+    prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", truncated)
+
+    if OLLAMA_ENABLED:
+        try:
+            raw = _call_ollama(prompt, timeout=60)
+            return _parse_action_array(raw)
+        except Exception as e:
+            print(f"Local model statement parsing failed, falling back to Gemini: {e}")
+
+    if not API_KEY:
+        raise Exception("API Key missing")
+
+    model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
+    response = model.generate_content(prompt)
+    return _parse_action_array(response.text)
+
+
 async def analyze_purchase(query: str, context: dict):
     if not API_KEY:
         raise Exception("API Key missing")
