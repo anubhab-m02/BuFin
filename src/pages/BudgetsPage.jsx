@@ -9,6 +9,8 @@ import { Trash2, Plus, Wallet2 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
 import { cn } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
+import { getCategoryMeta } from '../lib/categoryMeta';
+import { formatMoney } from '../lib/money';
 
 const BudgetsPage = () => {
     const { budgets, addBudget, updateBudget, deleteBudget, transactions, categories, isPrivacyMode } = useFinancial();
@@ -29,10 +31,7 @@ const BudgetsPage = () => {
         return acc;
     }, {});
 
-    const formatCurrency = (amount) => {
-        if (isPrivacyMode) return '••••••';
-        return `₹${amount.toFixed(0)}`;
-    };
+    const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
 
     const handleAdd = (e) => {
         e.preventDefault();
@@ -108,12 +107,21 @@ const BudgetsPage = () => {
                         const spent = spentByCategory[budget.category] || 0;
                         const pct = budget.monthlyLimit > 0 ? (spent / budget.monthlyLimit) * 100 : 0;
                         const isEditing = editingId === budget.id;
+                        const meta = getCategoryMeta(budget.category);
 
                         return (
                             <Card key={budget.id} className="shadow-sm">
                                 <CardContent className="p-5 space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-foreground">{budget.category}</span>
+                                        <span className="font-semibold text-foreground flex items-center gap-2">
+                                            <span
+                                                className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                                                style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}
+                                            >
+                                                <meta.icon className="h-3.5 w-3.5" />
+                                            </span>
+                                            {budget.category}
+                                        </span>
                                         <div className="flex items-center gap-2">
                                             {isEditing ? (
                                                 <Input
