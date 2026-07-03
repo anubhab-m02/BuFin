@@ -123,12 +123,6 @@ const ProfilePage = () => {
             <PageHeader
                 title="Profile & Settings"
                 subtitle="Manage your account, AI persona, and preferences."
-                action={
-                    <Button variant="destructive" size="sm" onClick={logout} className="gap-2">
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                    </Button>
-                }
             />
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -291,6 +285,15 @@ const ProfilePage = () => {
                             </div>
                             <Button variant="outline" size="sm" onClick={() => setIsPasswordModalOpen(true)}>
                                 Change
+                            </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <label className="text-sm font-medium">Sign Out</label>
+                                <p className="text-xs text-muted-foreground">End your session on this device</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={logout} className="gap-2">
+                                <LogOut className="h-4 w-4" /> Sign Out
                             </Button>
                         </div>
                         <div className="flex items-center justify-between">

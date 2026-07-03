@@ -85,7 +85,13 @@ const Navigation = () => {
                         </NavLink>
                     ))}
 
-                    <div className="flex items-center gap-3 px-3 py-3 mt-2 rounded-xl hover:bg-secondary/50 transition-colors duration-fast group">
+                    {/* Sign Out lives only on the Profile page (deliberate visit) and the mobile
+                        More sheet (explicit tap) - this card just links to Profile now, instead
+                        of doubling as a second, hover-only, easier-to-fat-finger sign-out. */}
+                    <NavLink
+                        to="/profile"
+                        className="flex items-center gap-3 px-3 py-3 mt-2 rounded-xl hover:bg-secondary/50 transition-colors duration-fast"
+                    >
                         <Avatar className="h-9 w-9 border border-border">
                             <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name}`} />
                             <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
@@ -94,16 +100,7 @@ const Navigation = () => {
                             <p className="text-sm font-medium truncate text-foreground">{user?.full_name || 'User'}</p>
                             <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10"
-                            onClick={logout}
-                            title="Sign Out"
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    </NavLink>
                 </div>
             </nav>
 
