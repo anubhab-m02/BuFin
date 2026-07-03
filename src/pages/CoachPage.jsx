@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { api } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
@@ -10,6 +10,7 @@ import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import PageHeader from '../components/PageHeader';
+import SegmentedControl from '../components/ui/segmented-control';
 
 const MODES = [
     {
@@ -17,30 +18,27 @@ const MODES = [
         title: 'Purchase Analyst',
         description: 'Decide on big purchases with trade-offs & alternatives.',
         icon: ShoppingBag,
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/20',
-        placeholder: 'e.g., "Should I buy the iPhone 16 or wait?"'
+        color: 'var(--chart-1)',
+        placeholder: 'e.g., "Should I buy the iPhone 16 or wait?"',
+        starters: ['Can I afford a ₹40,000 laptop right now?', 'iPhone 16 vs waiting for next year?', 'Should I lease or buy a car?']
     },
     {
         id: 'strategist',
         title: 'Savings Strategist',
         description: 'Plan targets & investments based on your profile.',
         icon: TrendingUp,
-        color: 'text-green-500',
-        bgColor: 'bg-green-500/10',
-        borderColor: 'border-green-500/20',
-        placeholder: 'e.g., "How do I save for a house in 5 years?"'
+        color: 'var(--chart-2)',
+        placeholder: 'e.g., "How do I save for a house in 5 years?"',
+        starters: ['How do I save for a house in 5 years?', 'What should my emergency fund be?', 'Where should I put my next bonus?']
     },
     {
         id: 'educator',
         title: 'Financial Educator',
         description: 'Learn concepts simply with clear analogies.',
         icon: GraduationCap,
-        color: 'text-purple-500',
-        bgColor: 'bg-purple-500/10',
-        borderColor: 'border-purple-500/20',
-        placeholder: 'e.g., "What is an SIP and how does it work?"'
+        color: 'var(--chart-4)',
+        placeholder: 'e.g., "What is an SIP and how does it work?"',
+        starters: ['What is an SIP and how does it work?', 'Explain the 50/30/20 rule simply', 'What\'s the difference between a stock and a mutual fund?']
     }
 ];
 
@@ -69,9 +67,10 @@ const CoachPage = () => {
 
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!input.trim() || isLoading) return;
+        const text = e.starterText || input;
+        if (!text.trim() || isLoading) return;
 
-        const userMsg = { role: 'user', content: input };
+        const userMsg = { role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsLoading(true);
@@ -97,27 +96,14 @@ const CoachPage = () => {
         <div className="h-full flex flex-col gap-6">
             <PageHeader title="Financial Coach" subtitle="Your personal AI expert for every financial decision." />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {MODES.map(mode => (
-                    <Card
-                        key={mode.id}
-                        className={cn(
-                            "cursor-pointer transition-all hover:shadow-md border-2",
-                            selectedMode.id === mode.id ? `${mode.borderColor} ${mode.bgColor}` : "border-transparent hover:border-border"
-                        )}
-                        onClick={() => handleModeSelect(mode)}
-                    >
-                        <CardHeader className="p-4">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <mode.icon className={cn("h-5 w-5", mode.color)} />
-                                {mode.title}
-                            </CardTitle>
-                            <CardDescription className="text-xs">
-                                {mode.description}
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                ))}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                <SegmentedControl
+                    options={MODES.map(m => ({ value: m.id, label: m.title, icon: m.icon }))}
+                    value={selectedMode.id}
+                    onChange={(id) => handleModeSelect(MODES.find(m => m.id === id))}
+                    className="w-full sm:w-auto"
+                />
+                <p className="text-xs text-muted-foreground">{selectedMode.description}</p>
             </div>
 
             <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
@@ -126,8 +112,11 @@ const CoachPage = () => {
                         {messages.map((msg, i) => (
                             <div key={i} className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}>
                                 {msg.role === 'assistant' && (
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", selectedMode.bgColor)}>
-                                        <Bot className={cn("h-5 w-5", selectedMode.color)} />
+                                    <div
+                                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                        style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                                    >
+                                        <Bot className="h-5 w-5" />
                                     </div>
                                 )}
                                 <div className={cn(
@@ -180,10 +169,26 @@ const CoachPage = () => {
                                 )}
                             </div>
                         ))}
+                        {messages.length === 1 && !isLoading && (
+                            <div className="flex flex-wrap gap-2 pl-11">
+                                {selectedMode.starters.map((starter) => (
+                                    <button
+                                        key={starter}
+                                        onClick={() => handleSend({ preventDefault: () => { }, starterText: starter })}
+                                        className="text-xs px-3 py-1.5 rounded-full border border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-fast text-left"
+                                    >
+                                        {starter}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {isLoading && (
                             <div className="flex gap-3">
-                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0", selectedMode.bgColor)}>
-                                    <Bot className={cn("h-5 w-5", selectedMode.color)} />
+                                <div
+                                    className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                                    style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                                >
+                                    <Bot className="h-5 w-5" />
                                 </div>
                                 <div className="bg-secondary text-secondary-foreground rounded-2xl rounded-tl-none px-4 py-2 text-sm shadow-sm flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
