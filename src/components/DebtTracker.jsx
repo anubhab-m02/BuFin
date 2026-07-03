@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowUpRight, ArrowDownLeft, Trash2, CheckCircle, Pencil } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Trash2, CheckCircle, Pencil, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import EmptyState from './EmptyState';
 import Dialog from './ui/dialog';
 import { AddDebtForm } from './PlannerForms';
+import { cn } from '../lib/utils';
 
 const DebtTracker = ({ compact }) => {
     const { debts, isPrivacyMode, deleteDebt, repayDebt } = useFinancial();
     const [editingDebt, setEditingDebt] = useState(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
+    // Person groups default collapsed to a summary row - a single busy relationship
+    // (many split-bill debts) shouldn't push everyone else off-screen.
+    const [expandedPeople, setExpandedPeople] = useState(() => new Set());
+
+    const togglePerson = (personName) => {
+        setExpandedPeople(prev => {
+            const next = new Set(prev);
+            if (next.has(personName)) next.delete(personName);
+            else next.add(personName);
+            return next;
+        });
+    };
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
@@ -43,14 +56,24 @@ const DebtTracker = ({ compact }) => {
             ) : (
                 Object.entries(byPerson).map(([personName, personDebts]) => {
                     const net = personDebts.reduce((sum, d) => sum + (d.direction === 'receivable' ? d.amount : -d.amount), 0);
+                    const isExpanded = expandedPeople.has(personName);
                     return (
                         <div key={personName} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold text-foreground">{personName}</p>
+                            <button
+                                type="button"
+                                onClick={() => togglePerson(personName)}
+                                className="flex items-center justify-between w-full text-left group"
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isExpanded && "rotate-180")} />
+                                    <p className="text-sm font-semibold text-foreground">{personName}</p>
+                                    <span className="text-xs text-muted-foreground">· {personDebts.length} {personDebts.length === 1 ? 'entry' : 'entries'}</span>
+                                </span>
                                 <span className={`text-xs font-medium tabular-nums ${net === 0 ? 'text-muted-foreground' : net > 0 ? 'text-success' : 'text-destructive'}`}>
                                     Net: {net > 0 ? '+' : net < 0 ? '-' : ''}{formatCurrency(Math.abs(net))}
                                 </span>
-                            </div>
+                            </button>
+                            {isExpanded && (
                             <div className="space-y-2">
                                 {personDebts.map(debt => (
                                     <div key={debt.id} className="flex items-center justify-between border-b pb-2 last:border-0">
@@ -95,6 +118,7 @@ const DebtTracker = ({ compact }) => {
                                     </div>
                                 ))}
                             </div>
+                            )}
                         </div>
                     );
                 })
