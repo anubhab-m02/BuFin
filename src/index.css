@@ -92,19 +92,21 @@
     --accent-foreground: #18181b;
     /* Zinc 900 */
 
-    /* Destructive - Keep for critical errors, but use sparingly */
-    --destructive: #ef4444;
-    /* Red 500 */
+    /* Destructive. Was Red 500 (#ef4444, 3.76:1 on white - passes graphics' 3:1 but fails
+       text's 4.5:1 since this token is used for both). Red 600 passes both. */
+    --destructive: #dc2626;
+    /* Red 600 */
     --destructive-foreground: #ffffff;
 
-    /* Success - Keep for critical success, but use sparingly */
-    --success: #10b981;
-    /* Emerald 500 */
+    /* Success. Was Emerald 500 (#10b981, 2.54:1 on white - fails even the 3:1 graphics
+       minimum, which is what made fills/arcs read as washed-out/invisible in light mode). */
+    --success: #059669;
+    /* Emerald 600 */
     --success-foreground: #ffffff;
 
-    /* Warning */
-    --warning: #f59e0b;
-    /* Amber 500 */
+    /* Warning. Was Amber 500 (#f59e0b, 2.15:1 on white - same failure as success above). */
+    --warning: #d97706;
+    /* Amber 600 */
     --warning-foreground: #ffffff;
 
     /* Borders & Inputs */

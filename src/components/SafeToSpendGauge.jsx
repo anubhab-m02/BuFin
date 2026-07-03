@@ -41,18 +41,18 @@ const SafeToSpendGauge = ({ pct = 0, size = 220, strokeWidth = 16, color: colorO
             <path
                 d={trackPath}
                 fill="none"
-                stroke="var(--secondary)"
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
+                style={{ stroke: 'var(--border)' }}
             />
             <path
                 d={trackPath}
                 fill="none"
-                stroke={color}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeDasharray={`${filledLength} ${circumference}`}
                 style={{
+                    stroke: color,
                     transition: 'stroke-dasharray var(--motion-slow) ease-out, stroke var(--motion-normal)',
                 }}
             />
