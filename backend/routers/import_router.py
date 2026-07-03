@@ -57,14 +57,20 @@ async def parse_statement(
                 # currently usable" (bad/missing Gemini key, Ollama down), a service-side
                 # config problem the user needs to fix, not a bad upload.
                 raise HTTPException(status_code=503, detail=str(e))
-            candidates = [{
-                "date": r.get("date"),
-                "amount": abs(float(r.get("amount", 0))),
-                "type": r.get("type", "expense"),
-                "merchant": (r.get("description") or "")[:60] or None,
-                "description": r.get("description"),
-                "category": statement_parser.guess_category(r.get("description", "")),
-            } for r in raw_candidates if r.get("date") and r.get("amount")]
+            candidates = []
+            for r in raw_candidates:
+                if not r.get("date") or not r.get("amount"):
+                    continue
+                raw_description = r.get("description") or ""
+                merchant, is_peer_transfer = statement_parser.clean_merchant_name(raw_description)
+                candidates.append({
+                    "date": r.get("date"),
+                    "amount": abs(float(r.get("amount", 0))),
+                    "type": r.get("type", "expense"),
+                    "merchant": merchant or None,
+                    "description": raw_description or None,
+                    "category": statement_parser.guess_category(merchant, is_peer_transfer),
+                })
             skipped = len(raw_candidates) - len(candidates)
             source_type = "pdf"
         else:
