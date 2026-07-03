@@ -67,15 +67,29 @@ export function useSafeToSpend() {
 
     const projectedEndMonth = balance + totalUpcomingIncome - totalUpcomingExpenses - debtPayable;
     const conservativeSafeBalance = balance - totalUpcomingExpenses - debtPayable;
-    const dailySafeSpend = Math.max(0, conservativeSafeBalance / daysRemaining);
 
-    // Today's spend, for the gauge - how much of today's safe daily budget is already used.
+    // Today's spend/income, needed both for the gauge and to derive a stable baseline below.
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const spentToday = transactions
         .filter(t => t.type === 'expense' && (t.date || '').startsWith(todayStr))
         .reduce((acc, t) => acc + t.amount, 0);
+    const incomeToday = transactions
+        .filter(t => t.type === 'income' && (t.date || '').startsWith(todayStr))
+        .reduce((acc, t) => acc + t.amount, 0);
+
+    // `balance` already has today's transactions folded in, so deriving today's daily
+    // allowance directly from it made the allowance shrink alongside an overspend instead
+    // of being exceeded by it - spend more today and the "limit" just quietly lowered
+    // itself to match, so overspending never showed up. Add today's own net back to get a
+    // stable "balance as of this morning" and measure today's budget against *that* instead,
+    // so `usagePct` can correctly go past 100% and the app can say "you're over" out loud.
+    const balanceAtStartOfToday = balance + spentToday - incomeToday;
+    const dailySafeSpend = Math.max(0, (balanceAtStartOfToday - totalUpcomingExpenses - debtPayable) / daysRemaining);
 
     const usagePct = dailySafeSpend > 0 ? (spentToday / dailySafeSpend) * 100 : (spentToday > 0 ? 100 : 0);
+    const remainingToday = Math.max(0, dailySafeSpend - spentToday);
+    const overAmountToday = Math.max(0, spentToday - dailySafeSpend);
+    const isOverToday = spentToday > dailySafeSpend;
 
     return {
         daysRemaining,
@@ -86,6 +100,9 @@ export function useSafeToSpend() {
         conservativeSafeBalance,
         dailySafeSpend,
         spentToday,
+        remainingToday,
+        overAmountToday,
+        isOverToday,
         usagePct,
     };
 }

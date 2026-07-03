@@ -14,7 +14,7 @@ import { cn } from '../lib/utils';
 // (replacing the old separate "Live Insight" card, which read like a stray quoted string).
 const DashboardHero = () => {
     const { isPrivacyMode, isDataLoading } = useFinancial();
-    const { dailySafeSpend, daysRemaining, usagePct, spentToday } = useSafeToSpend();
+    const { dailySafeSpend, daysRemaining, usagePct, spentToday, remainingToday, overAmountToday, isOverToday } = useSafeToSpend();
     const { alert, loading: alertLoading } = useSpendingAlert();
 
     const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
@@ -40,16 +40,16 @@ const DashboardHero = () => {
         <Card className="bg-surface-hero border-0 p-6 md:p-8">
             <div className="flex flex-col items-center text-center gap-3">
                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    Safe to spend today
+                    {isOverToday ? "Over today's limit" : 'Safe to spend today'}
                 </span>
 
                 <SafeToSpendGauge pct={usagePct} />
 
-                <div className="text-5xl font-bold tabular-nums -mt-4">
-                    {formatCurrency(dailySafeSpend)}
+                <div className={cn('text-5xl font-bold tabular-nums -mt-4', isOverToday && 'text-destructive')}>
+                    {isOverToday ? `-${formatCurrency(overAmountToday)}` : formatCurrency(remainingToday)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                    {daysRemaining} days left this month {spentToday > 0 && `• ${formatCurrency(spentToday)} spent today`}
+                    {daysRemaining} days left this month {spentToday > 0 && `• ${formatCurrency(spentToday)} spent today of ${formatCurrency(dailySafeSpend)} limit`}
                 </p>
 
                 <div className={cn('flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium mt-2 max-w-md', statusTone)}>
@@ -62,6 +62,16 @@ const DashboardHero = () => {
                         <>
                             <TrendingUp className="h-3.5 w-3.5 shrink-0" />
                             <span>{alert}</span>
+                        </>
+                    ) : isOverToday ? (
+                        <>
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <span>You're {formatCurrency(overAmountToday)} over today's safe limit.</span>
+                        </>
+                    ) : spentToday > 0 ? (
+                        <>
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                            <span>{formatCurrency(spentToday)} spent today, within your {formatCurrency(dailySafeSpend)} limit.</span>
                         </>
                     ) : (
                         <>
