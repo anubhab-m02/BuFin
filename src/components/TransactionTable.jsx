@@ -1,246 +1,198 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
-import { Trash2, Edit2, UserPlus } from 'lucide-react';
+import { Input } from './ui/input';
+import { Trash2, Edit2, UserPlus, Search } from 'lucide-react';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
 import { AddDebtForm } from './PlannerForms';
 import EmptyState from './EmptyState';
 import { Skeleton } from './ui/skeleton';
+import { getCategoryMeta } from '../lib/categoryMeta';
+import { formatSignedMoney } from '../lib/money';
+
+const dayLabel = (dateStr) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const sameDay = (a, b) => a.toDateString() === b.toDateString();
+    if (sameDay(d, today)) return 'Today';
+    if (sameDay(d, yesterday)) return 'Yesterday';
+    return d.toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' });
+};
 
 const TransactionTable = () => {
-    const { transactions, deleteTransaction, isPrivacyMode, debts, categories, isDataLoading } = useFinancial();
+    const { transactions, deleteTransaction, isPrivacyMode, debts, isDataLoading } = useFinancial();
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [splitTransaction, setSplitTransaction] = useState(null);
     const [viewingTransaction, setViewingTransaction] = useState(null);
-
-    // Filters & Sorting
     const [filterType, setFilterType] = useState('all'); // all, income, expense, debt
-    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
+    const [search, setSearch] = useState('');
 
-    const formatCurrency = (amount) => {
-        if (isPrivacyMode) return '••••••';
-        return `₹${amount.toFixed(2)}`;
-    };
+    const formatSigned = (amount, type) => (isPrivacyMode ? '••••••' : formatSignedMoney(amount, type));
 
     const formatDate = (isoString) => {
         if (!isoString) return 'Unknown Date';
-        return new Date(isoString).toLocaleDateString('en-IN', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+        return new Date(isoString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
     };
 
-    // Combine Data Sources if needed, or switch based on filter
     const getDataSource = () => {
         if (filterType === 'debt') {
             return debts.map(d => ({
                 ...d,
-                date: d.dueDate || new Date().toISOString(), // Use dueDate or now
+                date: d.dueDate || new Date().toISOString(),
                 merchant: d.personName,
                 category: 'Debt',
-                description: d.direction === 'receivable' ? 'Owes me' : 'I owe', // Map remarks/desc
-                type: d.direction === 'receivable' ? 'income' : 'expense', // Map for color coding (Receivable = Green/Income-like)
+                description: d.direction === 'receivable' ? 'Owes me' : 'I owe',
+                type: d.direction === 'receivable' ? 'income' : 'expense',
                 isDebt: true
             }));
         }
         return transactions;
     };
 
-    const rawData = getDataSource();
+    const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+    const searchLower = search.trim().toLowerCase();
 
-    // Filter
-    const filteredData = rawData.filter(item => {
-        // Always filter out future transactions from the Ledger
-        // Use LOCAL time for "today" to match user's perspective
-        const d = new Date();
-        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const filteredData = getDataSource()
+        .filter(item => {
+            const itemDate = (item.date || '').split('T')[0];
+            if (itemDate > todayStr) return false;
+            if (filterType !== 'all' && filterType !== 'debt' && item.type !== filterType) return false;
+            if (searchLower) {
+                const haystack = `${item.merchant || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
+                if (!haystack.includes(searchLower)) return false;
+            }
+            return true;
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const itemDate = item.date.split('T')[0];
-        if (itemDate > todayStr) return false;
-
-        if (filterType === 'all') return true;
-        if (filterType === 'debt') return true; // Already switched source
-        return item.type === filterType;
-    });
-
-    // Sort
-    const sortedData = [...filteredData].sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
-
-        if (sortConfig.key === 'amount') {
-            aValue = parseFloat(aValue);
-            bValue = parseFloat(bValue);
-        } else if (sortConfig.key === 'date') {
-            aValue = new Date(aValue);
-            bValue = new Date(bValue);
-        }
-
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-    });
-
-    // Calculate Running Balance (Net Balance)
-    const dataWithBalance = (() => {
-        // Sort chronologically ascending to calc balance
-        const chrono = [...sortedData].sort((a, b) => new Date(a.date) - new Date(b.date));
-        let running = 0;
-        const withBal = chrono.map(item => {
-            const amt = item.type === 'income' ? item.amount : -item.amount;
-            running += amt;
-            return { ...item, balance: running };
-        });
-
-        // Now re-sort to match user's sort config
-        if (sortConfig.key === 'date' && sortConfig.direction === 'desc') {
-            return withBal.reverse();
-        }
-        return withBal.sort((a, b) => {
-            let aValue = a[sortConfig.key];
-            let bValue = b[sortConfig.key];
-            if (sortConfig.key === 'amount') { aValue = parseFloat(aValue); bValue = parseFloat(bValue); }
-            if (sortConfig.key === 'date') { aValue = new Date(aValue); bValue = new Date(bValue); }
-            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-    })();
-
-    const handleSort = (key) => {
-        setSortConfig(current => ({
-            key,
-            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-        }));
-    };
+    const groups = filteredData.reduce((acc, item) => {
+        const key = dayLabel(item.date);
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+    }, {});
 
     return (
         <>
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Transaction History</CardTitle>
-                    <div className="flex gap-2">
-                        <select
-                            className="h-9 rounded-lg border border-input bg-background px-3 text-sm transition-colors duration-fast"
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                        >
-                            <option value="all">All Transactions</option>
-                            <option value="income">Income Only</option>
-                            <option value="expense">Expense Only</option>
-                            <option value="debt">Debts (Owed)</option>
-                        </select>
+                <CardHeader className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search merchant, category, or note..."
+                            className="pl-9"
+                        />
                     </div>
+                    <select
+                        className="h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors duration-fast"
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                    >
+                        <option value="all">All Transactions</option>
+                        <option value="income">Income Only</option>
+                        <option value="expense">Expense Only</option>
+                        <option value="debt">Debts (Owed)</option>
+                    </select>
                 </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-muted-foreground uppercase bg-secondary/50">
-                                <tr>
-                                    <th className="px-4 py-3 rounded-tl-lg cursor-pointer hover:text-foreground" onClick={() => handleSort('date')}>
-                                        Date {sortConfig.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th className="px-4 py-3">Merchant / Person</th>
-                                    <th className="px-4 py-3 cursor-pointer hover:text-foreground" onClick={() => handleSort('category')}>
-                                        Category
-                                    </th>
-                                    <th className="px-4 py-3">Title</th>
-                                    <th className="px-4 py-3 text-right cursor-pointer hover:text-foreground" onClick={() => handleSort('amount')}>
-                                        Amount {sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th className="px-4 py-3 text-right">Net Bal</th>
-                                    <th className="px-4 py-3 rounded-tr-lg text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {isDataLoading ? (
-                                    [0, 1, 2, 3, 4].map((i) => (
-                                        <tr key={i} className="border-b last:border-0">
-                                            {Array.from({ length: 7 }).map((_, j) => (
-                                                <td key={j} className="px-4 py-3">
-                                                    <Skeleton className="h-4 w-full max-w-[100px]" />
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))
-                                ) : dataWithBalance.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="p-4">
-                                            <EmptyState
-                                                title="No records found"
-                                                description="Try adjusting your filters or add a new transaction."
-                                                actionLabel="Add Transaction"
-                                                onAction={() => document.querySelector('button[type="submit"]')?.click()}
-                                            />
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    dataWithBalance.map((t) => (
-                                        <tr
-                                            key={t.id}
-                                            className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
-                                            onClick={() => setViewingTransaction(t)}
-                                        >
-                                            <td className="px-4 py-3 font-medium whitespace-nowrap">{formatDate(t.date)}</td>
-                                            <td className="px-4 py-3">{t.merchant || t.personName || '-'}</td>
-                                            <td className="px-4 py-3">
-                                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-                                                    {t.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground max-w-[150px] truncate" title={t.description}>
-                                                {t.description || '-'}
-                                            </td>
-                                            <td className={`px-4 py-3 text-right font-bold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-muted-foreground font-mono text-xs">
-                                                {formatCurrency(t.balance)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {!t.isDebt && (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                                onClick={(e) => { e.stopPropagation(); setEditingTransaction(t); }}
-                                                                title="Edit"
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                                                onClick={(e) => { e.stopPropagation(); setSplitTransaction(t); }}
-                                                                title="Split Bill"
-                                                            >
-                                                                <UserPlus className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
-                                                                title="Delete"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
+                <CardContent className="divide-y divide-border">
+                    {isDataLoading ? (
+                        [0, 1, 2, 3].map(i => (
+                            <div key={i} className="py-3 flex items-center gap-3">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-3 w-24" />
+                                </div>
+                                <Skeleton className="h-4 w-16" />
+                            </div>
+                        ))
+                    ) : filteredData.length === 0 ? (
+                        <EmptyState
+                            title="No records found"
+                            description="Try adjusting your search or filters."
+                        />
+                    ) : (
+                        Object.entries(groups).map(([label, items]) => (
+                            <div key={label} className="py-2 first:pt-0 last:pb-0">
+                                <p className="sticky top-0 z-10 bg-card text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">
+                                    {label}
+                                </p>
+                                <div className="divide-y divide-border/60">
+                                    {items.map((t) => {
+                                        const meta = getCategoryMeta(t.category);
+                                        return (
+                                            <div
+                                                key={t.id}
+                                                className="flex items-center gap-3 py-3 cursor-pointer group"
+                                                onClick={() => setViewingTransaction(t)}
+                                            >
+                                                <div
+                                                    className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+                                                    style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}
+                                                >
+                                                    <meta.icon className="h-4 w-4" />
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">
+                                                        {t.merchant || t.personName || t.description || t.category}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {t.category}{t.description ? ` • ${t.description}` : ''}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className={`text-sm font-semibold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                                                        {formatSigned(t.amount, t.type)}
+                                                    </p>
+                                                    <p className="text-[11px] text-muted-foreground">{formatDate(t.date)}</p>
+                                                </div>
+                                                {!t.isDebt && (
+                                                    <div
+                                                        className="flex items-center gap-0.5 shrink-0 pl-1"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-muted-foreground hover:text-primary"
+                                                            onClick={() => setEditingTransaction(t)}
+                                                            title="Edit"
+                                                        >
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
+                                                            onClick={() => setSplitTransaction(t)}
+                                                            title="Split Bill"
+                                                        >
+                                                            <UserPlus className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                                                            onClick={() => deleteTransaction(t.id)}
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </CardContent>
             </Card>
 
@@ -257,7 +209,7 @@ const TransactionTable = () => {
                                 <p className="text-sm text-muted-foreground">{formatDate(viewingTransaction.date)}</p>
                             </div>
                             <div className={`text-xl font-bold tabular-nums ${viewingTransaction.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                                {viewingTransaction.type === 'income' ? '+' : '-'}{formatCurrency(viewingTransaction.amount)}
+                                {formatSigned(viewingTransaction.amount, viewingTransaction.type)}
                             </div>
                         </div>
 
@@ -315,7 +267,7 @@ const TransactionTable = () => {
                     <AddDebtForm
                         initialData={{
                             amount: splitTransaction.amount,
-                            direction: 'receivable', // Usually if I paid, they owe me
+                            direction: 'receivable',
                             personName: ''
                         }}
                         onSuccess={() => setSplitTransaction(null)}
