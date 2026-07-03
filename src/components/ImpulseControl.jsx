@@ -130,7 +130,11 @@ const ImpulseControl = () => {
                                                     </span>
                                                 ) : (
                                                     <div className="relative w-14 h-14">
-                                                        <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
+                                                        <svg
+                                                            width="56" height="56" viewBox="0 0 56 56" className="-rotate-90"
+                                                            role="meter" aria-valuenow={Math.round(elapsedPct)} aria-valuemin={0} aria-valuemax={100}
+                                                            aria-label={`Cooldown ${Math.round(elapsedPct)}% complete, ${timeRemaining} remaining`}
+                                                        >
                                                             <circle cx="28" cy="28" r="24" fill="none" stroke="var(--secondary)" strokeWidth="5" />
                                                             <circle
                                                                 cx="28" cy="28" r="24" fill="none" stroke="var(--primary)" strokeWidth="5"
