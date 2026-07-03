@@ -27,14 +27,19 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4-mini")
 
 
-def _call_ollama(prompt: str, timeout: int = 20) -> str:
+def _call_ollama(prompt: str, timeout: int = 20, num_predict: int = None) -> str:
     """Send a single-turn prompt to the local Ollama model. Raises on any failure
-    (connection refused, timeout, non-2xx) so callers can fall back to Gemini."""
-    response = requests.post(
-        f"{OLLAMA_HOST}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        timeout=timeout,
-    )
+    (connection refused, timeout, non-2xx) so callers can fall back to Gemini.
+
+    `num_predict` caps generation length - Ollama's per-model default (often a few
+    hundred tokens) is fine for short structured replies but silently truncates a
+    long JSON array mid-object for something like a full statement's worth of
+    transactions, which then fails to parse. Callers with large expected outputs
+    should pass an explicit budget."""
+    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+    if num_predict is not None:
+        payload["options"] = {"num_predict": num_predict}
+    response = requests.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=timeout)
     response.raise_for_status()
     return response.json().get("response", "")
 
@@ -205,28 +210,48 @@ Statement text:
 """
 
 
+def _friendly_gemini_error(e: Exception) -> str:
+    """Gemini/google-api-core exceptions are verbose and nest a raw gRPC error
+    message - this maps the common cases to something a user can actually act on."""
+    msg = str(e)
+    if "API_KEY_INVALID" in msg or "API key not valid" in msg:
+        return "Gemini API key is invalid or has been revoked. Get a new key at aistudio.google.com/apikey and update GEMINI_API_KEY/VITE_GEMINI_API_KEY in your .env, or run Ollama locally so cloud AI isn't needed."
+    if "RESOURCE_EXHAUSTED" in msg or "429" in msg[:10]:
+        return "Gemini's free-tier quota is exhausted for now. Try again later, or run Ollama locally so cloud AI isn't needed."
+    return f"Gemini request failed: {msg}"
+
+
 async def parse_statement_text(text: str):
     """One AI call for the whole document (not per line) - PDFs don't have the reliable
     column structure a CSV does, so this is where AI-assisted extraction earns its cost,
     unlike per-row categorization which would be needlessly slow (see CSV path)."""
-    # Cap input size - a huge statement would blow the model's context and cost; a few
-    # thousand characters covers a multi-page statement's worth of transaction lines.
-    truncated = text[:15000]
-    prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", truncated)
-
+    ollama_error = None
     if OLLAMA_ENABLED:
         try:
-            raw = _call_ollama(prompt, timeout=60)
+            # phi4-mini's context is much smaller than Gemini's - truncate tighter here
+            # than the Gemini path below, and give generation a large enough token
+            # budget that a full statement's worth of transactions isn't cut off
+            # mid-array (Ollama's per-model default budget is easily too small for this).
+            truncated = text[:6000]
+            prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", truncated)
+            raw = _call_ollama(prompt, timeout=90, num_predict=4096)
             return _parse_action_array(raw)
         except Exception as e:
+            ollama_error = e
             print(f"Local model statement parsing failed, falling back to Gemini: {e}")
 
     if not API_KEY:
-        raise Exception("API Key missing")
+        detail = "No AI backend available: Ollama is unreachable/disabled" + (f" ({ollama_error})" if ollama_error else "") + " and no Gemini API key is configured."
+        raise Exception(detail)
 
-    model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
-    response = model.generate_content(prompt)
-    return _parse_action_array(response.text)
+    try:
+        truncated = text[:15000]
+        prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", truncated)
+        model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
+        response = model.generate_content(prompt)
+        return _parse_action_array(response.text)
+    except Exception as e:
+        raise Exception(_friendly_gemini_error(e))
 
 
 async def analyze_purchase(query: str, context: dict):

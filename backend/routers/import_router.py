@@ -48,7 +48,15 @@ async def parse_statement(
             text = statement_parser.extract_pdf_text(content)
             if not text.strip():
                 raise HTTPException(status_code=400, detail="Couldn't extract any text from this PDF - it may be a scanned image rather than a text-based statement")
-            raw_candidates = await ai_service.parse_statement_text(text)
+            try:
+                raw_candidates = await ai_service.parse_statement_text(text)
+            except HTTPException:
+                raise
+            except Exception as e:
+                # Distinct from a malformed file (400/422) - this is "no AI backend is
+                # currently usable" (bad/missing Gemini key, Ollama down), a service-side
+                # config problem the user needs to fix, not a bad upload.
+                raise HTTPException(status_code=503, detail=str(e))
             candidates = [{
                 "date": r.get("date"),
                 "amount": abs(float(r.get("amount", 0))),
@@ -62,6 +70,8 @@ async def parse_statement(
         else:
             candidates, skipped = statement_parser.parse_csv(content)
             source_type = "csv"
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
