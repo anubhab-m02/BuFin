@@ -190,12 +190,7 @@ const ProfilePage = () => {
                     </CardContent>
                 </Card>
 
-                {/* Achievements Section */}
-                <div className="md:col-span-2">
-                    <Achievements />
-                </div>
-
-                {/* AI Personalization Card */}
+                {/* AI Personalization - the standout feature, surfaced right after identity */}
                 <Card className="md:col-span-2 border-primary/20 bg-primary/5">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <div>
@@ -238,6 +233,11 @@ const ProfilePage = () => {
                     </CardContent>
                 </Card>
 
+                {/* Achievements Section */}
+                <div className="md:col-span-2">
+                    <Achievements />
+                </div>
+
                 {/* Preferences Card */}
                 <Card>
                     <CardHeader>
@@ -266,6 +266,16 @@ const ProfilePage = () => {
                                 <p className="text-xs text-muted-foreground">Display currency</p>
                             </div>
                             <div className="text-sm font-bold">{user?.currency || 'INR'} ({user?.currency === 'USD' ? '$' : '₹'})</div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <label className="text-sm font-medium">Export Data</label>
+                                <p className="text-xs text-muted-foreground">Download your data as JSON</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleExportData} className="gap-2">
+                                <Download className="h-4 w-4" /> Export
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -301,28 +311,8 @@ const ProfilePage = () => {
                                 <label className="text-sm font-medium text-destructive">Delete Account</label>
                                 <p className="text-xs text-muted-foreground">Permanently remove all data</p>
                             </div>
-                            <Button variant="destructive" size="sm" onClick={() => setIsDeleteModalOpen(true)}>
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Data Management Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <Download className="h-4 w-4" /> Data Management
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <label className="text-sm font-medium">Export Data</label>
-                                <p className="text-xs text-muted-foreground">Download your data as JSON</p>
-                            </div>
-                            <Button variant="outline" size="sm" onClick={handleExportData}>
-                                <Download className="h-4 w-4 mr-2" /> Export
+                            <Button variant="destructive" size="sm" onClick={() => setIsDeleteModalOpen(true)} className="gap-2">
+                                <Trash2 className="h-4 w-4" /> Delete
                             </Button>
                         </div>
                     </CardContent>
