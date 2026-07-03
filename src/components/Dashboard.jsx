@@ -152,7 +152,7 @@ export const ExpenseBreakdown = () => {
         }, []);
 
     return (
-        <Card className="h-full flex flex-col shadow-sm">
+        <Card className="h-[420px] flex flex-col shadow-sm">
             <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expense Breakdown</CardTitle>
             </CardHeader>

@@ -40,14 +40,14 @@ const ActivityFeed = () => {
     }, {});
 
     return (
-        <Card>
+        <Card className="h-[420px] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
                 <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => navigate('/ledger')}>
                     View All
                 </Button>
             </CardHeader>
-            <CardContent className="divide-y divide-border">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
                 {isDataLoading ? (
                     [0, 1, 2].map(i => (
                         <div key={i} className="py-2.5 flex items-center gap-3">
