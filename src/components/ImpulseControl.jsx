@@ -77,22 +77,24 @@ const ImpulseControl = () => {
                 <p className="text-xs text-muted-foreground">Wait 48 hours before buying to avoid regret.</p>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
-                <form onSubmit={handleAdd} className="flex gap-2">
-                    <Input
-                        placeholder="Item Name"
-                        value={newItem}
-                        onChange={(e) => setNewItem(e.target.value)}
-                        className="flex-grow h-9 bg-background"
-                    />
-                    <Input
-                        type="number"
-                        placeholder="Cost"
-                        value={newCost}
-                        onChange={(e) => setNewCost(e.target.value)}
-                        className="w-20 h-9 bg-background"
-                    />
-                    <Button type="submit" size="icon" className="h-9 w-9 bg-primary hover:bg-primary/90">
-                        <ShoppingBag className="h-4 w-4" />
+                <form onSubmit={handleAdd} className="space-y-2">
+                    <div className="flex gap-2">
+                        <Input
+                            placeholder="Item name"
+                            value={newItem}
+                            onChange={(e) => setNewItem(e.target.value)}
+                            className="flex-[2] min-w-0 h-9 bg-background"
+                        />
+                        <Input
+                            type="number"
+                            placeholder="Cost (₹)"
+                            value={newCost}
+                            onChange={(e) => setNewCost(e.target.value)}
+                            className="flex-1 min-w-0 h-9 bg-background"
+                        />
+                    </div>
+                    <Button type="submit" className="w-full h-9 bg-primary hover:bg-primary/90 gap-2">
+                        <ShoppingBag className="h-4 w-4" /> Add to Watchlist
                     </Button>
                 </form>
 
