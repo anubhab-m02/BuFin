@@ -3,8 +3,8 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Hourglass, ShoppingBag, Trash2, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { Hourglass, ShoppingBag, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
+import EmptyState from './EmptyState';
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000;
 
@@ -68,15 +68,15 @@ const ImpulseControl = () => {
     };
 
     return (
-        <Card className="h-full border-l-4 border-l-primary/20 shadow-sm bg-card rounded-xl overflow-hidden flex flex-col">
-            <CardHeader className="pb-3 border-b border-border/50 bg-secondary/20">
-                <CardTitle className="flex items-center gap-2 text-foreground text-base">
+        <Card variant="elevated" className="h-full flex flex-col">
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
                     <Hourglass className="h-5 w-5 text-primary" />
                     Impulse Control
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">Wait 48 hours before buying to avoid regret.</p>
             </CardHeader>
-            <CardContent className="space-y-4 p-4">
+            <CardContent className="space-y-4 p-4 pt-0">
                 <form onSubmit={handleAdd} className="flex gap-2">
                     <Input
                         placeholder="Item Name"
@@ -98,17 +98,11 @@ const ImpulseControl = () => {
 
                 <div className="space-y-3 max-h-[calc(100vh-24rem)] overflow-y-auto pr-1">
                     {wishlist.length === 0 ? (
-                        <div className="text-center py-8 px-4 bg-secondary/20 rounded-xl border border-dashed border-border">
-                            <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-3">
-                                <BrainCircuit className="h-6 w-6 text-primary" />
-                            </div>
-                            <p className="text-sm font-medium text-foreground mb-1">
-                                Ready to test your control?
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                "Ask the Purchase Analyst if you can afford that new item, and defer it here!"
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={BrainCircuit}
+                            title="Ready to test your control?"
+                            description="Ask the Purchase Analyst if you can afford that new item, and defer it here."
+                        />
                     ) : (
                         wishlist.map(item => {
                             const timeRemaining = getTimeRemaining(item.addedAt);
@@ -116,8 +110,8 @@ const ImpulseControl = () => {
                             const elapsedPct = getElapsedPct(item.addedAt);
 
                             return (
-                                <div key={item.id} className="group relative bg-background rounded-xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden">
-                                    <div className="p-4">
+                                <div key={item.id} className="group relative rounded-lg border border-border hover:border-primary/30 transition-colors duration-fast overflow-hidden">
+                                    <div className="p-3">
                                         <div className="flex justify-between items-start mb-3 gap-3">
                                             <div className="min-w-0">
                                                 <h4 className="font-semibold text-sm text-foreground truncate">{item.name}</h4>
