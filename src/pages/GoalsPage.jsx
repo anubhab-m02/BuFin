@@ -79,9 +79,11 @@ const GoalsPage = () => {
                 </div>
             )}
 
-            <div className="grid gap-6 md:grid-cols-12 h-[calc(100vh-12rem)]">
+            {/* Both columns size to their own content - a forced full-viewport height here
+                was leaving a large empty scroll region under a single jar / a short wishlist. */}
+            <div className="grid gap-6 md:grid-cols-12 items-start">
                 {/* Savings Jars Section */}
-                <div className="md:col-span-8 space-y-4 overflow-y-auto pr-2 pb-10">
+                <div className="md:col-span-8 space-y-4">
                     <div className="flex items-center justify-between mb-2">
                         <h2 className="text-lg font-semibold text-foreground/80">Your Savings Jars</h2>
                         <span className="text-xs text-muted-foreground">{savingsGoals.length} Active</span>
@@ -109,7 +111,7 @@ const GoalsPage = () => {
                 </div>
 
                 {/* Sidebar: Impulse Control */}
-                <div className="md:col-span-4 h-full">
+                <div className="md:col-span-4">
                     <ImpulseControl />
                 </div>
             </div>

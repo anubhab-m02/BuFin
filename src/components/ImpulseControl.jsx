@@ -68,7 +68,7 @@ const ImpulseControl = () => {
     };
 
     return (
-        <Card variant="elevated" className="h-full flex flex-col">
+        <Card variant="elevated" className="flex flex-col">
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                     <Hourglass className="h-5 w-5 text-primary" />
@@ -96,7 +96,7 @@ const ImpulseControl = () => {
                     </Button>
                 </form>
 
-                <div className="space-y-3 max-h-[calc(100vh-24rem)] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
                     {wishlist.length === 0 ? (
                         <EmptyState
                             icon={BrainCircuit}
