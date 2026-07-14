@@ -8,6 +8,15 @@ import EmptyState from './EmptyState';
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000;
 
+const parseAddedAt = (addedAt) => {
+    // Older API records were generated with Python's utcnow().isoformat(), which
+    // has no timezone suffix. JavaScript treats those values as local time even
+    // though the server meant UTC. Keep existing countdowns accurate while new
+    // records use an explicit +00:00 offset.
+    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(addedAt);
+    return new Date(hasTimezone ? addedAt : `${addedAt}Z`);
+};
+
 const ImpulseControl = () => {
     const { wishlist, addWishlistItem, deleteWishlistItem, addTransaction } = useFinancial();
     const [newItem, setNewItem] = useState('');
@@ -36,7 +45,7 @@ const ImpulseControl = () => {
     // Helper to calculate time remaining in HH:MM:SS format
     const getTimeRemaining = (addedAt) => {
         const now = new Date();
-        const added = new Date(addedAt);
+        const added = parseAddedAt(addedAt);
         const diff = COOLDOWN_MS - (now - added);
 
         if (diff <= 0) return null; // Cooldown over
@@ -50,8 +59,8 @@ const ImpulseControl = () => {
     // Real elapsed-cooldown percentage, replacing the old static "100% width" fake timer bar.
     const getElapsedPct = (addedAt) => {
         const now = new Date();
-        const added = new Date(addedAt);
-        return Math.min(100, ((now - added) / COOLDOWN_MS) * 100);
+        const added = parseAddedAt(addedAt);
+        return Math.max(0, Math.min(100, ((now - added) / COOLDOWN_MS) * 100));
     };
 
     // Force re-render every second to update timers
