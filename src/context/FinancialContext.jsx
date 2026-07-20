@@ -476,7 +476,6 @@ export const FinancialProvider = ({ children }) => {
       wishlist,
       addWishlistItem,
       deleteWishlistItem,
-      deleteWishlistItem,
       balance, // Total Net Worth
       safeBalance, // Spendable Cash (Net Worth - Jars)
       untouchedSavings, // Total in Jars
@@ -493,7 +492,6 @@ export const FinancialProvider = ({ children }) => {
       addSavingsGoal,
       updateSavingsGoal,
       editSavingsGoal,
-      deleteSavingsGoal,
       deleteSavingsGoal,
       ignoredMerchants,
       ignoreMerchant
