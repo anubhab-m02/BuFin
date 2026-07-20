@@ -6,7 +6,7 @@ from database import get_db
 import models
 from .auth import get_current_user
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -110,7 +110,10 @@ def create_wishlist_item(item: WishlistItemCreate, db: Session = Depends(get_db)
         user_id=current_user.id,
         name=item.name,
         cost=item.cost,
-        addedAt=datetime.utcnow().isoformat()
+        # Include the UTC offset.  An offset-less ISO timestamp is interpreted as
+        # local time by browsers, which made the client-side 48-hour cooldown
+        # start several hours early for wishlist items created by this endpoint.
+        addedAt=datetime.now(timezone.utc).isoformat()
     )
     db.add(db_item)
     db.commit()
