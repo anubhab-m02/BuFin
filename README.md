@@ -2,7 +2,7 @@
 
 **BuFin** (Budget + Finance) is an intelligent personal finance management application that combines traditional budgeting with AI-powered insights to help you make smarter financial decisions.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![React](https://img.shields.io/badge/React-19.2.0-61DAFB?logo=react)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688?logo=fastapi)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -61,8 +61,9 @@
 - **Pydantic** - Data validation
 
 ### AI Integration
-- **Google Gemini 2.5 Flash** - Natural language processing and financial insights
-- **Custom Prompts** - Specialized prompts for transaction parsing and spending analysis
+- **Hybrid local/cloud routing** - narrow structured tasks (transaction classification, tips, alerts, statement parsing) try a local **Ollama** model first, falling back to **Google Gemini** automatically if Ollama is unreachable/disabled
+- **Google Gemini 3 Flash** - used directly for reasoning-heavy calls (purchase analysis, the AI coach)
+- **Custom Prompts** - specialized prompts per task, not a single general-purpose one
 
 ## 🚀 Getting Started
 
@@ -186,21 +187,22 @@ An interactive planning tool that shows:
 
 ## 🔐 Security & Privacy
 
-- **Local-First**: All data stored locally in SQLite
-- **Privacy Mode**: Quick toggle to hide amounts
-- **No Third-Party Tracking**: Your financial data stays on your machine
-- **Secure API**: Backend uses FastAPI with proper validation
+- **Local storage**: your transaction/goal/budget data is stored in a local SQLite database, not a third-party cloud database
+- **AI routing is local-first, not local-only**: narrow tasks (transaction classification, tips, alerts, statement parsing) try a local Ollama model first; when Ollama is unavailable or disabled, they fall back to Google Gemini, and reasoning-heavy features (purchase analysis, the AI coach) always use Gemini directly. Any financial context sent to Gemini leaves your machine — this is not a fully offline app
+- **PII redaction before AI, not after**: bank statement and receipt text is scrubbed of account numbers, card numbers, PAN, phone numbers, and emails (`backend/statement_parser.py`'s `redact_pii()`) *before* it's sent to any AI model, local or cloud — not as an afterthought on stored data
+- **Privacy Mode**: quick in-app toggle to hide amounts on-screen
+- **Secure API**: backend uses FastAPI with request validation (Pydantic) and JWT-based auth; see [SECURITY.md](SECURITY.md) to report a vulnerability privately
+
+See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
 
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow, local setup, and pre-PR checklist.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Quick version: fork the repo, branch off `main` as `type/short-description`, open a PR. `main` is protected — PRs need at least one approval before merging.
+
+New to the codebase? Check issues labeled [`good first issue`](https://github.com/anubhab-m02/BuFin/labels/good%20first%20issue) — each one has the relevant file(s), a suggested approach, and a Definition-of-Done checklist already written out.
 
 
 ## 🙏 Acknowledgments
