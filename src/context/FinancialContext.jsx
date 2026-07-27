@@ -28,6 +28,9 @@ export const FinancialProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]); // { id, name, targetAmount, currentAmount }
   const [recurringSuggestion, setRecurringSuggestion] = useState(null);
+  const [assets, setAssets] = useState([]);
+  const [liabilities, setLiabilities] = useState([]);
+  const [netWorthSnapshots, setNetWorthSnapshots] = useState([]);
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -60,13 +63,16 @@ export const FinancialProvider = ({ children }) => {
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
-        const [txs, plans, dbt, wish, goals, budgetList] = await Promise.all([
+        const [txs, plans, dbt, wish, goals, budgetList, assetList, liabilityList, snapshots] = await Promise.all([
           api.getTransactions(),
           api.getRecurringPlans(),
           api.getDebts(),
           api.getWishlist(),
           api.getGoals(),
-          api.getBudgets()
+          api.getBudgets(),
+          api.getAssets(),
+          api.getLiabilities(),
+          api.getNetWorthSnapshots()
         ]);
         setTransactions(txs);
         setRecurringPlans(plans);
@@ -74,6 +80,9 @@ export const FinancialProvider = ({ children }) => {
         setWishlist(wish);
         setSavingsGoals(goals);
         setBudgets(budgetList);
+        setAssets(assetList);
+        setLiabilities(liabilityList);
+        setNetWorthSnapshots(snapshots);
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
         toast({
@@ -271,6 +280,82 @@ export const FinancialProvider = ({ children }) => {
     }
   };
 
+  // Net Worth - Assets & Liabilities
+  // Every mutation causes the backend to write a new NetWorthSnapshot row, so we
+  // re-fetch the (small) snapshot list after each one to keep the trend chart current.
+  const refreshNetWorthSnapshots = async () => {
+    try {
+      const snapshots = await api.getNetWorthSnapshots();
+      setNetWorthSnapshots(snapshots);
+    } catch (error) {
+      console.error("Failed to refresh net worth snapshots:", error);
+    }
+  };
+
+  const addAsset = async (asset) => {
+    try {
+      const newAsset = await api.createAsset(asset);
+      setAssets(prev => [...prev, newAsset]);
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to add asset:", error);
+      toast({ title: 'Could not save asset', variant: 'destructive' });
+    }
+  };
+
+  const updateAsset = async (id, updatedAsset) => {
+    try {
+      const updated = await api.updateAsset(id, updatedAsset);
+      setAssets(prev => prev.map(a => a.id === id ? updated : a));
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to update asset:", error);
+      toast({ title: 'Could not update asset', variant: 'destructive' });
+    }
+  };
+
+  const deleteAsset = async (id) => {
+    try {
+      await api.deleteAsset(id);
+      setAssets(prev => prev.filter(a => a.id !== id));
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to delete asset:", error);
+    }
+  };
+
+  const addLiability = async (liability) => {
+    try {
+      const newLiability = await api.createLiability(liability);
+      setLiabilities(prev => [...prev, newLiability]);
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to add liability:", error);
+      toast({ title: 'Could not save liability', variant: 'destructive' });
+    }
+  };
+
+  const updateLiability = async (id, updatedLiability) => {
+    try {
+      const updated = await api.updateLiability(id, updatedLiability);
+      setLiabilities(prev => prev.map(l => l.id === id ? updated : l));
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to update liability:", error);
+      toast({ title: 'Could not update liability', variant: 'destructive' });
+    }
+  };
+
+  const deleteLiability = async (id) => {
+    try {
+      await api.deleteLiability(id);
+      setLiabilities(prev => prev.filter(l => l.id !== id));
+      await refreshNetWorthSnapshots();
+    } catch (error) {
+      console.error("Failed to delete liability:", error);
+    }
+  };
+
   const repayDebt = async (id) => {
     const debt = debts.find(d => d.id === id);
     if (!debt) return;
@@ -453,6 +538,11 @@ export const FinancialProvider = ({ children }) => {
 
   const togglePrivacyMode = () => setIsPrivacyMode(prev => !prev);
 
+  // Net Worth totals (current state, not the snapshot history - that's only for the trend chart)
+  const totalAssets = assets.reduce((acc, a) => acc + (a.current_value || 0), 0);
+  const totalLiabilities = liabilities.reduce((acc, l) => acc + (l.current_balance || 0), 0);
+  const netWorth = totalAssets - totalLiabilities;
+
   return (
     <FinancialContext.Provider value={{
       isDataLoading,
@@ -494,7 +584,19 @@ export const FinancialProvider = ({ children }) => {
       editSavingsGoal,
       deleteSavingsGoal,
       ignoredMerchants,
-      ignoreMerchant
+      ignoreMerchant,
+      assets,
+      addAsset,
+      updateAsset,
+      deleteAsset,
+      liabilities,
+      addLiability,
+      updateLiability,
+      deleteLiability,
+      netWorthSnapshots,
+      totalAssets,
+      totalLiabilities,
+      netWorth
     }}>
       {children}
     </FinancialContext.Provider>

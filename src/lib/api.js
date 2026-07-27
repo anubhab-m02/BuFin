@@ -308,6 +308,109 @@ export const api = {
         return response.json();
     },
 
+    // Net Worth - Assets
+    getAssets: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/net-worth/assets`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch assets');
+        return response.json();
+    },
+    createAsset: async (asset) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/net-worth/assets`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(asset),
+        });
+        if (!response.ok) throw new Error('Failed to create asset');
+        return response.json();
+    },
+    updateAsset: async (id, asset) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/net-worth/assets/${id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(asset),
+        });
+        if (!response.ok) throw new Error('Failed to update asset');
+        return response.json();
+    },
+    deleteAsset: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/net-worth/assets/${id}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete asset');
+        return response.json();
+    },
+
+    // Net Worth - Liabilities
+    getLiabilities: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/net-worth/liabilities`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch liabilities');
+        return response.json();
+    },
+    createLiability: async (liability) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/net-worth/liabilities`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(liability),
+        });
+        if (!response.ok) throw new Error('Failed to create liability');
+        return response.json();
+    },
+    updateLiability: async (id, liability) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/net-worth/liabilities/${id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(liability),
+        });
+        if (!response.ok) throw new Error('Failed to update liability');
+        return response.json();
+    },
+    deleteLiability: async (id) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/net-worth/liabilities/${id}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete liability');
+        return response.json();
+    },
+
+    // Net Worth - Snapshots (trend history)
+    getNetWorthSnapshots: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/net-worth/snapshots`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch net worth snapshots');
+        return response.json();
+    },
+
     // Wishlist
     getWishlist: async () => {
         const token = localStorage.getItem('token');

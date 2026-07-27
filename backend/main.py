@@ -8,7 +8,7 @@ import models, schemas, auth_utils
 from database import SessionLocal, engine, get_db
 import uuid
 from datetime import timedelta
-from routers import auth, goals, transactions, recurring, debts, ai, budgets
+from routers import auth, goals, transactions, recurring, debts, ai, budgets, net_worth
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -30,6 +30,7 @@ app.include_router(recurring.router, prefix="/api", tags=["recurring"])
 app.include_router(debts.router, prefix="/api", tags=["debts"])
 app.include_router(ai.router, prefix="/api", tags=["ai"])
 app.include_router(budgets.router, prefix="/api", tags=["budgets"])
+app.include_router(net_worth.router, prefix="/api", tags=["net_worth"])
 
 from google.api_core.exceptions import ResourceExhausted
 
