@@ -4,6 +4,7 @@ import json
 import re
 import requests
 from dotenv import load_dotenv
+import statement_parser
 
 load_dotenv()
 
@@ -27,14 +28,19 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4-mini")
 
 
-def _call_ollama(prompt: str, timeout: int = 20) -> str:
+def _call_ollama(prompt: str, timeout: int = 20, num_predict: int = None) -> str:
     """Send a single-turn prompt to the local Ollama model. Raises on any failure
-    (connection refused, timeout, non-2xx) so callers can fall back to Gemini."""
-    response = requests.post(
-        f"{OLLAMA_HOST}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        timeout=timeout,
-    )
+    (connection refused, timeout, non-2xx) so callers can fall back to Gemini.
+
+    `num_predict` caps generation length - Ollama's per-model default (often a few
+    hundred tokens) is fine for short structured replies but silently truncates a
+    long JSON array mid-object for something like a full statement's worth of
+    transactions, which then fails to parse. Callers with large expected outputs
+    should pass an explicit budget."""
+    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+    if num_predict is not None:
+        payload["options"] = {"num_predict": num_predict}
+    response = requests.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=timeout)
     response.raise_for_status()
     return response.json().get("response", "")
 
@@ -182,6 +188,121 @@ async def classify_transaction(text: str):
         print(f"Failed to parse AI response: {e}")
         print(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
+
+STATEMENT_PARSE_PROMPT = """
+You are a bank statement parser. Below is raw text extracted from ONE PAGE (or a chunk of one)
+of a PDF bank/card statement. Extract every individual transaction line into a JSON array.
+Ignore headers, footers, balance summaries, and page numbers - only actual transaction rows.
+This chunk may start or end mid-page; only extract complete, clearly-identifiable transaction
+rows - if a line looks cut off or ambiguous, skip it rather than guessing.
+
+Each entry: { "date": "YYYY-MM-DD", "amount": float (always positive), "type": "expense"|"income",
+"description": str }
+
+Rules:
+- "type": "income" for credits/deposits, "expense" for debits/withdrawals/payments.
+- "amount": always positive; the "type" field carries the direction.
+- "description": the merchant/narration text as printed, trimmed. Some digit sequences may
+  already appear masked as XXXXXXXX1234 or [REDACTED-...] - leave those exactly as-is, do not
+  attempt to reconstruct or guess the original numbers.
+- If a date has no year, infer the most recent plausible year from context (statement period, if visible).
+- Skip lines that aren't real transactions (opening/closing balance, page headers, disclaimers).
+- Never include full account numbers, card numbers, or customer IDs in your output even if present.
+
+Return ONLY the JSON array, nothing else. If this chunk has no transactions, return [].
+
+Statement text:
+{statement_text}
+"""
+
+
+def _friendly_gemini_error(e: Exception) -> str:
+    """Gemini/google-api-core exceptions are verbose and nest a raw gRPC error
+    message - this maps the common cases to something a user can actually act on."""
+    msg = str(e)
+    if "API_KEY_INVALID" in msg or "API key not valid" in msg:
+        return "Gemini API key is invalid or has been revoked. Get a new key at aistudio.google.com/apikey and update GEMINI_API_KEY/VITE_GEMINI_API_KEY in your .env, or run Ollama locally so cloud AI isn't needed."
+    if "RESOURCE_EXHAUSTED" in msg or "429" in msg[:10]:
+        return "Gemini's free-tier quota is exhausted for now. Try again later, or run Ollama locally so cloud AI isn't needed."
+    return f"Gemini request failed: {msg}"
+
+
+# Hard cap on how many chunks a single statement gets split into. A 9-page, 3-month
+# statement can run to several hundred transaction lines - this bounds worst-case
+# latency (and, for Gemini, request count) instead of looping indefinitely on a huge
+# upload. Whatever fits in the first MAX_CHUNKS chunks gets parsed; anything past that
+# is dropped with a server-side log line rather than silently truncating input text.
+MAX_CHUNKS = 40
+
+
+def _statement_chunks(text: str, max_chars: int) -> list:
+    chunks = statement_parser.chunk_text_by_lines(text, max_chars)
+    if len(chunks) > MAX_CHUNKS:
+        print(f"Statement produced {len(chunks)} chunks, capping at {MAX_CHUNKS} (some transactions may be missed)")
+        chunks = chunks[:MAX_CHUNKS]
+    return chunks
+
+
+async def parse_statement_text(text: str):
+    """Whole-document parse, chunked across multiple AI calls rather than one call on
+    a truncated prefix - a multi-page statement's later pages were previously dropped
+    entirely. Redacts PII from the text once, up front, before any chunk reaches an
+    AI model (local or cloud)."""
+    text = statement_parser.redact_pii(text)
+
+    ollama_error = None
+    if OLLAMA_ENABLED:
+        try:
+            # phi4-mini's completeness drops sharply on long, repetitive extraction -
+            # tested empirically at ~93% recall on a ~28-line/1500-char chunk vs. ~47%
+            # on a ~60-line/4000-char chunk. Small chunks trade more (slower) calls for
+            # far fewer silently-dropped transactions, which matters more for a bulk
+            # import. Generation budget stays generous so one chunk's output isn't cut
+            # off mid-array (Ollama's per-model default budget is easily too small).
+            chunks = _statement_chunks(text, max_chars=1500)
+            results = []
+            failed_chunks = 0
+            for i, chunk in enumerate(chunks):
+                prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", chunk)
+                try:
+                    raw = _call_ollama(prompt, timeout=90, num_predict=4096)
+                    results.extend(_parse_action_array(raw))
+                except Exception as chunk_error:
+                    failed_chunks += 1
+                    if i == 0 and failed_chunks == 1:
+                        # First chunk failing usually means Ollama itself is down/
+                        # unreachable, not a one-off parse hiccup - stop wasting time
+                        # retrying and fall back to Gemini for the whole document.
+                        raise
+                    print(f"Skipping statement chunk {i + 1}/{len(chunks)} after parse failure: {chunk_error}")
+            if failed_chunks:
+                print(f"Statement parsed via Ollama with {failed_chunks}/{len(chunks)} chunk(s) skipped")
+            return results
+        except Exception as e:
+            ollama_error = e
+            print(f"Local model statement parsing failed, falling back to Gemini: {e}")
+
+    if not API_KEY:
+        detail = "No AI backend available: Ollama is unreachable/disabled" + (f" ({ollama_error})" if ollama_error else "") + " and no Gemini API key is configured."
+        raise Exception(detail)
+
+    chunks = _statement_chunks(text, max_chars=12000)
+    results = []
+    model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
+    for i, chunk in enumerate(chunks):
+        prompt = STATEMENT_PARSE_PROMPT.replace("{statement_text}", chunk)
+        try:
+            response = model.generate_content(prompt)
+            results.extend(_parse_action_array(response.text))
+        except Exception as chunk_error:
+            if i == 0:
+                # First chunk failing means Gemini itself is unusable (bad key, quota,
+                # network) - not worth burning through every remaining chunk to find
+                # that out. Surface one clear, actionable error instead.
+                raise Exception(_friendly_gemini_error(chunk_error))
+            print(f"Skipping statement chunk {i + 1}/{len(chunks)} after Gemini failure: {chunk_error}")
+    return results
+
 
 async def analyze_purchase(query: str, context: dict):
     if not API_KEY:

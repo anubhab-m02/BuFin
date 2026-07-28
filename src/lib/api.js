@@ -116,6 +116,36 @@ export const api = {
         if (!response.ok) throw new Error('Failed to delete transaction');
         return response.json();
     },
+    parseStatement: async (file) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${API_URL}/import/parse`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || 'Failed to parse statement');
+        }
+        return response.json();
+    },
+    commitImport: async (transactions) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/import/commit`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ transactions }),
+        });
+        if (!response.ok) throw new Error('Failed to import transactions');
+        return response.json();
+    },
 
     // Recurring Plans
     getRecurringPlans: async () => {

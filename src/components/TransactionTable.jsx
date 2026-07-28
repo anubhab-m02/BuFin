@@ -3,7 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Trash2, Edit2, UserPlus, Search } from 'lucide-react';
+import { Trash2, Edit2, UserPlus, Search, Upload } from 'lucide-react';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
 import { AddDebtForm } from './PlannerForms';
@@ -12,6 +12,7 @@ import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getCategoryMeta } from '../lib/categoryMeta';
 import { formatSignedMoney } from '../lib/money';
+import ImportReviewModal from './ImportReviewModal';
 
 const dayLabel = (dateStr) => {
     const d = new Date(dateStr);
@@ -31,6 +32,7 @@ const TransactionTable = () => {
     const [viewingTransaction, setViewingTransaction] = useState(null);
     const [filterType, setFilterType] = useState('all'); // all, income, expense, debt
     const [search, setSearch] = useState('');
+    const [isImportOpen, setIsImportOpen] = useState(false);
 
     const formatSigned = (amount, type) => (isPrivacyMode ? '••••••' : formatSignedMoney(amount, type));
 
@@ -90,17 +92,22 @@ const TransactionTable = () => {
                             className="pl-9"
                         />
                     </div>
-                    <Select value={filterType} onValueChange={setFilterType} className="sm:w-48">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Transactions</SelectItem>
-                            <SelectItem value="income">Income Only</SelectItem>
-                            <SelectItem value="expense">Expense Only</SelectItem>
-                            <SelectItem value="debt">Debts (Owed)</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                        <Select value={filterType} onValueChange={setFilterType} className="sm:w-48">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Filter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Transactions</SelectItem>
+                                <SelectItem value="income">Income Only</SelectItem>
+                                <SelectItem value="expense">Expense Only</SelectItem>
+                                <SelectItem value="debt">Debts (Owed)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button variant="outline" onClick={() => setIsImportOpen(true)} className="gap-2 shrink-0">
+                            <Upload className="h-4 w-4" /> Import
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="divide-y divide-border">
                     {isDataLoading ? (
@@ -141,8 +148,13 @@ const TransactionTable = () => {
                                                     <meta.icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-foreground truncate">
+                                                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
                                                         {t.merchant || t.personName || t.description || t.category}
+                                                        {t.source === 'imported' && (
+                                                            <span className="shrink-0 text-[9px] uppercase tracking-wide font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                                                                Imported
+                                                            </span>
+                                                        )}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground truncate">
                                                         {t.category}{t.description ? ` • ${t.description}` : ''}
@@ -234,6 +246,10 @@ const TransactionTable = () => {
                                 <span className="text-muted-foreground block">Necessity</span>
                                 <span className="capitalize">{viewingTransaction.necessity || '-'}</span>
                             </div>
+                            <div>
+                                <span className="text-muted-foreground block">Source</span>
+                                <span className="capitalize">{viewingTransaction.source === 'imported' ? 'Imported from statement' : 'Manual entry'}</span>
+                            </div>
                         </div>
 
                         <div className="bg-muted/30 p-3 rounded-md">
@@ -278,6 +294,8 @@ const TransactionTable = () => {
                     />
                 )}
             </Dialog>
+
+            <ImportReviewModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
         </>
     );
 };

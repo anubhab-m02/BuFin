@@ -123,6 +123,24 @@ export const FinancialProvider = ({ children }) => {
     }
   };
 
+  // Bulk-commits reviewed statement-import candidates in one request, then prepends
+  // them all to local state at once (rather than one addTransaction() call per row,
+  // which would be N round-trips for a large statement).
+  const importTransactions = async (candidateTransactions) => {
+    const created = await api.commitImport(candidateTransactions.map(c => ({
+      amount: parseFloat(c.amount),
+      category: c.category,
+      description: c.description || c.merchant || 'Imported transaction',
+      merchant: c.merchant || null,
+      type: c.type,
+      necessity: 'variable',
+      date: c.date,
+      remarks: null,
+    })));
+    setTransactions(prev => [...created, ...prev]);
+    return created;
+  };
+
   const deleteTransaction = async (id) => {
     try {
       // If this transaction was auto-created by repaying a debt, revert the debt
@@ -458,6 +476,7 @@ export const FinancialProvider = ({ children }) => {
       isDataLoading,
       transactions,
       addTransaction,
+      importTransactions,
       updateTransaction,
       deleteTransaction,
       recurringPlans,
