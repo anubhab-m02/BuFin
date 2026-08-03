@@ -38,14 +38,14 @@ const LIABILITY_CATEGORIES = [
 
 const categoryMeta = (list, category) => list.find(c => c.value === category) || list[list.length - 1];
 
-const NetWorthTooltip = ({ active, payload }) => {
+const NetWorthTooltip = ({ active, payload, isPrivacyMode }) => {
     if (!active || !payload?.length) return null;
     const point = payload[0].payload;
     return (
         <div style={chartTooltipStyle} className="p-2.5">
             <div className="font-semibold mb-0.5">{point.dateLabel}</div>
             <div className={cn('text-xs font-bold tabular-nums', point.netWorth < 0 ? 'text-destructive' : 'text-primary')}>
-                {formatMoney(point.netWorth)}
+                {isPrivacyMode ? '••••••' : formatMoney(point.netWorth)}
             </div>
         </div>
     );
@@ -64,7 +64,9 @@ const NetWorthSection = ({
     onUpdate,
     onDelete,
     emptyIcon: EmptyIcon,
+    isPrivacyMode,
 }) => {
+    const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
     const [name, setName] = useState('');
     const [category, setCategory] = useState('');
     const [value, setValue] = useState('');
@@ -100,7 +102,7 @@ const NetWorthSection = ({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-foreground/80">{title}</h2>
-                <span className="text-sm text-muted-foreground tabular-nums">{formatMoney(total)} total</span>
+                <span className="text-sm text-muted-foreground tabular-nums">{formatCurrency(total)} total</span>
             </div>
 
             <Card>
@@ -188,7 +190,7 @@ const NetWorthSection = ({
                                                 className="font-semibold text-sm text-foreground hover:text-primary transition-colors tabular-nums"
                                                 title="Click to edit"
                                             >
-                                                {formatMoney(item[valueKey])}
+                                                {formatCurrency(item[valueKey])}
                                             </button>
                                         )}
                                     </div>
@@ -206,8 +208,11 @@ const NetWorthPage = () => {
     const {
         assets, addAsset, updateAsset, deleteAsset,
         liabilities, addLiability, updateLiability, deleteLiability,
-        netWorthSnapshots, totalAssets, totalLiabilities, netWorth
+        netWorthSnapshots, totalAssets, totalLiabilities, netWorth,
+        isPrivacyMode
     } = useFinancial();
+
+    const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
 
     const chartData = netWorthSnapshots.map(s => ({
         dateLabel: format(new Date(s.recorded_at), 'MMM d, yyyy'),
@@ -226,7 +231,7 @@ const NetWorthPage = () => {
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Total Assets</p>
-                        <p className="text-lg font-semibold tabular-nums">{formatMoney(totalAssets)}</p>
+                        <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalAssets)}</p>
                     </div>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
@@ -235,7 +240,7 @@ const NetWorthPage = () => {
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Total Liabilities</p>
-                        <p className="text-lg font-semibold tabular-nums">{formatMoney(totalLiabilities)}</p>
+                        <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalLiabilities)}</p>
                     </div>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
@@ -244,7 +249,7 @@ const NetWorthPage = () => {
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Net Worth</p>
-                        <p className="text-lg font-semibold tabular-nums">{formatMoney(netWorth)}</p>
+                        <p className="text-lg font-semibold tabular-nums">{formatCurrency(netWorth)}</p>
                     </div>
                 </div>
             </div>
@@ -283,10 +288,10 @@ const NetWorthPage = () => {
                                     axisLine={false}
                                     tickLine={false}
                                     tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
-                                    tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                                    tickFormatter={(v) => isPrivacyMode ? '•••' : `₹${(v / 1000).toFixed(0)}k`}
                                     width={48}
                                 />
-                                <Tooltip content={<NetWorthTooltip />} cursor={{ stroke: 'var(--border)' }} />
+                                <Tooltip content={<NetWorthTooltip isPrivacyMode={isPrivacyMode} />} cursor={{ stroke: 'var(--border)' }} />
                                 <Area
                                     type="monotone"
                                     dataKey="netWorth"
@@ -311,6 +316,7 @@ const NetWorthPage = () => {
                 onUpdate={updateAsset}
                 onDelete={deleteAsset}
                 emptyIcon={TrendingUp}
+                isPrivacyMode={isPrivacyMode}
             />
 
             <NetWorthSection
@@ -324,6 +330,7 @@ const NetWorthPage = () => {
                 onUpdate={updateLiability}
                 onDelete={deleteLiability}
                 emptyIcon={TrendingDown}
+                isPrivacyMode={isPrivacyMode}
             />
         </div>
     );
