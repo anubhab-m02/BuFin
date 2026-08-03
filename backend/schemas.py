@@ -62,6 +62,7 @@ class TransactionCreate(TransactionBase):
 
 class Transaction(TransactionBase):
     id: str
+    household_id: Optional[str] = None  # null = personal transaction; server-derived, not client-writable
     model_config = ConfigDict(from_attributes=True)
 
 class RecurringPlanBase(BaseModel):

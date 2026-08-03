@@ -16,6 +16,7 @@ class Transaction(Base):
     necessity = Column(String) # 'fixed' or 'variable'
     remarks = Column(String, nullable=True)
     linked_debt_id = Column(String, ForeignKey("debts.id"), nullable=True) # set for auto-created debt repayment transactions
+    household_id = Column(String, ForeignKey("households.id"), nullable=True) # null = personal transaction
 
 class RecurringPlan(Base):
     __tablename__ = "recurring_plans"
@@ -62,6 +63,16 @@ class Goal(Base):
     fundingSource = Column(String, default="manual")
     type = Column(String, default="savings") # 'savings' or 'investment'
     projectedReturnRate = Column(Float, default=0.0) # For investment goals
+    household_id = Column(String, ForeignKey("households.id"), nullable=True) # null = personal goal
+
+class GoalContribution(Base):
+    __tablename__ = "goal_contributions"
+
+    id = Column(String, primary_key=True, index=True)
+    goal_id = Column(String, ForeignKey("goals.id"))
+    user_id = Column(String, ForeignKey("users.id")) # who made the deposit/withdrawal
+    amount = Column(Float) # positive = deposit, negative = withdrawal
+    created_at = Column(String)
 
 class Budget(Base):
     __tablename__ = "budgets"
