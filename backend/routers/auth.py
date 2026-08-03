@@ -111,7 +111,8 @@ def delete_account(db: Session = Depends(get_db), current_user: models.User = De
     db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == current_user.id).delete()
     db.query(models.Debt).filter(models.Debt.user_id == current_user.id).delete()
     db.query(models.WishlistItem).filter(models.WishlistItem.user_id == current_user.id).delete()
-    
+    db.query(models.HouseholdMember).filter(models.HouseholdMember.user_id == current_user.id).delete()
+
     # Delete user
     db.delete(current_user)
     db.commit()

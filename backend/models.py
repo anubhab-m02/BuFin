@@ -71,6 +71,34 @@ class Budget(Base):
     category = Column(String)
     monthlyLimit = Column(Float)
 
+class Household(Base):
+    __tablename__ = "households"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String)
+    created_by = Column(String, ForeignKey("users.id"))
+    created_at = Column(String)
+
+class HouseholdMember(Base):
+    __tablename__ = "household_members"
+
+    id = Column(String, primary_key=True, index=True)
+    household_id = Column(String, ForeignKey("households.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    role = Column(String, default="member") # 'owner' or 'member' - multiple owners allowed
+    joined_at = Column(String)
+
+class HouseholdInvite(Base):
+    __tablename__ = "household_invites"
+
+    id = Column(String, primary_key=True, index=True)
+    household_id = Column(String, ForeignKey("households.id"))
+    code = Column(String, unique=True, index=True)
+    created_by = Column(String, ForeignKey("users.id"))
+    expires_at = Column(String)
+    used_by = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(String)
+
 class User(Base):
     __tablename__ = "users"
 
