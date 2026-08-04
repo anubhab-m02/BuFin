@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil } from 'lucide-react';
+import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil, Users } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
 import { getCategoryColor } from '../lib/categoryMeta';
@@ -14,9 +16,30 @@ const ICONS = {
 
 const JarVisualization = ({ goal, onEdit }) => {
     const { updateSavingsGoal, deleteSavingsGoal } = useFinancial();
+    const { user } = useAuth();
     const [amount, setAmount] = useState('');
     const [showMilestone, setShowMilestone] = useState(false);
+    const [memberNames, setMemberNames] = useState({});
     const Icon = ICONS[goal.icon] || Star;
+
+    // Additive-only: personal goals (household_id null) never hit this path at all.
+    // Contributions come back from the API as {user_id, amount}; names are resolved
+    // separately here since GoalContributionResponse doesn't carry them.
+    useEffect(() => {
+        if (!goal.household_id) return;
+        api.getHouseholdMembers(goal.household_id)
+            .then((members) => {
+                const map = {};
+                members.forEach((m) => { map[m.user_id] = m.full_name; });
+                setMemberNames(map);
+            })
+            .catch(() => {});
+    }, [goal.household_id]);
+
+    const contributionsByMember = (goal.contributions || []).reduce((acc, c) => {
+        acc[c.user_id] = (acc[c.user_id] || 0) + c.amount;
+        return acc;
+    }, {});
     // Stable per-goal accent, hashed from the goal name - same identity system used for
     // transaction categories, so a jar's badge color doesn't change between renders.
     const accentColor = getCategoryColor(goal.name);
@@ -162,6 +185,26 @@ const JarVisualization = ({ goal, onEdit }) => {
                                     </p>
                                 )}
                             </div>
+
+                            {goal.household_id && Object.keys(contributionsByMember).length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-border/40">
+                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+                                        <Users className="h-3 w-3" /> Contributions
+                                    </p>
+                                    <div className="space-y-1">
+                                        {Object.entries(contributionsByMember).map(([userId, total]) => (
+                                            <div key={userId} className="flex items-center justify-between text-xs">
+                                                <span className="text-foreground/80 truncate">
+                                                    {memberNames[userId] || 'Member'}{userId === user?.id ? ' (You)' : ''}
+                                                </span>
+                                                <span className={cn('tabular-nums font-medium', total < 0 ? 'text-destructive' : 'text-foreground')}>
+                                                    {total >= 0 ? '+' : ''}₹{total.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

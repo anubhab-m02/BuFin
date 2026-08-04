@@ -1,5 +1,18 @@
 const API_URL = 'http://localhost:8000/api';
 
+// Only transactions and goals are household-shareable, so only their calls need the
+// active-persona header - everything else keeps using its own inline Authorization
+// header, unchanged, to avoid an unrelated refactor of ~25 other call sites.
+const getScopeHeaders = (extra = {}) => {
+    const token = localStorage.getItem('token');
+    const activeHouseholdId = localStorage.getItem('bufin_active_household');
+    return {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(activeHouseholdId ? { 'X-Household-Id': activeHouseholdId } : {}),
+        ...extra
+    };
+};
+
 export const api = {
     // Auth
     signup: async (email, password, full_name) => {
@@ -72,46 +85,32 @@ export const api = {
 
     // Transactions
     getTransactions: async () => {
-        const token = localStorage.getItem('token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/transactions`, { headers });
+        const response = await fetch(`${API_URL}/transactions`, { headers: getScopeHeaders() });
         if (!response.ok) throw new Error('Failed to fetch transactions');
         return response.json();
     },
     createTransaction: async (transaction) => {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
         const response = await fetch(`${API_URL}/transactions`, {
             method: 'POST',
-            headers,
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(transaction),
         });
         if (!response.ok) throw new Error('Failed to create transaction');
         return response.json();
     },
     updateTransaction: async (id, transaction) => {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
         const response = await fetch(`${API_URL}/transactions/${id}`, {
             method: 'PUT',
-            headers,
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(transaction),
         });
         if (!response.ok) throw new Error('Failed to update transaction');
         return response.json();
     },
     deleteTransaction: async (id) => {
-        const token = localStorage.getItem('token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         const response = await fetch(`${API_URL}/transactions/${id}`, {
             method: 'DELETE',
-            headers
+            headers: getScopeHeaders()
         });
         if (!response.ok) throw new Error('Failed to delete transaction');
         return response.json();
@@ -263,48 +262,141 @@ export const api = {
 
     // Goals
     getGoals: async () => {
-        const token = localStorage.getItem('token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/goals`, { headers });
+        const response = await fetch(`${API_URL}/goals`, { headers: getScopeHeaders() });
         if (!response.ok) throw new Error('Failed to fetch goals');
         return response.json();
     },
     createGoal: async (goal) => {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
         const response = await fetch(`${API_URL}/goals`, {
             method: 'POST',
-            headers,
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(goal),
         });
         if (!response.ok) throw new Error('Failed to create goal');
         return response.json();
     },
     updateGoal: async (id, goal) => {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
         const response = await fetch(`${API_URL}/goals/${id}`, {
             method: 'PUT',
-            headers,
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(goal),
         });
         if (!response.ok) throw new Error('Failed to update goal');
         return response.json();
     },
     deleteGoal: async (id) => {
+        const response = await fetch(`${API_URL}/goals/${id}`, {
+            method: 'DELETE',
+            headers: getScopeHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to delete goal');
+        return response.json();
+    },
+
+    // Households
+    getHouseholds: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/goals/${id}`, {
+        const response = await fetch(`${API_URL}/households`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch households');
+        return response.json();
+    },
+    createHousehold: async (name) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/households`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ name }),
+        });
+        if (!response.ok) throw new Error('Failed to create household');
+        return response.json();
+    },
+    createHouseholdInvite: async (householdId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/households/${householdId}/invites`, {
+            method: 'POST',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to create invite');
+        return response.json();
+    },
+    joinHousehold: async (code) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/households/join`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ code }),
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || 'Failed to join household');
+        }
+        return response.json();
+    },
+    getHouseholdMembers: async (householdId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/households/${householdId}/members`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch members');
+        return response.json();
+    },
+    updateHouseholdMemberRole: async (householdId, userId, role) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/households/${householdId}/members/${userId}/role`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ role }),
+        });
+        if (!response.ok) throw new Error('Failed to update member role');
+        return response.json();
+    },
+    removeHouseholdMember: async (householdId, userId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/households/${householdId}/members/${userId}`, {
             method: 'DELETE',
             headers
         });
-        if (!response.ok) throw new Error('Failed to delete goal');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || 'Failed to remove member');
+        }
+        return response.json();
+    },
+    leaveHousehold: async (householdId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/households/${householdId}/leave`, {
+            method: 'POST',
+            headers
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.detail || 'Failed to leave household');
+        }
+        return response.json();
+    },
+    deleteHousehold: async (householdId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/households/${householdId}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete household');
         return response.json();
     },
 
