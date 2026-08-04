@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import Optional
 import uuid
 import models, schemas, auth_utils
 from database import get_db
@@ -29,6 +30,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
+
+# Which "persona" (personal vs a specific household) the request is acting as. Sent as a
+# header rather than baked into the JWT, since the JWT isn't reissued on persona switch -
+# a header lets the frontend switch personas instantly without a fresh login/token refresh.
+def get_active_household_id(
+    x_household_id: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+) -> Optional[str]:
+    if not x_household_id:
+        return None
+    membership = db.query(models.HouseholdMember).filter(
+        models.HouseholdMember.household_id == x_household_id,
+        models.HouseholdMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this household")
+    return x_household_id
 
 @router.post("/signup", response_model=schemas.Token)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
