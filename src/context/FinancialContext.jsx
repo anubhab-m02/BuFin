@@ -32,6 +32,12 @@ export const FinancialProvider = ({ children }) => {
   const [liabilities, setLiabilities] = useState([]);
   const [netWorthSnapshots, setNetWorthSnapshots] = useState([]);
 
+  const [households, setHouseholds] = useState([]);
+  // The active persona (null = personal). Persisted to localStorage under the same key
+  // api.js's getScopeHeaders() reads directly, so a page refresh keeps whichever
+  // persona was active without an extra round-trip to figure it out.
+  const [activeHouseholdId, setActiveHouseholdId] = useState(() => localStorage.getItem('bufin_active_household') || null);
+
   const [categories, setCategories] = useState(() => {
     try {
       const saved = localStorage.getItem('bufin_categories');
@@ -63,6 +69,7 @@ export const FinancialProvider = ({ children }) => {
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
+        const [txs, plans, dbt, wish, goals, budgetList, householdList] = await Promise.all([
         const [txs, plans, dbt, wish, goals, budgetList, assetList, liabilityList, snapshots] = await Promise.all([
           api.getTransactions(),
           api.getRecurringPlans(),
@@ -70,6 +77,7 @@ export const FinancialProvider = ({ children }) => {
           api.getWishlist(),
           api.getGoals(),
           api.getBudgets(),
+          api.getHouseholds()
           api.getAssets(),
           api.getLiabilities(),
           api.getNetWorthSnapshots()
@@ -80,6 +88,7 @@ export const FinancialProvider = ({ children }) => {
         setWishlist(wish);
         setSavingsGoals(goals);
         setBudgets(budgetList);
+        setHouseholds(householdList);
         setAssets(assetList);
         setLiabilities(liabilityList);
         setNetWorthSnapshots(snapshots);
@@ -489,6 +498,83 @@ export const FinancialProvider = ({ children }) => {
     }
   };
 
+  // Households
+  // Switching persona re-fetches only transactions/goals - the two resources that are
+  // actually household-aware. Everything else (budgets, debts, recurring plans, etc.)
+  // stays personal-only regardless of the active persona.
+  const switchPersona = async (householdId) => {
+    if (householdId) {
+      localStorage.setItem('bufin_active_household', householdId);
+    } else {
+      localStorage.removeItem('bufin_active_household');
+    }
+    setActiveHouseholdId(householdId || null);
+
+    setIsDataLoading(true);
+    try {
+      const [txs, goals] = await Promise.all([api.getTransactions(), api.getGoals()]);
+      setTransactions(txs);
+      setSavingsGoals(goals);
+    } catch (error) {
+      console.error("Failed to switch persona:", error);
+      toast({ title: 'Could not switch view', description: 'Check that the backend is running and try again.', variant: 'destructive' });
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
+  const createHousehold = async (name) => {
+    try {
+      const newHousehold = await api.createHousehold(name);
+      setHouseholds(prev => [...prev, newHousehold]);
+      return newHousehold;
+    } catch (error) {
+      console.error("Failed to create household:", error);
+      toast({ title: 'Could not create household', variant: 'destructive' });
+      throw error;
+    }
+  };
+
+  const joinHousehold = async (code) => {
+    try {
+      const household = await api.joinHousehold(code);
+      setHouseholds(prev => [...prev, household]);
+      return household;
+    } catch (error) {
+      console.error("Failed to join household:", error);
+      toast({ title: 'Could not join household', description: error.message, variant: 'destructive' });
+      throw error;
+    }
+  };
+
+  const leaveHousehold = async (householdId) => {
+    try {
+      await api.leaveHousehold(householdId);
+      setHouseholds(prev => prev.filter(h => h.id !== householdId));
+      if (activeHouseholdId === householdId) {
+        await switchPersona(null);
+      }
+    } catch (error) {
+      console.error("Failed to leave household:", error);
+      toast({ title: 'Could not leave household', description: error.message, variant: 'destructive' });
+      throw error;
+    }
+  };
+
+  const deleteHousehold = async (householdId) => {
+    try {
+      await api.deleteHousehold(householdId);
+      setHouseholds(prev => prev.filter(h => h.id !== householdId));
+      if (activeHouseholdId === householdId) {
+        await switchPersona(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete household:", error);
+      toast({ title: 'Could not delete household', variant: 'destructive' });
+      throw error;
+    }
+  };
+
   // Categories (Client-side only for now as per MVP)
   // Restore localStorage persistence for categories to maintain feature parity
   useEffect(() => {
@@ -585,6 +671,13 @@ export const FinancialProvider = ({ children }) => {
       deleteSavingsGoal,
       ignoredMerchants,
       ignoreMerchant,
+      households,
+      activeHouseholdId,
+      switchPersona,
+      createHousehold,
+      joinHousehold,
+      leaveHousehold,
+      deleteHousehold
       assets,
       addAsset,
       updateAsset,

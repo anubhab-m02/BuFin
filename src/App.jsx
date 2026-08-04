@@ -13,6 +13,7 @@ import BudgetsPage from './pages/BudgetsPage';
 import NetWorthPage from './pages/NetWorthPage';
 import InsightsPage from './pages/InsightsPage';
 import ProfilePage from './pages/ProfilePage';
+import HouseholdPage from './pages/HouseholdPage';
 import CoachPage from './pages/CoachPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -84,6 +85,7 @@ function App() {
         <Route path="/net-worth" element={<ProtectedRoute><AppLayout><NetWorthPage /></AppLayout></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><AppLayout><InsightsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
+        <Route path="/household" element={<ProtectedRoute><AppLayout><HouseholdPage /></AppLayout></ProtectedRoute>} />
         <Route path="/coach" element={<ProtectedRoute><AppLayout><CoachPage /></AppLayout></ProtectedRoute>} />
         {/* Catch-all route for any other path, redirecting to dashboard or handling 404 */}
         <Route path="*" element={<Navigate to="/" />} />
