@@ -69,15 +69,14 @@ export const FinancialProvider = ({ children }) => {
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
-        const [txs, plans, dbt, wish, goals, budgetList, householdList] = await Promise.all([
-        const [txs, plans, dbt, wish, goals, budgetList, assetList, liabilityList, snapshots] = await Promise.all([
+        const [txs, plans, dbt, wish, goals, budgetList, householdList, assetList, liabilityList, snapshots] = await Promise.all([
           api.getTransactions(),
           api.getRecurringPlans(),
           api.getDebts(),
           api.getWishlist(),
           api.getGoals(),
           api.getBudgets(),
-          api.getHouseholds()
+          api.getHouseholds(),
           api.getAssets(),
           api.getLiabilities(),
           api.getNetWorthSnapshots()
@@ -677,7 +676,7 @@ export const FinancialProvider = ({ children }) => {
       createHousehold,
       joinHousehold,
       leaveHousehold,
-      deleteHousehold
+      deleteHousehold,
       assets,
       addAsset,
       updateAsset,
