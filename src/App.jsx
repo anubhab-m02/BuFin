@@ -10,6 +10,7 @@ import LedgerPage from './pages/LedgerPage';
 import PlannerPage from './pages/PlannerPage';
 import GoalsPage from './pages/GoalsPage';
 import BudgetsPage from './pages/BudgetsPage';
+import NetWorthPage from './pages/NetWorthPage';
 import InsightsPage from './pages/InsightsPage';
 import ProfilePage from './pages/ProfilePage';
 import HouseholdPage from './pages/HouseholdPage';
@@ -81,6 +82,7 @@ function App() {
         <Route path="/planner" element={<ProtectedRoute><AppLayout><PlannerPage /></AppLayout></ProtectedRoute>} />
         <Route path="/goals" element={<ProtectedRoute><AppLayout><GoalsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/budgets" element={<ProtectedRoute><AppLayout><BudgetsPage /></AppLayout></ProtectedRoute>} />
+        <Route path="/net-worth" element={<ProtectedRoute><AppLayout><NetWorthPage /></AppLayout></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><AppLayout><InsightsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>} />
         <Route path="/household" element={<ProtectedRoute><AppLayout><HouseholdPage /></AppLayout></ProtectedRoute>} />

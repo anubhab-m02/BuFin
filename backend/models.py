@@ -109,6 +109,34 @@ class HouseholdInvite(Base):
     expires_at = Column(String)
     used_by = Column(String, ForeignKey("users.id"), nullable=True)
     created_at = Column(String)
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    name = Column(String)
+    category = Column(String) # 'cash', 'investment', 'property', 'vehicle', 'other'
+    current_value = Column(Float)
+    created_at = Column(String)
+
+class Liability(Base):
+    __tablename__ = "liabilities"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    name = Column(String)
+    category = Column(String) # 'loan', 'credit_card', 'mortgage', 'other'
+    current_balance = Column(Float)
+    created_at = Column(String)
+
+class NetWorthSnapshot(Base):
+    __tablename__ = "net_worth_snapshots"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    total_assets = Column(Float)
+    total_liabilities = Column(Float)
+    recorded_at = Column(String)
 
 class User(Base):
     __tablename__ = "users"
