@@ -8,8 +8,7 @@ import models, schemas, auth_utils
 from database import SessionLocal, engine, get_db
 import uuid
 from datetime import timedelta
-from routers import auth, goals, transactions, recurring, debts, ai, budgets, households
-from routers import auth, goals, transactions, recurring, debts, ai, budgets, net_worth
+from routers import auth, goals, transactions, recurring, debts, ai, budgets, households, net_worth
 
 models.Base.metadata.create_all(bind=engine)
 
