@@ -148,6 +148,33 @@ def _extract_json_array(text: str) -> str:
     return text[start:]
 
 
+def _extract_number_candidates(text: str) -> set:
+    """All numeric literals mentioned in the raw input, "k" shorthand expanded."""
+    candidates = set()
+    for m in re.finditer(r'(\d[\d,]*\.?\d*)\s*([kK])?', text):
+        num_str = m.group(1).replace(',', '')
+        if not num_str or num_str == '.':
+            continue
+        val = float(num_str)
+        candidates.add(val)
+        if m.group(2):
+            candidates.add(val * 1000)
+    return candidates
+
+
+def _amounts_plausible(actions: list, text: str) -> bool:
+    """Guards against the local model silently rounding non-round amounts
+    (e.g. 53200 -> 53000). Only checked for single-action responses - multi-action
+    output (split expense, lending) legitimately derives amounts (e.g. a 3-way split
+    share) that won't appear as a literal number in the input."""
+    if len(actions) != 1:
+        return True
+    amount = actions[0].get('amount')
+    if amount is None:
+        return True
+    return any(abs(amount - c) < 0.01 for c in _extract_number_candidates(text))
+
+
 def _parse_action_array(text_response: str):
     json_str = _extract_json_array(text_response)
     data = json.loads(json_str)
@@ -166,7 +193,10 @@ async def classify_transaction(text: str):
     if OLLAMA_ENABLED:
         try:
             raw = _call_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:")
-            return _parse_action_array(raw)
+            actions = _parse_action_array(raw)
+            if _amounts_plausible(actions, text):
+                return actions
+            print(f"Local model amount failed plausibility check, falling back to Gemini: {actions}")
         except Exception as e:
             print(f"Local model classification failed, falling back to Gemini: {e}")
 
