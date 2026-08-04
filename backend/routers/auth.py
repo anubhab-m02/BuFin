@@ -106,12 +106,42 @@ def change_password(passwords: schemas.UserChangePassword, db: Session = Depends
 
 @router.delete("/me")
 def delete_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Deferred import: households.py imports get_current_user from this module at load
+    # time, so importing it back at module scope here would be circular.
+    from .households import _is_sole_owner, _delete_household
+
+    # Same guard leave_household uses: don't let a sole owner strand a household that
+    # still has other members in it. Unlike leaving, deleting your account can't just be
+    # blocked forever, so surface which household(s) need attention before proceeding.
+    memberships = db.query(models.HouseholdMember).filter(models.HouseholdMember.user_id == current_user.id).all()
+    solo_households_to_delete = []
+    for m in memberships:
+        if m.role != "owner" or not _is_sole_owner(db, m.household_id, current_user.id):
+            continue
+        other_members = db.query(models.HouseholdMember).filter(
+            models.HouseholdMember.household_id == m.household_id,
+            models.HouseholdMember.user_id != current_user.id
+        ).count()
+        if other_members > 0:
+            household = db.query(models.Household).filter(models.Household.id == m.household_id).first()
+            raise HTTPException(
+                status_code=400,
+                detail=f"You're the only owner of '{household.name if household else 'a household'}' and other members are still in it. Promote another member to owner (or remove them) before deleting your account."
+            )
+        # Sole owner AND sole member - nothing to strand, this household is about to be
+        # fully orphaned by this deletion, so it gets deleted outright below instead.
+        solo_households_to_delete.append(m.household_id)
+
     # Manually delete related data since we don't have cascade set up in models (safer for now)
     db.query(models.Transaction).filter(models.Transaction.user_id == current_user.id).delete()
     db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == current_user.id).delete()
     db.query(models.Debt).filter(models.Debt.user_id == current_user.id).delete()
     db.query(models.WishlistItem).filter(models.WishlistItem.user_id == current_user.id).delete()
-    
+    db.query(models.HouseholdMember).filter(models.HouseholdMember.user_id == current_user.id).delete()
+
+    for household_id in solo_households_to_delete:
+        _delete_household(db, household_id)
+
     # Delete user
     db.delete(current_user)
     db.commit()
