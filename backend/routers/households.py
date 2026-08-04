@@ -75,6 +75,15 @@ def _is_sole_owner(db: Session, household_id: str, user_id: str) -> bool:
     return len(owners) == 1 and owners[0].user_id == user_id
 
 def _delete_household(db: Session, household_id: str):
+    # Revert shared transactions/goals to personal rather than deleting them - a
+    # household disappearing shouldn't take anyone's logged financial data with it.
+    # (Each row's own user_id already tells you whose personal view it lands back in.)
+    db.query(models.Transaction).filter(models.Transaction.household_id == household_id).update(
+        {models.Transaction.household_id: None}, synchronize_session=False
+    )
+    db.query(models.Goal).filter(models.Goal.household_id == household_id).update(
+        {models.Goal.household_id: None}, synchronize_session=False
+    )
     db.query(models.HouseholdInvite).filter(models.HouseholdInvite.household_id == household_id).delete()
     db.query(models.HouseholdMember).filter(models.HouseholdMember.household_id == household_id).delete()
     db.query(models.Household).filter(models.Household.id == household_id).delete()
