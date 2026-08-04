@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, User, Target, Wallet, Wallet2, Plus, MoreHorizontal, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, User, Target, Wallet, Wallet2, Plus, MoreHorizontal, X, Landmark } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -12,6 +12,7 @@ const ALL_ITEMS = [
     { name: 'Planner', path: '/planner', icon: Calendar },
     { name: 'Goals', path: '/goals', icon: Target },
     { name: 'Budgets', path: '/budgets', icon: Wallet2 },
+    { name: 'Net Worth', path: '/net-worth', icon: Landmark },
     { name: 'Insights', path: '/insights', icon: PieChart },
     { name: 'Coach', path: '/coach', icon: MessageSquareText },
 ];
