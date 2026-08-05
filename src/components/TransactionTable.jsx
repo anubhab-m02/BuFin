@@ -3,7 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Trash2, Edit2, UserPlus, Search } from 'lucide-react';
+import { Trash2, Edit2, UserPlus, Search, Repeat } from 'lucide-react';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
 import { AddDebtForm } from './PlannerForms';
@@ -141,8 +141,17 @@ const TransactionTable = () => {
                                                     <meta.icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-foreground truncate">
-                                                        {t.merchant || t.personName || t.description || t.category}
+                                                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                                                        <span className="truncate">{t.merchant || t.personName || t.description || t.category}</span>
+                                                        {t.recurring_plan_id && (
+                                                            <span
+                                                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                                                title="Auto-added from a recurring plan"
+                                                            >
+                                                                <Repeat className="h-2.5 w-2.5" />
+                                                                Recurring
+                                                            </span>
+                                                        )}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground truncate">
                                                         {t.category}{t.description ? ` • ${t.description}` : ''}

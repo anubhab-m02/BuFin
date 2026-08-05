@@ -69,9 +69,13 @@ export const FinancialProvider = ({ children }) => {
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
-        const [txs, plans, dbt, wish, goals, budgetList, householdList, assetList, liabilityList, snapshots] = await Promise.all([
+        // getRecurringPlans() has a server-side side effect (materializing overdue
+        // occurrences into real transactions) that getTransactions() needs to see, so
+        // it has to resolve first rather than racing it inside the Promise.all below.
+        const plans = await api.getRecurringPlans();
+
+        const [txs, dbt, wish, goals, budgetList, householdList, assetList, liabilityList, snapshots] = await Promise.all([
           api.getTransactions(),
-          api.getRecurringPlans(),
           api.getDebts(),
           api.getWishlist(),
           api.getGoals(),

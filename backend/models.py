@@ -17,6 +17,7 @@ class Transaction(Base):
     remarks = Column(String, nullable=True)
     linked_debt_id = Column(String, ForeignKey("debts.id"), nullable=True) # set for auto-created debt repayment transactions
     household_id = Column(String, ForeignKey("households.id"), nullable=True) # null = personal transaction
+    recurring_plan_id = Column(String, ForeignKey("recurring_plans.id"), nullable=True) # set for auto-materialized recurring occurrences
 
 class RecurringPlan(Base):
     __tablename__ = "recurring_plans"
