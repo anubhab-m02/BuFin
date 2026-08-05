@@ -3,6 +3,7 @@ import os
 import json
 import re
 import requests
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,6 +28,27 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4-mini")
 
 
+# Perf #12: when Ollama is enabled (the default) but nothing is actually running on
+# OLLAMA_HOST, every AI call used to pay for a doomed connection attempt before falling
+# back to Gemini. Profiling showed the OS-level "connection refused" itself - not
+# `requests`' own timeout parameter, which never got a chance to fire - takes several
+# seconds (confirmed via a raw socket connect too, so it isn't a `requests`/urllib3
+# quirk either). That's dead time on *every single* Quick Add / tip / alert call. Once
+# a probe fails, skip Ollama entirely for a while instead of re-paying that tax on the
+# next call; a background success (or the recheck window elapsing) re-enables it.
+_ollama_unavailable_until = 0.0
+OLLAMA_RECHECK_SECONDS = 300
+
+
+def _ollama_ready() -> bool:
+    return OLLAMA_ENABLED and time.monotonic() >= _ollama_unavailable_until
+
+
+def _mark_ollama(reachable: bool):
+    global _ollama_unavailable_until
+    _ollama_unavailable_until = 0.0 if reachable else time.monotonic() + OLLAMA_RECHECK_SECONDS
+
+
 def _call_ollama(prompt: str, timeout: int = 20) -> str:
     """Send a single-turn prompt to the local Ollama model. Raises on any failure
     (connection refused, timeout, non-2xx) so callers can fall back to Gemini."""
@@ -37,6 +59,27 @@ def _call_ollama(prompt: str, timeout: int = 20) -> str:
     )
     response.raise_for_status()
     return response.json().get("response", "")
+
+
+def _try_ollama(prompt: str, label: str):
+    """Shared attempt-Ollama-then-mark-availability wrapper, with timing logs so the
+    actual latency split between local/cloud paths is visible instead of guessed at
+    (the profiling ask from #12). Returns the raw text on success, None if Ollama
+    should be skipped entirely right now, and raises on a genuine attempt failure so
+    callers can fall back to Gemini."""
+    if not _ollama_ready():
+        return None
+    start = time.perf_counter()
+    try:
+        raw = _call_ollama(prompt)
+        _mark_ollama(True)
+        print(f"[ai_service] {label}: Ollama responded in {time.perf_counter() - start:.2f}s")
+        return raw
+    except Exception as e:
+        _mark_ollama(False)
+        print(f"[ai_service] {label}: Ollama unavailable after {time.perf_counter() - start:.2f}s ({e}); "
+              f"skipping it for {OLLAMA_RECHECK_SECONDS}s and falling back to Gemini")
+        raise
 
 DATA_ANALYST_PROMPT = """
 You are an advanced financial parser. I will give you a natural language command.
@@ -163,18 +206,24 @@ async def classify_transaction(text: str):
     # Inject today's date into prompt for relative date parsing
     formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
 
-    if OLLAMA_ENABLED:
+    try:
+        raw = _try_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:", "classify_transaction")
+    except Exception:
+        raw = None  # already logged inside _try_ollama
+
+    if raw is not None:
         try:
-            raw = _call_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:")
             return _parse_action_array(raw)
         except Exception as e:
-            print(f"Local model classification failed, falling back to Gemini: {e}")
+            print(f"[ai_service] classify_transaction: Ollama response didn't parse ({e}), falling back to Gemini")
 
     if not API_KEY:
         raise Exception("API Key missing")
 
+    gemini_start = time.perf_counter()
     model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
     response = model.generate_content([formatted_prompt, text])
+    print(f"[ai_service] classify_transaction: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
 
     try:
         return _parse_action_array(response.text)
@@ -300,18 +349,21 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     "Spending is on track today, keep it up!"
     """
     
-    if OLLAMA_ENABLED:
-        try:
-            return _call_ollama(prompt).strip()
-        except Exception as e:
-            print(f"Local model alert generation failed, falling back to Gemini: {e}")
+    try:
+        raw = _try_ollama(prompt, "generate_spending_alert")
+        if raw is not None:
+            return raw.strip()
+    except Exception:
+        pass  # already logged inside _try_ollama
 
     if not API_KEY:
         return None
 
     try:
+        gemini_start = time.perf_counter()
         model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
+        print(f"[ai_service] generate_spending_alert: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
         return response.text.strip()
     except Exception as e:
         print(f"Alert generation failed: {e}")
@@ -338,18 +390,25 @@ async def generate_financial_tips(transactions: list, balance: float):
     ["Tip 1...", "Tip 2...", "Tip 3..."]
     """
 
-    if OLLAMA_ENABLED:
+    try:
+        raw = _try_ollama(prompt, "generate_financial_tips")
+    except Exception:
+        raw = None  # already logged inside _try_ollama
+
+    if raw is not None:
         try:
-            return _parse_tip_list(_call_ollama(prompt))
+            return _parse_tip_list(raw)
         except Exception as e:
-            print(f"Local model tips generation failed, falling back to Gemini: {e}")
+            print(f"[ai_service] generate_financial_tips: Ollama response didn't parse ({e}), falling back to Gemini")
 
     if not API_KEY:
         return DEFAULT_TIPS
 
     try:
+        gemini_start = time.perf_counter()
         model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
+        print(f"[ai_service] generate_financial_tips: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
         return _parse_tip_list(response.text)
     except Exception as e:
         print(f"Error generating tips: {e}")
