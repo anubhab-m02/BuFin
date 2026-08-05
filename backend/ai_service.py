@@ -106,7 +106,7 @@ Output:
 Input: "Salary 50k last working day"
 Output:
 [
-    { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last", "endDate": null }
+    { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last-working", "endDate": null }
 ]
 
 IMPORTANT:
