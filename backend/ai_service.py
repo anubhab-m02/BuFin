@@ -114,7 +114,7 @@ Output:
 Input: "Salary 50k last working day"
 Output:
 [
-    { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last", "endDate": null }
+    { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last-working", "endDate": null }
 ]
 
 Input: "Change Google AI Pro subscription value to 650 for upcoming months"
@@ -162,6 +162,30 @@ def _extract_json_array(text: str) -> str:
     return text[start:]
 
 
+def _amounts_plausible(actions: list, text: str) -> bool:
+    """Guards against the AI model silently rounding non-round amounts
+    (e.g. 53200 -> 53000). Only checked for single-action responses - multi-action
+    output (split expense, lending) legitimately derives amounts (e.g. a 3-way split
+    share) that won't appear as a literal number in the input."""
+    if len(actions) != 1:
+        return True
+    amount = actions[0].get('amount')
+    if amount is None:
+        return True
+
+    candidates = set()
+    for m in re.finditer(r'(\d[\d,]*\.?\d*)\s*([kK])?', text):
+        num_str = m.group(1).replace(',', '')
+        if not num_str or num_str == '.':
+            continue
+        val = float(num_str)
+        candidates.add(val)
+        if m.group(2):
+            candidates.add(val * 1000)
+
+    return any(abs(amount - c) < 0.01 for c in candidates)
+
+
 def _parse_action_array(text_response: str):
     json_str = _extract_json_array(text_response)
     data = json.loads(json_str)
@@ -180,7 +204,10 @@ async def classify_transaction(text: str):
     if OLLAMA_ENABLED:
         try:
             raw = _call_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:")
-            return _parse_action_array(raw)
+            actions = _parse_action_array(raw)
+            if _amounts_plausible(actions, text):
+                return actions
+            print(f"Local model amount failed plausibility check, falling back to Gemini: {actions}")
         except Exception as e:
             print(f"Local model classification failed, falling back to Gemini: {e}")
 
@@ -191,11 +218,15 @@ async def classify_transaction(text: str):
     response = model.generate_content([formatted_prompt, text])
 
     try:
-        return _parse_action_array(response.text)
+        actions = _parse_action_array(response.text)
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
         print(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
+
+    if not _amounts_plausible(actions, text):
+        print(f"Gemini amount also failed plausibility check, no further fallback: {actions}")
+    return actions
 
 async def analyze_purchase(query: str, context: dict):
     if not API_KEY:
