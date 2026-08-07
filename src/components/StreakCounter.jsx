@@ -1,9 +1,9 @@
 import React from "react";
 import { Flame } from "lucide-react";
 import { useFinancial } from "../context/FinancialContext";
-import { todayLocalStr, cn } from "../lib/utils";
+import { todayLocalStr } from "../lib/utils";
 
-const StreakCounter = ({ className }) => {
+const StreakCounter = () => {
   const { transactions } = useFinancial();
 
   const distinctDays = new Set(
@@ -28,12 +28,7 @@ const StreakCounter = ({ className }) => {
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3",
-        className,
-      )}
-    >
+    <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3">
       <div className="p-2 rounded-full bg-orange-500/10 text-orange-500 dark:bg-orange-100 dark:text-orange-500">
         <Flame className="h-4 w-4" />
       </div>
