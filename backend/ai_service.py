@@ -148,8 +148,17 @@ def _extract_json_array(text: str) -> str:
     return text[start:]
 
 
-def _extract_number_candidates(text: str) -> set:
-    """All numeric literals mentioned in the raw input, "k" shorthand expanded."""
+def _amounts_plausible(actions: list, text: str) -> bool:
+    """Guards against the AI model silently rounding non-round amounts
+    (e.g. 53200 -> 53000). Only checked for single-action responses - multi-action
+    output (split expense, lending) legitimately derives amounts (e.g. a 3-way split
+    share) that won't appear as a literal number in the input."""
+    if len(actions) != 1:
+        return True
+    amount = actions[0].get('amount')
+    if amount is None:
+        return True
+
     candidates = set()
     for m in re.finditer(r'(\d[\d,]*\.?\d*)\s*([kK])?', text):
         num_str = m.group(1).replace(',', '')
@@ -159,20 +168,8 @@ def _extract_number_candidates(text: str) -> set:
         candidates.add(val)
         if m.group(2):
             candidates.add(val * 1000)
-    return candidates
 
-
-def _amounts_plausible(actions: list, text: str) -> bool:
-    """Guards against the local model silently rounding non-round amounts
-    (e.g. 53200 -> 53000). Only checked for single-action responses - multi-action
-    output (split expense, lending) legitimately derives amounts (e.g. a 3-way split
-    share) that won't appear as a literal number in the input."""
-    if len(actions) != 1:
-        return True
-    amount = actions[0].get('amount')
-    if amount is None:
-        return True
-    return any(abs(amount - c) < 0.01 for c in _extract_number_candidates(text))
+    return any(abs(amount - c) < 0.01 for c in candidates)
 
 
 def _parse_action_array(text_response: str):
@@ -207,11 +204,15 @@ async def classify_transaction(text: str):
     response = model.generate_content([formatted_prompt, text])
 
     try:
-        return _parse_action_array(response.text)
+        actions = _parse_action_array(response.text)
     except Exception as e:
         print(f"Failed to parse AI response: {e}")
         print(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
+
+    if not _amounts_plausible(actions, text):
+        print(f"Gemini amount also failed plausibility check, no further fallback: {actions}")
+    return actions
 
 async def analyze_purchase(query: str, context: dict):
     if not API_KEY:
