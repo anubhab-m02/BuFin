@@ -138,6 +138,25 @@ class NetWorthSnapshot(Base):
     total_liabilities = Column(Float)
     recorded_at = Column(String)
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    mode = Column(String) # 'analyst', 'strategist', or 'educator'
+    title = Column(String, nullable=True) # derived from the first user message, null until then
+    created_at = Column(String)
+    updated_at = Column(String) # bumped on every message; drives sidebar ordering
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True, index=True)
+    session_id = Column(String, ForeignKey("chat_sessions.id"))
+    role = Column(String) # 'user' or 'assistant'
+    content = Column(String)
+    created_at = Column(String)
+
 class User(Base):
     __tablename__ = "users"
 

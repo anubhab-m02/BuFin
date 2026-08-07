@@ -581,6 +581,60 @@ export const api = {
         });
         if (!response.ok) throw new Error('Coach chat failed');
         return response.json();
+    },
+
+    // Coach Chat History
+    getChatSessions: async () => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/chat/sessions`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch chat sessions');
+        return response.json();
+    },
+    getChatSession: async (sessionId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}`, { headers });
+        if (!response.ok) throw new Error('Failed to fetch chat session');
+        return response.json();
+    },
+    createChatSession: async (mode) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/chat/sessions`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ mode }),
+        });
+        if (!response.ok) throw new Error('Failed to create chat session');
+        return response.json();
+    },
+    postChatMessage: async (sessionId, role, content) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}/messages`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ role, content }),
+        });
+        if (!response.ok) throw new Error('Failed to post chat message');
+        return response.json();
+    },
+    deleteChatSession: async (sessionId) => {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to delete chat session');
+        return response.json();
     }
 };
 
