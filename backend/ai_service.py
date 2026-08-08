@@ -49,7 +49,10 @@ Supported Actions:
      - "merchant": The entity paid (e.g., "Starbucks", "Landlord"). If unknown, use Category.
      - "title": Concise summary (max 5 words), e.g., "Starbucks Coffee", "Rent Payment".
      - "remarks": Context (e.g., "with friends"). If none, null.
-     - "date": Parse explicit dates (e.g., "yesterday", "3rd Nov"). Default to today if absent.
+     - "date": Parse explicit dates, past OR future (e.g., "yesterday", "3rd Nov", "next Friday",
+       "in 3 days"). Default to today if absent. Do NOT default to today just because a date is
+       relative - compute the actual calendar date it refers to. For a bare weekday name ("next
+       Friday", "on Friday"), use the nearest upcoming occurrence of that weekday.
 
 2. "debt": Money owed TO user (receivable) or BY user (payable).
    - Fields: { "action": "debt", "personName": str, "amount": float, "direction": "receivable"|"payable", "dueDate": "YYYY-MM-DD"|null }
@@ -108,6 +111,15 @@ Output:
 [
     { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last-working", "endDate": null }
 ]
+
+Input: "Pay rent 15000 next Friday" (assume today reference is 2025-11-19, a Wednesday)
+Output:
+[
+  { "action": "transaction", "amount": 15000, "category": "Rent", "merchant": "Landlord", "title": "Rent Payment", "type": "expense", "date": "2025-11-21", "remarks": null }
+]
+(This is a single upcoming payment, not a repeating bill - "recurring" is only for phrases like
+"every month"/"every 1st"/a stated frequency. A one-off future date is still a "transaction",
+just dated ahead instead of today.)
 
 IMPORTANT:
 - Return ONLY the JSON Array.
