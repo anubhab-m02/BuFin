@@ -12,6 +12,7 @@ import { User, Shield, Calendar, LogOut, Edit2, Download, Wallet, Target, Brain,
 import { api } from '../lib/api';
 import Achievements from '../components/Achievements';
 import PageHeader from '../components/PageHeader';
+import StreakCounter from '../components/StreakCounter';
 
 const ProfilePage = () => {
     const { isPrivacyMode, togglePrivacyMode } = useFinancial();
@@ -123,6 +124,7 @@ const ProfilePage = () => {
             <PageHeader
                 title="Profile & Settings"
                 subtitle="Manage your account, AI persona, and preferences."
+                action={<StreakCounter />}
             />
 
             <div className="grid gap-6 md:grid-cols-2">
