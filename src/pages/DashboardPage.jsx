@@ -8,6 +8,7 @@ import ActivityFeed from '../components/ActivityFeed';
 import Dialog from '../components/ui/dialog';
 import AddTransactionForm from '../components/AddTransactionForm';
 import PageHeader from '../components/PageHeader';
+import StreakCounter from '../components/StreakCounter';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -17,7 +18,11 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-4 pb-4">
-            <PageHeader title={`Hi, ${firstName}`} subtitle="Here's your financial overview for today." />
+            <PageHeader 
+                title={`Hi, ${firstName}`} 
+                subtitle="Here's your financial overview for today." 
+                action={<StreakCounter />}
+            />
 
             {/* Hero zone: the safe-to-spend gauge answers "am I okay?" before anything else */}
             <DashboardHero />
