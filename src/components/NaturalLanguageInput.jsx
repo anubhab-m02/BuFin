@@ -6,8 +6,28 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 
+// Finds the recurring plan an "update_recurring" action's target_name refers to. Tries
+// an exact (case-insensitive) name match first, then falls back to a substring match in
+// either direction - the model may output a slightly different name than what's stored
+// (e.g. "Google AI Pro Subscription" vs "Google AI Pro"). Returns null on no match OR a
+// genuinely ambiguous multi-match, rather than guessing which plan was meant - updating
+// the wrong plan would be worse than the bug this is fixing.
+const findMatchingPlan = (targetName, plans) => {
+    const target = (targetName || '').trim().toLowerCase();
+    if (!target) return null;
+
+    const exact = plans.find(p => p.name.trim().toLowerCase() === target);
+    if (exact) return exact;
+
+    const partial = plans.filter(p => {
+        const name = p.name.trim().toLowerCase();
+        return name.includes(target) || target.includes(name);
+    });
+    return partial.length === 1 ? partial[0] : null;
+};
+
 const NaturalLanguageInput = ({ onManualEntry }) => {
-    const { addTransaction, addRecurringPlan, addDebt } = useFinancial();
+    const { addTransaction, addRecurringPlan, updateRecurringPlan, recurringPlans, addDebt } = useFinancial();
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -46,6 +66,18 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                         expectedDate: String(action.expectedDate || '1'),
                         endDate: action.endDate || null
                     });
+                } else if (action.action === 'update_recurring') {
+                    const match = findMatchingPlan(action.target_name, recurringPlans);
+                    if (!match) {
+                        setError(`Couldn't find a recurring plan matching "${action.target_name}". Update it from the Planner page instead, or check the name.`);
+                        continue;
+                    }
+                    const changes = {};
+                    if (action.amount != null) changes.amount = parseFloat(action.amount);
+                    if (action.frequency) changes.frequency = action.frequency;
+                    if (action.expectedDate != null) changes.expectedDate = String(action.expectedDate);
+                    if (action.endDate) changes.endDate = action.endDate;
+                    updateRecurringPlan(match.id, { ...match, ...changes });
                 } else if (action.action === 'debt') {
                     addDebt({
                         personName: action.personName,

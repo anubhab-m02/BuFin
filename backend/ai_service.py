@@ -97,11 +97,19 @@ Supported Actions:
 2. "debt": Money owed TO user (receivable) or BY user (payable).
    - Fields: { "action": "debt", "personName": str, "amount": float, "direction": "receivable"|"payable", "dueDate": "YYYY-MM-DD"|null }
 
-3. "recurring": Repeating bills/income.
+3. "recurring": A brand-new repeating bill/income that doesn't already exist for the user.
    - Fields: { "action": "recurring", "name": str, "amount": float, "type": "expense"|"income", "frequency": "monthly"|"weekly"|"yearly", "expectedDate": int (1-31) or "last" or "last-working", "endDate": "YYYY-MM-DD"|null }
    - Rules:
      - "endDate": Parse "till Dec 2025" or "for 6 months". Calculate the specific date.
      - "expectedDate": If "last working day", use "last-working".
+
+4. "update_recurring": Modify an EXISTING recurring plan. Use this - not "recurring" - whenever
+   the phrasing implies the plan already exists (e.g. "change", "update", "increase/decrease",
+   "X now costs Y", "bump my ... to ...") rather than describing a brand-new commitment.
+   - Fields: { "action": "update_recurring", "target_name": str, "amount": float|null, "frequency": ("monthly"|"weekly"|"yearly")|null, "expectedDate": (int (1-31) or "last" or "last-working")|null, "endDate": "YYYY-MM-DD"|null }
+   - Rules:
+     - "target_name": The existing plan's name as the user refers to it (e.g. "Netflix", "Google AI Pro", "Rent"). Don't invent a longer/different name.
+     - Only include the field(s) actually being changed; leave everything else null.
 
 SPECIAL LOGIC: "Split Expense"
 If user says "Spent 300 on Lunch split with A and B":
@@ -150,6 +158,12 @@ Input: "Salary 50k last working day"
 Output:
 [
     { "action": "recurring", "name": "Salary", "amount": 50000, "type": "income", "frequency": "monthly", "expectedDate": "last-working", "endDate": null }
+]
+
+Input: "Change Google AI Pro subscription value to 650 for upcoming months"
+Output:
+[
+    { "action": "update_recurring", "target_name": "Google AI Pro", "amount": 650, "frequency": null, "expectedDate": null, "endDate": null }
 ]
 
 IMPORTANT:
