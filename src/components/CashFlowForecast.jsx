@@ -59,6 +59,14 @@ const CashFlowForecast = () => {
 
                 // 1. Recurring Plans
                 recurringPlans.forEach(plan => {
+                    // A monthly plan's occurrence today, if due, was just materialized
+                    // into a real Transaction by GET /recurring_plans (picked up by the
+                    // transaction loop below) - counting it here too would double it.
+                    // Every later day in this forward-looking window is unambiguously
+                    // future. Weekly/yearly plans are never materialized, so they're
+                    // untouched by this and keep their existing (forecast-only) behavior.
+                    if (plan.frequency === 'monthly' && isSameDay(currentDay, today)) return;
+
                     const planDay = resolveExpectedDay(plan.expectedDate, year, month);
 
                     // Check End Date

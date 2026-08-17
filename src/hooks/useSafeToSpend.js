@@ -18,6 +18,13 @@ export function useSafeToSpend() {
         return d.getDate() > now.getDate();
     };
 
+    // A monthly plan's occurrence today, if due, is already a real materialized
+    // Transaction reflected in `balance`/`spentToday`/`incomeToday` below - excluding
+    // today here avoids counting it twice. Weekly/yearly plans are never materialized,
+    // so their existing "today still counts as upcoming" behavior is unchanged.
+    const isPlanUpcoming = (plan, expectedDay) =>
+        plan.frequency === 'monthly' ? expectedDay > today.getDate() : expectedDay >= today.getDate();
+
     const upcomingRecurringFixed = recurringPlans
         .filter(p => {
             if (p.type !== 'expense') return false;
@@ -27,7 +34,7 @@ export function useSafeToSpend() {
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
                 if (current > end) return false;
             }
-            return expectedDay >= today.getDate();
+            return isPlanUpcoming(p, expectedDay);
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -46,7 +53,7 @@ export function useSafeToSpend() {
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
                 if (current > end) return false;
             }
-            return expectedDay >= today.getDate();
+            return isPlanUpcoming(p, expectedDay);
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
 

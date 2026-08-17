@@ -15,12 +15,23 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
     const day = date.getDate();
     const items = [];
 
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
     recurringPlans.forEach(plan => {
         const planDay = resolveExpectedDay(plan.expectedDate, year, month);
+        const planDate = new Date(year, month, planDay);
+
+        // A monthly plan's occurrence today-or-earlier, if due, is already a real
+        // materialized Transaction (picked up by the transaction branch below, which
+        // uses this same `tomorrow` boundary) - showing it here too would double it.
+        // Weekly/yearly plans are never materialized, so they keep the old behavior.
+        if (plan.frequency === 'monthly' && planDate < tomorrow) return;
+
         if (plan.endDate) {
             const end = new Date(plan.endDate);
-            const current = new Date(year, month, planDay);
-            if (current > end) return;
+            if (planDate > end) return;
         }
         if (planDay === day) {
             items.push({ id: plan.id, name: plan.name, amount: plan.amount, type: plan.type === 'income' ? 'income' : 'expense', isRecurring: true, category: 'Recurring' });
@@ -35,10 +46,6 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
             }
         }
     });
-
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
 
     transactions.forEach(t => {
         const tDate = new Date(t.date);
