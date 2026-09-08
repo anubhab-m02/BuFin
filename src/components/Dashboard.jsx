@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import {PieChart,Pie,Cell,ResponsiveContainer,Tooltip,Legend,LineChart,Line,YAxis,CartesianGrid,} from "recharts";
-import { TrendingUp, TrendingDown, Wallet, Trash2, Wallet2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Trash2, Wallet2, ArrowLeft } from 'lucide-react';
 import JargonBuster from './JargonBuster';
 import { Button } from './ui/button';
 import EmptyState from './EmptyState';
