@@ -2,7 +2,7 @@ import React, {useMemo, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import {PieChart,Pie,Cell,ResponsiveContainer,Tooltip,Legend,LineChart,Line,YAxis,CartesianGrid,} from "recharts";
+import {PieChart,Pie,Cell,ResponsiveContainer,Tooltip,Legend,LineChart,Line,YAxis, XAxis,CartesianGrid,} from "recharts";
 import { TrendingUp, TrendingDown, Wallet, Trash2, Wallet2, ArrowLeft } from 'lucide-react';
 import JargonBuster from './JargonBuster';
 import { Button } from './ui/button';
