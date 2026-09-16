@@ -36,8 +36,12 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4-mini")
 # quirk either). That's dead time on *every single* Quick Add / tip / alert call. Once
 # a probe fails, skip Ollama entirely for a while instead of re-paying that tax on the
 # next call; a background success (or the recheck window elapsing) re-enables it.
+# Process-local "Ollama is down" cache. Fine for single-process deploy; with
+# uvicorn --workers N each worker keeps its own clock (no shared state / Redis).
+# After a failed probe we skip Ollama for OLLAMA_RECHECK_SECONDS even if it
+# comes back mid-window (stale-negative tradeoff vs hammering a dead endpoint).
 _ollama_unavailable_until = 0.0
-OLLAMA_RECHECK_SECONDS = 300
+OLLAMA_RECHECK_SECONDS = 300  # 5 minutes
 
 
 def _ollama_ready() -> bool:
