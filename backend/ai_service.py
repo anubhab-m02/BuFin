@@ -390,12 +390,9 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     "Spending is on track today, keep it up!"
     """
     
-    try:
-        raw = _try_ollama(prompt, "generate_spending_alert")
-        if raw is not None:
-            return raw.strip()
-    except Exception:
-        pass  # already logged inside _try_ollama
+    raw = _try_ollama(prompt, "generate_spending_alert")
+    if raw is not None:
+        return raw.strip()
 
     if not API_KEY:
         return None
