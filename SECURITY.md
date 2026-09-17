@@ -20,3 +20,7 @@ This is a personal project in active development, not a hardened production serv
 - Anything that would let a request from one user affect another user's data
 
 Reports about missing rate limiting, lack of CSRF protection on a hobby-scale dev deployment, or similar hardening gaps expected of a project at this stage are welcome as regular issues rather than private reports, unless you believe there's a real, exploitable impact.
+
+## Local models
+
+Treat Ollama/local LLM output as untrusted input to downstream tools.
