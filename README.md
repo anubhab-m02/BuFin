@@ -218,3 +218,7 @@ For questions or feedback, please open an issue on GitHub.
 ---
 
 **Built with ❤️ for smarter financial management**
+
+## Ollama tip
+
+When streaming chat completions through a local Ollama instance, keep skip-cache behavior **process-local** so concurrent workers do not share a poisoned response cache between sessions.
