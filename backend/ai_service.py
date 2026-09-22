@@ -64,9 +64,8 @@ def _call_ollama(prompt: str, timeout: int = 20) -> str:
 def _try_ollama(prompt: str, label: str):
     """Shared attempt-Ollama-then-mark-availability wrapper, with timing logs so the
     actual latency split between local/cloud paths is visible instead of guessed at
-    (the profiling ask from #12). Returns the raw text on success, None if Ollama
-    should be skipped entirely right now, and raises on a genuine attempt failure so
-    callers can fall back to Gemini."""
+    (the profiling ask from #12). Returns the raw text on success, or None if Ollama
+    is skipped / unavailable so callers can fall back to Gemini without try/except."""
     if not _ollama_ready():
         return None
     start = time.perf_counter()
@@ -79,7 +78,7 @@ def _try_ollama(prompt: str, label: str):
         _mark_ollama(False)
         print(f"[ai_service] {label}: Ollama unavailable after {time.perf_counter() - start:.2f}s ({e}); "
               f"skipping it for {OLLAMA_RECHECK_SECONDS}s and falling back to Gemini")
-        raise
+        return None
 
 DATA_ANALYST_PROMPT = """
 You are an advanced financial parser. I will give you a natural language command.
@@ -244,10 +243,7 @@ async def classify_transaction(text: str):
     # Inject today's date into prompt for relative date parsing
     formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
 
-    try:
-        raw = _try_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:", "classify_transaction")
-    except Exception:
-        raw = None  # already logged inside _try_ollama
+    raw = _try_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:", "classify_transaction")
 
     if raw is not None:
         try:
@@ -394,12 +390,9 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
     "Spending is on track today, keep it up!"
     """
     
-    try:
-        raw = _try_ollama(prompt, "generate_spending_alert")
-        if raw is not None:
-            return raw.strip()
-    except Exception:
-        pass  # already logged inside _try_ollama
+    raw = _try_ollama(prompt, "generate_spending_alert")
+    if raw is not None:
+        return raw.strip()
 
     if not API_KEY:
         return None
@@ -435,10 +428,7 @@ async def generate_financial_tips(transactions: list, balance: float):
     ["Tip 1...", "Tip 2...", "Tip 3..."]
     """
 
-    try:
-        raw = _try_ollama(prompt, "generate_financial_tips")
-    except Exception:
-        raw = None  # already logged inside _try_ollama
+    raw = _try_ollama(prompt, "generate_financial_tips")
 
     if raw is not None:
         try:
