@@ -218,3 +218,7 @@ For questions or feedback, please open an issue on GitHub.
 ---
 
 **Built with ❤️ for smarter financial management**
+
+## Before you PR
+
+Run the project's lint/test scripts for any touched package (backend and/or frontend).
