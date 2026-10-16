@@ -24,3 +24,5 @@ Reports about missing rate limiting, lack of CSRF protection on a hobby-scale de
 ## Local models
 
 Treat Ollama/local LLM output as untrusted input to downstream tools.
+
+Concretely: `classify_transaction` (and similar helpers) parse model JSON and feed it into transaction / recurring-plan creation. Beyond Pydantic field validation on the API schema, that structured output is **not** independently audited for business correctness (wrong category, amount, merchant, or date). Do not treat model-produced fields as authoritative without user confirmation or additional server-side checks before they become durable financial records.
