@@ -17,9 +17,13 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# Unprivileged nginx: writable pid/cache paths for USER nginx
 FROM nginx:1.27-alpine AS web
 COPY --from=web-build /web/dist /usr/share/nginx/html
-RUN chown -R nginx:nginx /usr/share/nginx/html
+RUN sed -i 's@/var/run/nginx.pid@/tmp/nginx.pid@' /etc/nginx/nginx.conf \
+ && mkdir -p /var/cache/nginx /var/log/nginx \
+ && chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx \
+ && chmod -R a+rwX /var/cache/nginx /var/log/nginx /tmp
 USER nginx
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

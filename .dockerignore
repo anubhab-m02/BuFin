@@ -2,8 +2,8 @@
 .gitignore
 .env
 .env.*
-*.db
-*.db.backup-*
+**/*.db
+**/*.db.backup-*
 **/__pycache__
 **/*.pyc
 node_modules
@@ -13,3 +13,5 @@ build
 venv
 *.md
 .DS_Store
+Dockerfile
+docker-compose.yml
