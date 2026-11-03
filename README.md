@@ -221,4 +221,4 @@ For questions or feedback, please open an issue on GitHub.
 
 ## Before you PR
 
-Run the project's lint/test scripts for any touched package (backend and/or frontend).
+Use the checks listed in [CONTRIBUTING.md](CONTRIBUTING.md): `npm run build` / `npm run lint` when frontend files change, and a backend import sanity check (`python3 -c "import main"` from `backend/`). There is no full automated test suite yet.
