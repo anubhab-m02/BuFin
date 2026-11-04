@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Landmark, TrendingUp, TrendingDown, Scale, Plus, Trash2, Wallet, CreditCard, Home, Car, Package } from 'lucide-react';
+import { Landmark, TrendingUp, TrendingDown, Plus, Trash2, Wallet, CreditCard, Home, Car, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import {
     ResponsiveContainer,
@@ -153,13 +153,10 @@ const NetWorthSection = ({
                         const meta = categoryMeta(categories, item.category);
                         const isEditing = editingId === item.id;
                         return (
-                            <Card key={item.id} className="shadow-sm">
+                            <Card key={item.id}>
                                 <CardContent className="p-5 space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="font-semibold text-foreground flex items-center gap-2 min-w-0">
-                                            <span className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 bg-secondary text-foreground/80">
-                                                <meta.icon className="h-3.5 w-3.5" />
-                                            </span>
                                             <span className="truncate">{item.name}</span>
                                         </span>
                                         <Button
@@ -225,29 +222,20 @@ const NetWorthPage = () => {
             <PageHeader title="Net Worth" subtitle="What you own minus what you owe." />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-success/10 text-success">
-                        <TrendingUp className="h-4 w-4" />
-                    </div>
-                    <div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                        <div>
                         <p className="text-xs text-muted-foreground">Total Assets</p>
                         <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalAssets)}</p>
                     </div>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-destructive/10 text-destructive">
-                        <TrendingDown className="h-4 w-4" />
-                    </div>
-                    <div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                        <div>
                         <p className="text-xs text-muted-foreground">Total Liabilities</p>
                         <p className="text-lg font-semibold tabular-nums">{formatCurrency(totalLiabilities)}</p>
                     </div>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                    <div className={cn('p-2 rounded-full', netWorth >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>
-                        <Scale className="h-4 w-4" />
-                    </div>
-                    <div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                        <div>
                         <p className="text-xs text-muted-foreground">Net Worth</p>
                         <p className="text-lg font-semibold tabular-nums">{formatCurrency(netWorth)}</p>
                     </div>
@@ -257,7 +245,6 @@ const NetWorthPage = () => {
             <Card>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2 text-foreground/90">
-                        <Landmark className="h-4 w-4 text-primary" />
                         Net Worth Over Time
                     </CardTitle>
                 </CardHeader>

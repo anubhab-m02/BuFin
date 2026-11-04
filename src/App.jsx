@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
+      <div className="h-dvh w-full flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -45,15 +45,15 @@ const ProtectedRoute = ({ children }) => {
 const AppLayout = ({ children }) => {
   return (
     <FinancialProvider> {/* FinancialProvider moved inside AppLayout */}
-      <div className="min-h-screen bg-secondary/30 flex flex-col md:flex-row overflow-hidden p-0 md:p-4 gap-4">
+      <div className="min-h-dvh bg-background flex flex-col md:flex-row overflow-hidden">
         {/* Navigation renders both the desktop sidebar and mobile bottom bar internally
             (each gated by its own responsive classes) - mounted once, not duplicated. */}
         <Navigation />
 
         {/* Main Content Area - Canvas Mode (No Card) */}
-        <main className="flex-1 flex flex-col h-[calc(100vh-2rem)] overflow-hidden relative">
+        <main className="flex-1 flex flex-col h-dvh overflow-hidden relative">
           <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-6xl mx-auto md:p-6">
               {children} {/* Render children here */}
             </div>
           </div>

@@ -31,3 +31,4 @@ dist-ssr
 
 # Claude Code project notes (local only)
 CLAUDE.md
+.playwright-mcp/

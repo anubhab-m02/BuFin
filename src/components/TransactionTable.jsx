@@ -10,7 +10,6 @@ import { AddDebtForm } from './PlannerForms';
 import EmptyState from './EmptyState';
 import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { getCategoryMeta } from '../lib/categoryMeta';
 import { formatSignedMoney } from '../lib/money';
 
 const dayLabel = (dateStr) => {
@@ -106,7 +105,6 @@ const TransactionTable = () => {
                     {isDataLoading ? (
                         [0, 1, 2, 3].map(i => (
                             <div key={i} className="py-3 flex items-center gap-3">
-                                <Skeleton className="h-10 w-10 rounded-full" />
                                 <div className="flex-1 space-y-2">
                                     <Skeleton className="h-4 w-40" />
                                     <Skeleton className="h-3 w-24" />
@@ -122,33 +120,26 @@ const TransactionTable = () => {
                     ) : (
                         Object.entries(groups).map(([label, items]) => (
                             <div key={label} className="py-2 first:pt-0 last:pb-0">
-                                <p className="sticky top-0 z-10 bg-card text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">
+                                <p className="sticky top-0 z-10 bg-card text-sm font-medium text-muted-foreground py-2">
                                     {label}
                                 </p>
-                                <div className="divide-y divide-border/60">
+                                <div className="divide-y divide-border">
                                     {items.map((t) => {
-                                        const meta = getCategoryMeta(t.category);
                                         return (
                                             <div
                                                 key={t.id}
-                                                className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-lg cursor-pointer group hover:bg-secondary/40 transition-colors duration-fast"
+                                                className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-md cursor-pointer group hover:bg-secondary/60 transition-colors duration-fast"
                                                 onClick={() => setViewingTransaction(t)}
                                             >
-                                                <div
-                                                    className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-                                                    style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)`, color: meta.color }}
-                                                >
-                                                    <meta.icon className="h-4 w-4" />
-                                                </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
                                                         <span className="truncate">{t.merchant || t.personName || t.description || t.category}</span>
                                                         {t.recurring_plan_id && (
                                                             <span
-                                                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground shrink-0"
                                                                 title="Auto-added from a recurring plan"
                                                             >
-                                                                <Repeat className="h-2.5 w-2.5" />
+                                                                <Repeat className="h-3 w-3" />
                                                                 Recurring
                                                             </span>
                                                         )}
@@ -158,10 +149,10 @@ const TransactionTable = () => {
                                                     </p>
                                                 </div>
                                                 <div className="text-right shrink-0">
-                                                    <p className={`text-sm font-semibold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                                                    <p className={`text-sm font-semibold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-foreground'}`}>
                                                         {formatSigned(t.amount, t.type)}
                                                     </p>
-                                                    <p className="text-[11px] text-muted-foreground">{formatDate(t.date)}</p>
+                                                    <p className="text-xs text-muted-foreground">{formatDate(t.date)}</p>
                                                 </div>
                                                 {!t.isDebt && (
                                                     <div
@@ -188,6 +179,7 @@ const TransactionTable = () => {
                                                                 <UserPlus className="h-4 w-4" />
                                                             </Button>
                                                         )}
+                                                        {t.type !== 'expense' && <span className="hidden sm:block h-9 w-9" aria-hidden="true" />}
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -221,7 +213,7 @@ const TransactionTable = () => {
                                 <h3 className="text-lg font-bold">{viewingTransaction.description || 'No Title'}</h3>
                                 <p className="text-sm text-muted-foreground">{formatDate(viewingTransaction.date)}</p>
                             </div>
-                            <div className={`text-xl font-bold tabular-nums ${viewingTransaction.type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                            <div className={`text-xl font-bold tabular-nums ${viewingTransaction.type === 'income' ? 'text-success' : 'text-foreground'}`}>
                                 {formatSigned(viewingTransaction.amount, viewingTransaction.type)}
                             </div>
                         </div>

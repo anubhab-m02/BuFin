@@ -5,20 +5,19 @@ import { api } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil, Users } from 'lucide-react';
+import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
 import { cn } from '../lib/utils';
-import { getCategoryColor } from '../lib/categoryMeta';
 
 const ICONS = {
     PiggyBank, Travel: Plane, Tech: Laptop, Home, Car, Education: GraduationCap, Health: Heart, Other: Star, Investment: TrendingUp
 };
 
 const JarVisualization = ({ goal, onEdit }) => {
-    const { updateSavingsGoal, deleteSavingsGoal } = useFinancial();
+    const { updateSavingsGoal, deleteSavingsGoal, isPrivacyMode } = useFinancial();
+    const mask = '••••••';
     const { user } = useAuth();
     const [amount, setAmount] = useState('');
-    const [showMilestone, setShowMilestone] = useState(false);
     const [memberNames, setMemberNames] = useState({});
     const Icon = ICONS[goal.icon] || Star;
 
@@ -40,9 +39,6 @@ const JarVisualization = ({ goal, onEdit }) => {
         acc[c.user_id] = (acc[c.user_id] || 0) + c.amount;
         return acc;
     }, {});
-    // Stable per-goal accent, hashed from the goal name - same identity system used for
-    // transaction categories, so a jar's badge color doesn't change between renders.
-    const accentColor = getCategoryColor(goal.name);
     const progress = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
     const isCompleted = progress >= 100;
 
@@ -81,9 +77,8 @@ const JarVisualization = ({ goal, onEdit }) => {
 
     return (
         <Card className={cn(
-            "relative overflow-hidden transition-colors duration-normal hover:shadow-xl border-2",
-            isCompleted ? "border-success bg-success/10" :
-                "border-border/60 hover:border-primary/50 bg-card"
+            "relative overflow-hidden transition-colors duration-normal",
+            isCompleted ? "border-success" : "hover:border-foreground/30"
         )}>
 
 
@@ -94,12 +89,10 @@ const JarVisualization = ({ goal, onEdit }) => {
                         <div
                             className={cn(
                                 "absolute bottom-0 left-0 right-0 transition-all duration-slow ease-out",
-                                isCompleted ? "bg-success" : "bg-primary"
+                                isCompleted ? "bg-success" : "bg-data"
                             )}
                             style={{ height: `${progress}%` }}
                         />
-                        {/* Glass effect overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
 
                         {/* Percentage Label */}
                         <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference">
@@ -113,21 +106,16 @@ const JarVisualization = ({ goal, onEdit }) => {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h3 className="font-bold text-lg leading-tight mb-1 flex items-center gap-2">
-                                        <span
-                                            className="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
-                                            style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 18%, transparent)`, color: accentColor }}
-                                        >
-                                            <Icon className="h-3.5 w-3.5" />
-                                        </span>
+                                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                                         {goal.name}
                                     </h3>
-                                    <p className="text-xs text-muted-foreground ml-8">
+                                    <p className="text-xs text-muted-foreground ml-6">
                                         {goal.type === 'investment' ? 'Investment' : 'Savings Goal'}
                                     </p>
                                 </div>
                                 <div className="flex items-start gap-2 relative z-10">
                                     {isCompleted && (
-                                        <div className="bg-success/15 text-success p-1.5 rounded-full shadow-sm animate-in zoom-in">
+                                        <div className="text-success">
                                             <Trophy className="h-4 w-4" />
                                         </div>
                                     )}
@@ -135,7 +123,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                             onClick={onEdit}
                                             title="Edit Goal"
                                         >
@@ -156,13 +144,13 @@ const JarVisualization = ({ goal, onEdit }) => {
 
                             <div className="mt-3 space-y-1">
                                 <div className="flex items-baseline gap-1 tabular-nums">
-                                    <span className="text-2xl font-bold">₹{goal.currentAmount.toLocaleString()}</span>
-                                    <span className="text-xs text-muted-foreground">/ ₹{goal.targetAmount.toLocaleString()}</span>
+                                    <span className="text-2xl font-bold">{isPrivacyMode ? mask : `₹${goal.currentAmount.toLocaleString()}`}</span>
+                                    <span className="text-xs text-muted-foreground">/ {isPrivacyMode ? mask : `₹${goal.targetAmount.toLocaleString()}`}</span>
                                 </div>
 
                                 {isCompleted ? (
                                     <p className="text-sm font-medium text-success flex items-center gap-1">
-                                        Goal Reached! 🎉
+                                        Goal reached
                                     </p>
                                 ) : (
                                     <div className="space-y-1">
@@ -172,8 +160,8 @@ const JarVisualization = ({ goal, onEdit }) => {
                                             </p>
                                         )}
                                         {dailySavings > 0 && (
-                                            <p className="text-xs font-medium text-primary">
-                                                Save ₹{dailySavings}/day to stay on track
+                                            <p className="text-xs font-medium text-foreground">
+                                                Save {isPrivacyMode ? mask : `₹${dailySavings}`}/day to stay on track
                                             </p>
                                         )}
                                     </div>
@@ -181,15 +169,15 @@ const JarVisualization = ({ goal, onEdit }) => {
 
                                 {goal.type === 'investment' && projectedValue && (
                                     <p className="text-xs text-success mt-1 font-medium tabular-nums">
-                                        Est. Value: ₹{projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        Est. value: {isPrivacyMode ? mask : `₹${projectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                                     </p>
                                 )}
                             </div>
 
                             {goal.household_id && Object.keys(contributionsByMember).length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-border/40">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                                        <Users className="h-3 w-3" /> Contributions
+                                    <p className="text-xs text-muted-foreground mb-1.5">
+                                        Contributions
                                     </p>
                                     <div className="space-y-1">
                                         {Object.entries(contributionsByMember).map(([userId, total]) => (
@@ -198,7 +186,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                                     {memberNames[userId] || 'Member'}{userId === user?.id ? ' (You)' : ''}
                                                 </span>
                                                 <span className={cn('tabular-nums font-medium', total < 0 ? 'text-destructive' : 'text-foreground')}>
-                                                    {total >= 0 ? '+' : ''}₹{total.toLocaleString()}
+                                                    {isPrivacyMode ? mask : `${total >= 0 ? '+' : ''}₹${total.toLocaleString()}`}
                                                 </span>
                                             </div>
                                         ))}
@@ -210,7 +198,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                 </div>
 
                 {/* Actions Footer */}
-                <div className="bg-secondary/30 p-3 flex gap-2 border-t border-border/50">
+                <div className="bg-secondary/60 p-3 flex gap-2 border-t border-border">
                     <Input
                         type="number"
                         placeholder="Amount"
@@ -221,7 +209,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                     <div className="flex-1 flex gap-2">
                         <Button
                             size="sm"
-                            className="flex-1 h-8 bg-primary hover:bg-primary/90 text-primary-foreground"
+                            className="flex-1 h-8"
                             onClick={handleDeposit}
                             disabled={!amount}
                         >

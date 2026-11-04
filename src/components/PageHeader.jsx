@@ -5,8 +5,8 @@ import React from 'react';
 const PageHeader = ({ title, subtitle, action }) => (
     <div className="flex justify-between items-end pb-2">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">{title}</h1>
-            {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
         </div>
         {action}
     </div>
