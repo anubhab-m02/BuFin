@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp } from 'lucide-react';
 import { addDays, isSameDay, format } from 'date-fns';
 import { resolveExpectedDay } from '../lib/utils';
 import { chartTooltipStyle } from '../lib/chartTheme';
