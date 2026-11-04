@@ -25,8 +25,10 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
 
         // A monthly plan's occurrence today-or-earlier, if due, is already a real
         // materialized Transaction (picked up by the transaction branch below, which
-        // uses this same `tomorrow` boundary) - showing it here too would double it.
-        // Weekly/yearly plans are never materialized, so they keep the old behavior.
+        // shows every real transaction regardless of date) - showing it here too would
+        // double it, and would show today's *current* plan amount for a past occurrence
+        // instead of what it actually was. Weekly/yearly plans are never materialized,
+        // so they keep the old behavior.
         if (plan.frequency === 'monthly' && planDate < tomorrow) return;
 
         if (plan.endDate) {
@@ -47,9 +49,13 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
         }
     });
 
+    // Real transactions always show, past or future - they're the source of truth for what
+    // actually happened (unlike a live recurring-plan projection, whose amount can change
+    // after the fact). The recurring-plan branch above already excludes any monthly
+    // occurrence dated before tomorrow, so there's no risk of double-showing a past one here.
     transactions.forEach(t => {
         const tDate = new Date(t.date);
-        if (tDate >= tomorrow && tDate.getDate() === day && tDate.getMonth() === month && tDate.getFullYear() === year) {
+        if (tDate.getDate() === day && tDate.getMonth() === month && tDate.getFullYear() === year) {
             items.push({ id: t.id, name: t.description || t.merchant, amount: t.amount, type: t.type, isTransaction: true, category: t.category });
         }
     });
