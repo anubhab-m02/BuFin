@@ -110,7 +110,7 @@ const AuthLayout = ({ children }) => {
 
                 <div key={slideIndex} className="flex flex-col items-center animate-in fade-in duration-normal">
                     {slide.render()}
-                    <h1 className="text-2xl font-bold tracking-tight max-w-sm">{slide.title}</h1>
+                    <h2 className="text-2xl font-bold tracking-tight max-w-sm">{slide.title}</h2>
                     <p className="text-sm text-muted-foreground mt-3 max-w-sm">{slide.description}</p>
                 </div>
 

@@ -18,10 +18,10 @@ const Dialog = ({ isOpen, onClose, title, children, className }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
             <div
                 className={cn(
-                    "relative w-full max-w-lg rounded-lg bg-background p-6 shadow-lg animate-in zoom-in-95 duration-200",
+                    "relative w-full max-w-lg rounded-lg border border-border bg-background p-6 shadow-lg animate-in zoom-in-95 duration-200",
                     className
                 )}
             >
