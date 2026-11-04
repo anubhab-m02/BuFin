@@ -204,7 +204,7 @@ const FiscalCalendar = () => {
                                     key={day}
                                     onClick={() => handleCellClick(day, items)}
                                     className={cn(
-                                        "p-1.5 rounded border border-border/20 bg-background flex flex-col gap-1 overflow-hidden transition-all hover:border-border/40 hover:shadow-sm cursor-pointer active:scale-95",
+                                        "p-1.5 rounded border border-border/20 bg-background flex flex-col gap-1 overflow-hidden transition-all hover:border-border/40 cursor-pointer active:scale-95",
                                         isToday && "ring-1 ring-data bg-secondary/60"
                                     )}
                                 >
