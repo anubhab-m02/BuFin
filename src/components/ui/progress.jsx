@@ -18,11 +18,11 @@ const Progress = React.forwardRef(({ className, value, ...props }, ref) => (
 ));
 Progress.displayName = "Progress";
 
-// Same visual shape as Progress, but the fill color shifts green -> amber -> red as `value`
-// (0-100, uncapped) approaches/exceeds 100. Used for budget-vs-actual and similar limit bars.
+// Same visual shape as Progress, but the fill turns red only once `value` (0-100, uncapped)
+// reaches 100; below that it stays ink. Used for budget-vs-actual and similar limit bars.
 const ThresholdProgress = React.forwardRef(({ className, value = 0, ...props }, ref) => {
     const pct = Math.max(0, value);
-    const colorClass = pct >= 100 ? 'bg-destructive' : pct >= 80 ? 'bg-warning' : 'bg-success';
+    const colorClass = pct >= 100 ? 'bg-destructive' : 'bg-primary';
     return (
         <div
             ref={ref}

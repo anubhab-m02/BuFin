@@ -1,12 +1,11 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
-// `variant="elevated"` is for the single hero card per page (e.g. Safe-to-Spend on the
-// Dashboard) - everything else should stay `default` so the elevated card actually reads
-// as more important instead of every card competing for the same visual weight.
+// Cards are flat: a 1px border on a white surface, no shadow. `elevated` is kept so existing
+// callers keep working; it is currently identical to `default`.
 const cardVariants = {
-    default: "shadow-sm",
-    elevated: "shadow-md",
+    default: "",
+    elevated: "",
 }
 
 const Card = React.forwardRef(({ className, variant = "default", ...props }, ref) => (
