@@ -40,11 +40,11 @@ const ReceiptCapture = () => {
     };
 
     const handleReselect = () => {
-    if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        fileInputRef.current.click();
-    }
-};
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+            fileInputRef.current.click();
+        }
+    };
 
     const handleRemove = () => {
         setSelectedFile(null);
@@ -66,8 +66,8 @@ const ReceiptCapture = () => {
             await new Promise((resolve) => setTimeout(resolve, 1500));
 
             toast({
-                title: 'Receipt ready',
-                description: 'Receipt image was submitted for parsing.',
+                title: 'Receipt parsing not connected yet',
+                description: 'Nothing was uploaded. Parsing arrives with the receipt backend endpoint (#43).',
             });
         } catch (error) {
             console.error('Receipt upload failed:', error);
