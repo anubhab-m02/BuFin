@@ -1,12 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Hourglass, ShoppingBag, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
 import EmptyState from './EmptyState';
 
-const COOLDOWN_MS = 48 * 60 * 60 * 1000;
+// Base cooldown per risk_tolerance. Values are 'low' | 'moderate' | 'high' - confirmed
+// via OnboardingPage.jsx and the live profile-edit form, NOT 'medium' as models.py's
+// stale inline comment claims (that column is an unconstrained string, so nothing
+// enforces the comment; matching actual runtime values matters more than the comment).
+// Anchored so risk_tolerance='moderate' lands exactly on the original fixed 48h - only
+// the extremes move, so the "average" profile's experience doesn't shift just because
+// this landed. A more risk-tolerant user needs less of a "wait it out" guardrail; a more
+// risk-averse one keeps (or gets more of) it.
+const RISK_BASE_HOURS = { low: 60, moderate: 48, high: 30 };
+// Nudges that base by experience level: a beginner gets a bit longer to reconsider, an
+// advanced user a bit less - literacy matters less than risk tolerance for this, so the
+// adjustment is deliberately smaller than the spread between risk tiers.
+const LITERACY_ADJUST_HOURS = { beginner: 6, intermediate: 0, advanced: -6 };
+// Floored regardless of combination - even the most risk-tolerant, most experienced user
+// (high + advanced, the shortest combo at 30-6=24h) still gets a full day's guardrail,
+// not none at all.
+const MIN_COOLDOWN_HOURS = 24;
+
+const getCooldownMs = (user) => {
+    const baseHours = RISK_BASE_HOURS[user?.risk_tolerance] ?? RISK_BASE_HOURS.moderate;
+    const adjustHours = LITERACY_ADJUST_HOURS[user?.financial_literacy] ?? 0;
+    return Math.max(MIN_COOLDOWN_HOURS, baseHours + adjustHours) * 60 * 60 * 1000;
+};
 
 const parseAddedAt = (addedAt) => {
     // Older API records were generated with Python's utcnow().isoformat(), which
@@ -19,8 +42,17 @@ const parseAddedAt = (addedAt) => {
 
 const ImpulseControl = () => {
     const { wishlist, addWishlistItem, deleteWishlistItem, addTransaction } = useFinancial();
+    const { user } = useAuth();
     const [newItem, setNewItem] = useState('');
     const [newCost, setNewCost] = useState('');
+
+    // Recomputed from the live profile on every render rather than stored per-item -
+    // a wishlist item added before this change (or before a later profile edit) is
+    // evaluated against the user's CURRENT cooldown, not a frozen historical one.
+    // There's no per-item duration persisted anywhere to preserve instead, and this
+    // keeps the rule simple: "how long you wait" reflects who you are now.
+    const cooldownMs = getCooldownMs(user);
+    const cooldownHours = Math.round(cooldownMs / (60 * 60 * 1000));
 
     const handleAdd = (e) => {
         e.preventDefault();
@@ -46,7 +78,7 @@ const ImpulseControl = () => {
     const getTimeRemaining = (addedAt) => {
         const now = new Date();
         const added = parseAddedAt(addedAt);
-        const diff = COOLDOWN_MS - (now - added);
+        const diff = cooldownMs - (now - added);
 
         if (diff <= 0) return null; // Cooldown over
 
@@ -60,7 +92,7 @@ const ImpulseControl = () => {
     const getElapsedPct = (addedAt) => {
         const now = new Date();
         const added = parseAddedAt(addedAt);
-        return Math.max(0, Math.min(100, ((now - added) / COOLDOWN_MS) * 100));
+        return Math.max(0, Math.min(100, ((now - added) / cooldownMs) * 100));
     };
 
     // Force re-render every second to update timers
@@ -83,7 +115,7 @@ const ImpulseControl = () => {
                     <Hourglass className="h-5 w-5 text-primary" />
                     Impulse Control
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">Wait 48 hours before buying to avoid regret.</p>
+                <p className="text-xs text-muted-foreground">Wait {cooldownHours} hours before buying to avoid regret.</p>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
                 <form onSubmit={handleAdd} className="space-y-2">

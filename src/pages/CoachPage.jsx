@@ -5,7 +5,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Send, TrendingUp, GraduationCap, ShoppingBag, User, Bot, ChevronDown, Check } from 'lucide-react';
+import { Send, TrendingUp, GraduationCap, ShoppingBag, User, Bot, ChevronDown, Check, PanelLeft, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -50,6 +50,9 @@ const CoachPage = () => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
+    const [sessions, setSessions] = useState([]);
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const scrollRef = useRef(null);
     const modeMenuRef = useRef(null);
 
@@ -70,12 +73,76 @@ const CoachPage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isModeMenuOpen]);
 
-    const handleModeSelect = (mode) => {
-        setSelectedMode(mode);
-        setIsModeMenuOpen(false);
+    // Populate the sidebar on mount, but never auto-load or auto-create a session - the
+    // page always opens on a fresh draft, same as the pre-history default welcome message.
+    useEffect(() => {
+        refreshSessions();
+    }, []);
+
+    const refreshSessions = async () => {
+        try {
+            const list = await api.getChatSessions();
+            setSessions(list);
+        } catch (error) {
+            console.error('Failed to load chat sessions', error);
+        }
+    };
+
+    const resetToFreshDraft = (mode) => {
+        setCurrentSessionId(null);
         setMessages([
             { role: 'assistant', content: `Hello! I'm your ${mode.title}. ${mode.description} How can I help?` }
         ]);
+    };
+
+    const handleModeSelect = (mode) => {
+        setSelectedMode(mode);
+        setIsModeMenuOpen(false);
+        // Switching modes already wipes the transcript today - that's now literally the
+        // start of a new session under the new mode, rather than mutating the old one.
+        resetToFreshDraft(mode);
+    };
+
+    const handleNewConversation = () => {
+        resetToFreshDraft(selectedMode);
+    };
+
+    const handleLoadSession = async (sessionId) => {
+        if (sessionId === currentSessionId) return;
+        try {
+            const session = await api.getChatSession(sessionId);
+            const mode = MODES.find(m => m.id === session.mode) || MODES[0];
+            setSelectedMode(mode);
+            setMessages(session.messages.map(m => ({ role: m.role, content: m.content })));
+            setCurrentSessionId(session.id);
+        } catch (error) {
+            console.error('Failed to load chat session', error);
+        }
+    };
+
+    const handleDeleteSession = async (sessionId) => {
+        try {
+            await api.deleteChatSession(sessionId);
+            if (sessionId === currentSessionId) {
+                resetToFreshDraft(selectedMode);
+            }
+            refreshSessions();
+        } catch (error) {
+            console.error('Failed to delete chat session', error);
+        }
+    };
+
+    const formatSessionDate = (isoString) => {
+        try {
+            const date = new Date(isoString);
+            const now = new Date();
+            if (date.toDateString() === now.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        } catch {
+            return '';
+        }
     };
 
     const handleSend = async (e) => {
@@ -89,6 +156,16 @@ const CoachPage = () => {
         setIsLoading(true);
 
         try {
+            // Sessions are created lazily, on the first message of a conversation - not
+            // just from opening the page or switching modes.
+            let sessionId = currentSessionId;
+            if (!sessionId) {
+                const session = await api.createChatSession(selectedMode.id);
+                sessionId = session.id;
+                setCurrentSessionId(sessionId);
+            }
+            await api.postChatMessage(sessionId, 'user', userMsg.content);
+
             const context = {
                 balance,
                 recentTransactions: transactions.slice(0, 5),
@@ -98,10 +175,14 @@ const CoachPage = () => {
             const response = await api.coachChat(userMsg.content, selectedMode.id, context);
 
             setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+            await api.postChatMessage(sessionId, 'assistant', response);
         } catch (error) {
             setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
             setIsLoading(false);
+            // Refresh regardless of outcome - even a failed AI reply may have already
+            // created the session and persisted the user's message above.
+            refreshSessions();
         }
     };
 
@@ -112,22 +193,34 @@ const CoachPage = () => {
             {/* Mode switcher sits outside the chat Card - the Card needs overflow-hidden for
                 its own scroll containment, which would otherwise clip this dropdown. */}
             <div className="flex items-center justify-between gap-3 relative" ref={modeMenuRef}>
-                <button
-                    type="button"
-                    onClick={() => setIsModeMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
-                    aria-haspopup="listbox"
-                    aria-expanded={isModeMenuOpen}
-                >
-                    <div
-                        className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setIsSidebarOpen((prev) => !prev)}
+                        className="p-2 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                        title={isSidebarOpen ? "Hide history" : "Show history"}
+                        aria-label={isSidebarOpen ? "Hide chat history" : "Show chat history"}
+                        aria-pressed={isSidebarOpen}
                     >
-                        <selectedMode.icon className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
-                    <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
-                </button>
+                        <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsModeMenuOpen((prev) => !prev)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                        aria-haspopup="listbox"
+                        aria-expanded={isModeMenuOpen}
+                    >
+                        <div
+                            className="h-7 w-7 rounded-full flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `color-mix(in srgb, ${selectedMode.color} 15%, transparent)`, color: selectedMode.color }}
+                        >
+                            <selectedMode.icon className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">{selectedMode.title}</span>
+                        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-fast", isModeMenuOpen && "rotate-180")} />
+                    </button>
+                </div>
                 <p className="hidden sm:block text-xs text-muted-foreground text-right">{selectedMode.description}</p>
 
                 {isModeMenuOpen && (
@@ -161,8 +254,57 @@ const CoachPage = () => {
                 )}
             </div>
 
-            <Card className="flex-1 flex flex-col overflow-hidden border-border shadow-sm">
-                <CardContent className="flex-1 flex flex-col p-0 h-full">
+            <Card className="flex-1 flex overflow-hidden border-border shadow-sm">
+                {isSidebarOpen && (
+                    <div className="w-64 shrink-0 border-r border-border flex flex-col bg-secondary/20">
+                        <div className="p-3 border-b border-border flex items-center justify-between">
+                            <span className="text-sm font-semibold text-foreground">History</span>
+                            <button
+                                type="button"
+                                onClick={handleNewConversation}
+                                className="p-1.5 rounded-lg hover:bg-secondary transition-colors duration-fast"
+                                title="New conversation"
+                                aria-label="New conversation"
+                            >
+                                <Plus className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                            {sessions.length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-6 px-2">No conversations yet. Start chatting to save your history.</p>
+                            ) : (
+                                sessions.map((session) => (
+                                    <div
+                                        key={session.id}
+                                        className={cn(
+                                            "group relative flex items-center rounded-lg",
+                                            session.id === currentSessionId ? "bg-secondary" : "hover:bg-secondary/60"
+                                        )}
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => handleLoadSession(session.id)}
+                                            className="flex-1 min-w-0 text-left px-2.5 py-2"
+                                        >
+                                            <p className="text-xs font-medium text-foreground truncate pr-6">{session.title || 'New Conversation'}</p>
+                                            <p className="text-[10px] text-muted-foreground">{formatSessionDate(session.updated_at)}</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
+                                            className="absolute right-1.5 opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity duration-fast shrink-0"
+                                            title="Delete conversation"
+                                            aria-label="Delete conversation"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+                <CardContent className="flex-1 flex flex-col p-0 h-full min-w-0">
                     <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
                         {messages.map((msg, i) => (
                             <div key={i} className={cn("flex gap-3", msg.role === 'user' ? "justify-end" : "justify-start")}>

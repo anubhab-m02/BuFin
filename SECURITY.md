@@ -20,3 +20,9 @@ This is a personal project in active development, not a hardened production serv
 - Anything that would let a request from one user affect another user's data
 
 Reports about missing rate limiting, lack of CSRF protection on a hobby-scale dev deployment, or similar hardening gaps expected of a project at this stage are welcome as regular issues rather than private reports, unless you believe there's a real, exploitable impact.
+
+## Local models
+
+Treat Ollama/local LLM output as untrusted input to downstream tools.
+
+Concretely: `classify_transaction` (and similar helpers) parse model JSON and feed it into transaction / recurring-plan creation. Beyond Pydantic field validation on the API schema, that structured output is **not** independently audited for business correctness (wrong category, amount, merchant, or date). Do not treat model-produced fields as authoritative without user confirmation or additional server-side checks before they become durable financial records.
