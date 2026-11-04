@@ -16,11 +16,11 @@ const CommitmentsHub = () => {
         <Card variant="elevated" className="h-full bg-card flex flex-col">
             <CardHeader className="pb-2 space-y-4">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold">Commitments</CardTitle>
+                    <CardTitle className="text-base font-semibold">Commitments</CardTitle>
                     <Button
                         size="sm"
                         onClick={() => setIsAddOpen(true)}
-                        className="h-8 bg-primary hover:bg-primary/90 text-xs"
+                        className="h-8 text-xs"
                     >
                         <Plus className="h-3 w-3 mr-1" />
                         Add {activeTab === 'recurring' ? 'Plan' : 'Debt'}
@@ -28,14 +28,14 @@ const CommitmentsHub = () => {
                 </div>
 
                 {/* Custom Segmented Control */}
-                <div className="flex p-1 bg-secondary/50 rounded-lg">
+                <div className="flex p-1 bg-secondary rounded-md">
                     <button
                         onClick={() => setActiveTab('recurring')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-normal",
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md border border-transparent transition-colors duration-normal",
                             activeTab === 'recurring'
-                                ? "bg-background text-primary shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                ? "bg-card text-foreground border border-border"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <Repeat className="h-3.5 w-3.5" />
@@ -44,10 +44,10 @@ const CommitmentsHub = () => {
                     <button
                         onClick={() => setActiveTab('debts')}
                         className={cn(
-                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md transition-all duration-normal",
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-sm font-medium rounded-md border border-transparent transition-colors duration-normal",
                             activeTab === 'debts'
-                                ? "bg-background text-primary shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                ? "bg-card text-foreground border border-border"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <CreditCard className="h-3.5 w-3.5" />

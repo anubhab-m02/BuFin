@@ -28,16 +28,12 @@ const StreakCounter = () => {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3">
-      <div className="p-2 rounded-full bg-orange-500/10 text-orange-500 dark:bg-orange-100 dark:text-orange-500">
-        <Flame className="h-4 w-4" />
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Day Streak</p>
-        <p className="text-lg font-semibold tabular-nums">
-          {streak} {streak === 1 ? "day" : "days"}
-        </p>
-      </div>
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <Flame className="h-4 w-4" aria-hidden="true" />
+      <span>
+        <span className="font-medium text-foreground tabular-nums">{streak}</span>
+        {streak === 1 ? " day" : " days"} streak
+      </span>
     </div>
   );
 };

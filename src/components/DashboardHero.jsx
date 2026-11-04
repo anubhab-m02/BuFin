@@ -1,84 +1,82 @@
 import React from 'react';
-import { Loader2, TrendingUp } from 'lucide-react';
 import { Card } from './ui/card';
 import { Skeleton } from './ui/skeleton';
-import SafeToSpendGauge from './SafeToSpendGauge';
 import { useSafeToSpend } from '../hooks/useSafeToSpend';
 import { useSpendingAlert } from '../hooks/useSpendingAlert';
 import { useFinancial } from '../context/FinancialContext';
 import { formatMoney } from '../lib/money';
 import { cn } from '../lib/utils';
 
-// The Dashboard's hero zone: "am I okay?" answered in one glance. The gauge shows how much
-// of today's safe-spend budget is used; the status pill carries the coach's read on it
-// (replacing the old separate "Live Insight" card, which read like a stray quoted string).
+// The Dashboard's hero zone: "am I okay?" answered in one glance. The headline figure is what
+// is left to spend today; the bar beside it shows how much of today's limit is used, and one
+// line of text carries the coach's read on it.
 const DashboardHero = () => {
     const { isPrivacyMode, isDataLoading } = useFinancial();
     const { dailySafeSpend, daysRemaining, usagePct, spentToday, remainingToday, overAmountToday, isOverToday } = useSafeToSpend();
     const { alert, loading: alertLoading } = useSpendingAlert();
 
     const formatCurrency = (amount) => (isPrivacyMode ? '••••••' : formatMoney(amount));
+    // The coach's sentence is free text that may quote amounts; mask them in Privacy Mode too.
+    const safeAlert = alert && isPrivacyMode ? alert.replace(/₹\s?[\d,]+(\.\d+)?/g, '••••••') : alert;
 
-    const statusTone = usagePct >= 100
-        ? 'bg-destructive/10 text-destructive'
-        : usagePct >= 80
-            ? 'bg-warning/10 text-warning'
-            : 'bg-success/10 text-success';
+    const barPct = Math.min(100, Math.max(0, usagePct));
+
+    const statusLine = alertLoading
+        ? "Checking today's spending..."
+        : safeAlert
+            ? safeAlert
+            : isOverToday
+                ? `You're ${formatCurrency(overAmountToday)} over today's safe limit.`
+                : spentToday > 0
+                    ? `${formatCurrency(spentToday)} spent today, within your ${formatCurrency(dailySafeSpend)} limit.`
+                    : "No spending logged yet today - you're on track.";
 
     if (isDataLoading) {
         return (
-            <Card className="bg-surface-hero border-0 p-8">
-                <div className="flex flex-col items-center gap-4">
-                    <Skeleton className="h-40 w-56 rounded-full" />
-                    <Skeleton className="h-10 w-40" />
+            <Card className="p-6 md:p-8">
+                <div className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-end">
+                    <div className="space-y-3">
+                        <Skeleton className="h-4 w-36" />
+                        <Skeleton className="h-12 w-48" />
+                    </div>
+                    <Skeleton className="h-16 w-full" />
                 </div>
             </Card>
         );
     }
 
     return (
-        <Card className="bg-surface-hero border-0 p-6 md:p-8">
-            <div className="flex flex-col items-center text-center gap-3">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    {isOverToday ? "Over today's limit" : 'Safe to spend today'}
-                </span>
-
-                <SafeToSpendGauge pct={usagePct} />
-
-                <div className={cn('text-5xl font-bold tabular-nums -mt-4', isOverToday && 'text-destructive')}>
-                    {isOverToday ? `-${formatCurrency(overAmountToday)}` : formatCurrency(remainingToday)}
+        <Card className="p-6 md:p-8">
+            <div className="grid gap-6 md:grid-cols-[1fr_minmax(0,28rem)] md:items-end">
+                <div>
+                    <p className="text-sm text-muted-foreground">
+                        {isOverToday ? "Over today's limit" : 'Safe to spend today'}
+                    </p>
+                    <div className={cn('mt-2 text-5xl font-bold tabular-nums tracking-tight', isOverToday && 'text-destructive')}>
+                        {isOverToday ? `-${formatCurrency(overAmountToday)}` : formatCurrency(remainingToday)}
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{daysRemaining} days left this month</p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                    {daysRemaining} days left this month {spentToday > 0 && `• ${formatCurrency(spentToday)} spent today of ${formatCurrency(dailySafeSpend)} limit`}
-                </p>
 
-                <div className={cn('flex items-start gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium mt-2 max-w-md text-left', statusTone)}>
-                    {alertLoading ? (
-                        <>
-                            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin mt-0.5" />
-                            <span>Checking today's spending...</span>
-                        </>
-                    ) : alert ? (
-                        <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <span>{alert}</span>
-                        </>
-                    ) : isOverToday ? (
-                        <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <span>You're {formatCurrency(overAmountToday)} over today's safe limit.</span>
-                        </>
-                    ) : spentToday > 0 ? (
-                        <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <span>{formatCurrency(spentToday)} spent today, within your {formatCurrency(dailySafeSpend)} limit.</span>
-                        </>
-                    ) : (
-                        <>
-                            <TrendingUp className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <span>No spending logged yet today - you're on track.</span>
-                        </>
-                    )}
+                <div>
+                    <div className="flex items-baseline justify-between text-sm">
+                        <span className="text-muted-foreground">Spent today</span>
+                        <span className="tabular-nums">
+                            <span className="font-medium">{formatCurrency(spentToday)}</span>
+                            <span className="text-muted-foreground"> of {formatCurrency(dailySafeSpend)}</span>
+                        </span>
+                    </div>
+                    <div
+                        className="mt-2 h-2 overflow-hidden rounded-full bg-secondary"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(barPct)}
+                        aria-label="Share of today's safe limit spent"
+                    >
+                        <div className={cn('h-full rounded-full', isOverToday ? 'bg-destructive' : 'bg-data')} style={{ width: `${barPct}%` }} />
+                    </div>
+                    <p className={cn('mt-3 text-sm', isOverToday ? 'text-destructive' : 'text-muted-foreground')}>{statusLine}</p>
                 </div>
             </div>
         </Card>

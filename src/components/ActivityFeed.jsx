@@ -43,7 +43,7 @@ const ActivityFeed = () => {
         <Card className="h-[420px] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
-                <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => navigate('/ledger')}>
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate('/ledger')}>
                     View All
                 </Button>
             </CardHeader>
@@ -51,7 +51,6 @@ const ActivityFeed = () => {
                 {isDataLoading ? (
                     [0, 1, 2].map(i => (
                         <div key={i} className="py-2.5 flex items-center gap-3">
-                            <Skeleton className="h-9 w-9 rounded-full" />
                             <div className="flex-1 space-y-1.5">
                                 <Skeleton className="h-3.5 w-32" />
                                 <Skeleton className="h-3 w-20" />
@@ -67,8 +66,8 @@ const ActivityFeed = () => {
                 ) : (
                     Object.entries(groups).map(([label, items]) => (
                         <div key={label} className="py-1 first:pt-0 last:pb-0">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">{label}</p>
-                            <div className="divide-y divide-border/60">
+                            <p className="text-sm font-medium text-muted-foreground py-2">{label}</p>
+                            <div className="divide-y divide-border">
                                 {items.map(t => (
                                     <TransactionFeedItem key={t.id} transaction={t} onDelete={() => deleteTransaction(t.id)} />
                                 ))}
