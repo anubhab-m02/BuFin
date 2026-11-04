@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from '../components/ui/button';
-import { Plus, PiggyBank, Target, CalendarClock } from 'lucide-react';
+import { Plus, PiggyBank, Target } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Dialog from '../components/ui/dialog';
 import JarVisualization from '../components/JarVisualization';
@@ -12,7 +12,7 @@ import EmptyState from '../components/EmptyState';
 import { formatMoney } from '../lib/money';
 
 const GoalsPage = () => {
-    const { savingsGoals } = useFinancial();
+    const { savingsGoals, isPrivacyMode } = useFinancial();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingGoal, setEditingGoal] = useState(null);
 
@@ -38,7 +38,7 @@ const GoalsPage = () => {
                 title="Goals & Jars"
                 subtitle="Your path to guilt-free spending."
                 action={
-                    <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 shadow-sm">
+                    <Button onClick={handleCreate}>
                         <Plus className="mr-2 h-4 w-4" />
                         New Jar
                     </Button>
@@ -47,28 +47,19 @@ const GoalsPage = () => {
 
             {savingsGoals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-success/10 text-success">
-                            <PiggyBank className="h-4 w-4" />
-                        </div>
+                    <div className="rounded-lg border border-border bg-card p-4">
                         <div>
                             <p className="text-xs text-muted-foreground">Total Saved</p>
-                            <p className="text-lg font-semibold tabular-nums">{formatMoney(totalSaved)}</p>
+                            <p className="text-lg font-semibold tabular-nums">{isPrivacyMode ? '••••••' : formatMoney(totalSaved)}</p>
                         </div>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-primary/10 text-primary">
-                            <Target className="h-4 w-4" />
-                        </div>
+                    <div className="rounded-lg border border-border bg-card p-4">
                         <div>
                             <p className="text-xs text-muted-foreground">Combined Target</p>
-                            <p className="text-lg font-semibold tabular-nums">{formatMoney(totalTarget)}</p>
+                            <p className="text-lg font-semibold tabular-nums">{isPrivacyMode ? '••••••' : formatMoney(totalTarget)}</p>
                         </div>
                     </div>
-                    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-full bg-warning/10 text-warning">
-                            <CalendarClock className="h-4 w-4" />
-                        </div>
+                    <div className="rounded-lg border border-border bg-card p-4">
                         <div>
                             <p className="text-xs text-muted-foreground">Next Milestone</p>
                             <p className="text-lg font-semibold truncate">
@@ -85,8 +76,8 @@ const GoalsPage = () => {
                 {/* Savings Jars Section */}
                 <div className="md:col-span-8 space-y-4">
                     <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-lg font-semibold text-foreground/80">Your Savings Jars</h2>
-                        <span className="text-xs text-muted-foreground">{savingsGoals.length} Active</span>
+                        <h2 className="text-base font-semibold text-foreground">Your savings jars</h2>
+                        <span className="text-xs text-muted-foreground">{savingsGoals.length} active</span>
                     </div>
                     {savingsGoals.length === 0 ? (
                         <EmptyState

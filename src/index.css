@@ -168,6 +168,14 @@
     --surface-hero-foreground: var(--foreground);
 }
 
+/* Tailwind v4 defaults a bare `border` to currentColor (black on light). Keep the v3 behaviour:
+   every border takes the theme border colour unless a border-* colour utility says otherwise. */
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--border);
+    }
+}
+
 /* Global Resets & Typography */
 body {
     @apply bg-background text-foreground antialiased;

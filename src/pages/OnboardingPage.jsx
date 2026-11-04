@@ -76,7 +76,7 @@ const OnboardingPage = () => {
     return (
         <div className="min-h-screen bg-background flex">
             <div className="hidden md:flex md:w-1/2 lg:w-2/5 bg-surface-hero flex-col items-center justify-center p-12 text-center">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-6">
+                <p className="text-sm font-medium text-muted-foreground mb-6">
                     Your safe-to-spend preview
                 </p>
                 <SafeToSpendGauge pct={step === 3 ? 100 : 40} size={200} />
@@ -90,9 +90,9 @@ const OnboardingPage = () => {
                 </p>
             </div>
             <div className="flex-1 flex items-center justify-center p-4">
-            <Card className="w-full max-w-lg border-border shadow-xl">
+            <Card className="w-full max-w-lg">
                 <CardHeader className="text-center">
-                    <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <div className="mx-auto w-12 h-12 bg-secondary rounded-full flex items-center justify-center mb-4">
                         {step === 1 && <Wallet className="h-6 w-6 text-primary" />}
                         {step === 2 && <Target className="h-6 w-6 text-primary" />}
                         {step === 3 && <Brain className="h-6 w-6 text-primary" />}
