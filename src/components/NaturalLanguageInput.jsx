@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
+import ReceiptCapture from './ReceiptCapture';
 
 // Finds the recurring plan an "update_recurring" action's target_name refers to. Tries
 // an exact (case-insensitive) name match first, then falls back to a substring match in
@@ -131,6 +132,7 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                     </Button>
                 </form>
                 {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+                <ReceiptCapture />
             </CardContent>
         </Card>
     );
