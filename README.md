@@ -218,3 +218,7 @@ For questions or feedback, please open an issue on GitHub.
 ---
 
 **Built with ❤️ for smarter financial management**
+
+## Before you PR
+
+Use the checks listed in [CONTRIBUTING.md](CONTRIBUTING.md): `npm run build` / `npm run lint` when frontend files change, and a backend import sanity check (`python3 -c "import main"` from `backend/`). There is no full automated test suite yet.

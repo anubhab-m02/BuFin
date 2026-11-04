@@ -17,9 +17,14 @@ Thanks for your interest in contributing.
 
 ## Before opening a PR
 
-- `npm run build` — must pass clean
-- Backend: `python3 -c "import main"` — must import without errors
-- No test suite exists yet; verify money-math changes by reading the code path end to end.
+Run the commands this repo actually supports (there is **no** full automated test suite yet):
+
+- Frontend production build: `npm run build` (must pass clean)
+- Frontend lint (if configured in `package.json`): `npm run lint`
+- Backend import sanity check from `backend/`: `python3 -c "import main"`
+- Optional syntax check: `python3 -m py_compile main.py` (and any modules you touched)
+
+For money-math or ledger changes, also walk the code path end to end in the UI — unit tests are not a substitute here yet.
 
 ## Commit messages
 
