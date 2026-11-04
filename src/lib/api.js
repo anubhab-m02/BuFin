@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Only transactions and goals are household-shareable, so only their calls need the
 // active-persona header - everything else keeps using its own inline Authorization
