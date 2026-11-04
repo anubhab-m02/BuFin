@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # The repo-wide lint still has existing failures (issue #91), so lint only the
+      # frontend files this PR touched. Switch to `npm run lint` once #91 is closed.
+      - name: Lint changed files
+        if: github.event_name == 'pull_request'
+        run: |
+          files=$(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" -- 'src/*.js' 'src/*.jsx' 'src/**/*.js' 'src/**/*.jsx')
+          if [ -n "$files" ]; then npx eslint $files; else echo "no frontend source changes"; fi
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: App imports cleanly
+        run: python -c "import main"
+      - name: Alembic has a single head
+        run: python scripts/check_alembic_heads.py
