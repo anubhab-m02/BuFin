@@ -1,5 +1,4 @@
 import React from 'react';
-import { CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { useSafeToSpend } from '../hooks/useSafeToSpend';
@@ -28,9 +27,8 @@ const MonthProjectionCard = () => {
     return (
         <Card className="h-full">
             <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                    <CalendarClock className="h-4 w-4" />
-                    Month Projection
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Month projection
                 </CardTitle>
             </CardHeader>
             <CardContent>

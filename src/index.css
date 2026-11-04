@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-    /* Color Palette - Strict Blue/White/Black + Data Colors */
+    /* Color Palette - achromatic ledger: ink and greys, one data hue */
     --color-background: var(--background);
     --color-foreground: var(--foreground);
 
@@ -43,6 +43,8 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    --color-data: var(--data);
+
     --color-surface-hero: var(--surface-hero);
     --color-surface-hero-foreground: var(--surface-hero-foreground);
 
@@ -54,183 +56,137 @@
 
 /* 
   Root Variables 
-  Palette: Blue (Primary), Zinc (Neutrals) - Strict B/W + Blue
+  Palette: ink + cool greys; --data is the single chart hue
 */
 :root {
-    --background: #ffffff;
-    --foreground: #09090b;
-    /* Zinc 950 */
+    /* Achromatic ledger: the chrome carries no colour. Ink and greys do the work; the one
+       data hue (--data) marks the main series on a chart; red/green appear only where a
+       figure changed. */
+    --background: #f2f4f7;
+    --foreground: #0a0a0a;
 
-    /* Card surface - was previously undefined (bg-card/text-card-foreground resolved to nothing) */
     --card: #ffffff;
-    --card-foreground: #09090b;
+    --card-foreground: #0a0a0a;
 
-    /* Popover/tooltip surface - was also previously undefined */
     --popover: #ffffff;
-    --popover-foreground: #09090b;
+    --popover-foreground: #0a0a0a;
 
-    /* Primary Blue - Strong, Trustworthy */
-    --primary: #2563eb;
-    /* Blue 600 */
+    /* Primary action is near-black. */
+    --primary: #141414;
     --primary-foreground: #ffffff;
 
-    /* Secondary - Neutral Gray */
-    --secondary: #f4f4f5;
-    /* Zinc 100 */
-    --secondary-foreground: #18181b;
-    /* Zinc 900 */
+    --secondary: #eceff3;
+    --secondary-foreground: #141414;
 
-    /* Muted - For secondary text */
-    --muted: #fafafa;
-    /* Zinc 50 */
-    --muted-foreground: #71717a;
-    /* Zinc 500 */
+    --muted: #f7f8fa;
+    --muted-foreground: #5f6673;
 
-    /* Accent - For hover states */
-    --accent: #f4f4f5;
-    /* Zinc 100 */
-    --accent-foreground: #18181b;
-    /* Zinc 900 */
+    --accent: #eceff3;
+    --accent-foreground: #141414;
 
-    /* Destructive. Was Red 500 (#ef4444, 3.76:1 on white - passes graphics' 3:1 but fails
-       text's 4.5:1 since this token is used for both). Red 600 passes both. */
-    --destructive: #dc2626;
-    /* Red 600 */
+    --destructive: #c4242a;
     --destructive-foreground: #ffffff;
 
-    /* Success. Was Emerald 500 (#10b981, 2.54:1 on white - fails even the 3:1 graphics
-       minimum, which is what made fills/arcs read as washed-out/invisible in light mode). */
-    --success: #059669;
-    /* Emerald 600 */
+    --success: #2e7d32;
     --success-foreground: #ffffff;
 
-    /* Warning. Was Amber 500 (#f59e0b, 2.15:1 on white - same failure as success above). */
-    --warning: #d97706;
-    /* Amber 600 */
+    --warning: #b45309;
     --warning-foreground: #ffffff;
 
-    /* Borders & Inputs */
-    --border: #e4e4e7;
-    /* Zinc 200 */
-    --input: #e4e4e7;
-    /* Zinc 200 */
-    --ring: #2563eb;
-    /* Blue 600 */
+    --border: #e1e5ea;
+    --input: #d4d9e0;
+    --ring: #141414;
 
+    /* Card radius 8px, control radius 6px (--radius-md below). */
     --radius: 0.5rem;
-    /* 8px - Cleaner, sharper look */
 
-    /* Chart Palette - categorical, distinct from primary so charts don't blend into UI chrome */
-    --chart-1: #2563eb;
-    /* Blue 600 */
-    --chart-2: #10b981;
-    /* Emerald 500 */
-    --chart-3: #f59e0b;
-    /* Amber 500 */
-    --chart-4: #8b5cf6;
-    /* Violet 500 */
-    --chart-5: #ec4899;
-    /* Pink 500 */
+    /* The one data hue, for the main series only. */
+    --data: #1d5fbf;
+
+    /* Chart ramp: hue first (the main series), then ink and greys. Never a rainbow. */
+    --chart-1: #1d5fbf;
+    --chart-2: #141414;
+    --chart-3: #8a8f99;
+    --chart-4: #b9bec7;
+    --chart-5: #d6dae1;
 
     /* Motion scale - use via transition-[var(--motion-*)] or the .duration-fast/-normal/-slow utilities below */
     --motion-fast: 150ms;
     --motion-normal: 300ms;
     --motion-slow: 500ms;
 
-    /* Hero surface - the Dashboard's safe-to-spend gauge zone. A subtle primary-tinted
-       wash so it reads as "the important number" without needing a heavier shadow. */
-    --surface-hero: #eff4ff;
+    /* Headline figure surface: flat white, no wash. */
+    --surface-hero: #ffffff;
     --surface-hero-foreground: var(--foreground);
 }
 
 /* Dark Mode Support (Class-based for manual toggle) */
 .dark {
-    --background: #09090b;
-    /* Zinc 950 */
+    --background: #0b0c0e;
+    --foreground: #f4f5f7;
 
-    /* Card surface - slightly lighter than the page background for subtle elevation */
-    --card: #18181b;
-    /* Zinc 900 */
-    --card-foreground: #fafafa;
+    --card: #141518;
+    --card-foreground: #f4f5f7;
 
-    --popover: #18181b;
-    /* Zinc 900 */
-    --popover-foreground: #fafafa;
+    --popover: #141518;
+    --popover-foreground: #f4f5f7;
 
-    --foreground: #fafafa;
-    /* Zinc 50 */
+    --primary: #f4f5f7;
+    --primary-foreground: #0a0a0a;
 
-    --primary: #3b82f6;
-    /* Blue 500 */
-    --primary-foreground: #ffffff;
+    --secondary: #1d1f23;
+    --secondary-foreground: #f4f5f7;
 
-    --secondary: #27272a;
-    /* Zinc 800 */
-    --secondary-foreground: #fafafa;
-    /* Zinc 50 */
+    --muted: #101114;
+    --muted-foreground: #9aa0aa;
 
-    --muted: #09090b;
-    /* Zinc 950 */
-    --muted-foreground: #a1a1aa;
-    /* Zinc 400 */
+    --accent: #1d1f23;
+    --accent-foreground: #f4f5f7;
 
-    --accent: #27272a;
-    /* Zinc 800 */
-    --accent-foreground: #fafafa;
-    /* Zinc 50 */
-
-    /* Previously Red/Emerald 900 - nearly invisible against a near-black background.
-       400-level shades stay vivid enough to read as "danger"/"success" in dark mode. */
     --destructive: #f87171;
-    /* Red 400 */
     --destructive-foreground: #450a0a;
-    /* Red 950, for text placed directly on the destructive color */
 
-    --success: #34d399;
-    /* Emerald 400 */
-    --success-foreground: #022c22;
-    /* Emerald 950 */
+    --success: #4ade80;
+    --success-foreground: #052e16;
 
     --warning: #fbbf24;
-    /* Amber 400 */
     --warning-foreground: #451a03;
-    /* Amber 950 */
 
-    --border: #27272a;
-    /* Zinc 800 */
-    --input: #27272a;
-    /* Zinc 800 */
-    --ring: #3b82f6;
-    /* Blue 500 */
+    --border: #25272c;
+    --input: #31343a;
+    --ring: #f4f5f7;
 
-    /* Chart Palette - lighter shades for visibility against the dark background */
-    --chart-1: #60a5fa;
-    /* Blue 400 */
-    --chart-2: #34d399;
-    /* Emerald 400 */
-    --chart-3: #fbbf24;
-    /* Amber 400 */
-    --chart-4: #a78bfa;
-    /* Violet 400 */
-    --chart-5: #f472b6;
-    /* Pink 400 */
+    --data: #6ea0e8;
 
-    /* Hero surface - dark mode drops hairline borders in favor of elevation, so this needs
-       to read clearly against --card (#18181b) via a blue-tinted radial wash instead. */
-    --surface-hero: #16192b;
+    --chart-1: #6ea0e8;
+    --chart-2: #f4f5f7;
+    --chart-3: #a1a6b0;
+    --chart-4: #6b707a;
+    --chart-5: #42454c;
+
+    --surface-hero: #141518;
     --surface-hero-foreground: var(--foreground);
+}
+
+/* Tailwind v4 defaults a bare `border` to currentColor (black on light). Keep the v3 behaviour:
+   every border takes the theme border colour unless a border-* colour utility says otherwise. */
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--border);
+    }
 }
 
 /* Global Resets & Typography */
 body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Geist', Inter, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Utility for consistent "Box" styling */
 .card-base {
-    @apply bg-background border-none shadow-lg rounded-2xl;
+    @apply bg-card border border-border rounded-lg;
 }
 
 /* Motion scale - pair with a transition-* utility, e.g. `transition-colors duration-fast` */
@@ -246,11 +202,9 @@ body {
     transition-duration: var(--motion-slow);
 }
 
-/* Dashboard hero zone - the safe-to-spend gauge card. Radial wash keeps it feeling like
-   "the important number" rather than just another card in the grid. */
+/* Dashboard hero zone: flat surface, no wash. */
 .bg-surface-hero {
     background-color: var(--surface-hero);
-    background-image: radial-gradient(ellipse at top left, color-mix(in srgb, var(--primary) 12%, transparent), transparent 60%);
     color: var(--surface-hero-foreground);
 }
 

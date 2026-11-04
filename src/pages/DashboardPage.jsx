@@ -18,13 +18,13 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-4 pb-4">
-            <PageHeader 
-                title={`Hi, ${firstName}`} 
-                subtitle="Here's your financial overview for today." 
+            <PageHeader
+                title="Dashboard"
+                subtitle={`${firstName}'s money today`}
                 action={<StreakCounter />}
             />
 
-            {/* Hero zone: the safe-to-spend gauge answers "am I okay?" before anything else */}
+            {/* Hero zone: the safe-to-spend figure answers "am I okay?" before anything else */}
             <DashboardHero />
 
             {/* AI Quick Add docked directly beneath the hero - see the number, log the expense */}

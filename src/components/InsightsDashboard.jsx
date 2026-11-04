@@ -4,7 +4,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { detectLeaks, findSubscriptions } from '../lib/analysis';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { AlertTriangle, Repeat, Lightbulb, Plus, X, Check, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, X, Pencil, Trash2 } from 'lucide-react';
 import Dialog from './ui/dialog';
 import { AddRecurringForm } from './PlannerForms';
 import ReactMarkdown from 'react-markdown';
@@ -87,7 +87,7 @@ const InsightsDashboard = () => {
                                             <p className="font-medium text-foreground">{leak.category}</p>
                                             <p className="text-sm text-muted-foreground">{leak.suggestion}</p>
                                         </div>
-                                        <div className="font-bold text-destructive">-₹{leak.amount.toFixed(2)}</div>
+                                        <div className="font-bold">-₹{leak.amount.toFixed(2)}</div>
                                     </div>
                                 ))}
                             </div>
@@ -101,7 +101,6 @@ const InsightsDashboard = () => {
                 <Card className="border-border bg-card">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-foreground">
-                            <Repeat className="h-5 w-5 text-primary" />
                             Recurring Subscriptions
                         </CardTitle>
                     </CardHeader>
@@ -119,7 +118,7 @@ const InsightsDashboard = () => {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <div className="font-bold text-primary">₹{sub.amount.toFixed(2)}</div>
+                                            <div className="font-bold">₹{sub.amount.toFixed(2)}</div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button
                                                     variant="ghost"
@@ -147,11 +146,11 @@ const InsightsDashboard = () => {
                             {/* 2. Discovered Potential Subscriptions */}
                             {subscriptions.length > 0 && (
                                 <>
-                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4 mb-2">
+                                    <div className="text-sm font-medium text-muted-foreground mt-4 mb-2">
                                         Detected Potential Subscriptions
                                     </div>
                                     {subscriptions.map((sub, index) => (
-                                        <div key={`new- ${index} `} className="flex items-center justify-between p-3 bg-warning/10 rounded-lg border border-warning/20 group">
+                                        <div key={`new- ${index} `} className="flex items-center justify-between p-3 bg-secondary/60 rounded-md border border-warning/20 group">
                                             <div>
                                                 <p className="font-medium text-foreground">{sub.name}</p>
                                                 <p className="text-xs text-muted-foreground">
@@ -197,13 +196,12 @@ const InsightsDashboard = () => {
                 <Card className="border-border bg-card md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="flex items-center gap-2 text-foreground">
-                            <Lightbulb className="h-5 w-5 text-primary" />
                             AI Quick Tips
                         </CardTitle>
                         <Button
                             size="sm"
                             variant="outline"
-                            className="text-primary border-border hover:bg-secondary"
+                            className="border-border hover:bg-secondary"
                             onClick={handleGenerateTips}
                             disabled={loadingTips}
                         >
