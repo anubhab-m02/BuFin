@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import Dialog from './ui/dialog';
 import { AddRecurringForm } from './PlannerForms';
 import EmptyState from './EmptyState';
+import { formatMoney } from '../lib/money';
 
 const RecurringManager = ({ compact }) => {
     const { recurringPlans, isPrivacyMode, deleteRecurringPlan } = useFinancial();
@@ -15,7 +16,7 @@ const RecurringManager = ({ compact }) => {
 
     const formatCurrency = (amount) => {
         if (isPrivacyMode) return '••••••';
-        return `₹${amount.toFixed(2)}`;
+        return formatMoney(amount, { precise: true });
     };
 
     const handleEdit = (plan) => {
@@ -43,16 +44,11 @@ const RecurringManager = ({ compact }) => {
                         key={plan.id}
                         type="button"
                         onClick={() => setViewingPlan(plan)}
-                        className="w-full flex items-center justify-between gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-secondary/40 transition-colors duration-fast text-left"
+                        className="w-full flex items-center justify-between gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-secondary/60 transition-colors duration-fast text-left"
                     >
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2 rounded-full bg-secondary text-secondary-foreground shrink-0">
-                                <CalendarClock className="h-4 w-4" />
-                            </div>
-                            <p className="font-medium text-sm truncate">{plan.name}</p>
-                        </div>
-                        <div className={`font-bold whitespace-nowrap tabular-nums text-sm shrink-0 ${plan.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                            {plan.type === 'income' ? '+' : '-'}{formatCurrency(plan.amount).replace('₹', '')}
+                        <p className="font-medium text-sm truncate">{plan.name}</p>
+                        <div className={`font-semibold whitespace-nowrap tabular-nums text-sm shrink-0 ${plan.type === 'income' ? 'text-success' : 'text-foreground'}`}>
+                            {plan.type === 'income' ? '+' : '-'}{formatCurrency(plan.amount)}
                         </div>
                     </button>
                 ))
@@ -70,7 +66,7 @@ const RecurringManager = ({ compact }) => {
                                 <h3 className="text-lg font-bold">{viewingPlan.name}</h3>
                                 <p className="text-sm text-muted-foreground">Day {viewingPlan.expectedDate} of month · {viewingPlan.frequency}</p>
                             </div>
-                            <div className={`text-xl font-bold tabular-nums ${viewingPlan.type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                            <div className={`text-xl font-bold tabular-nums ${viewingPlan.type === 'income' ? 'text-success' : 'text-foreground'}`}>
                                 {viewingPlan.type === 'income' ? '+' : '-'}{formatCurrency(viewingPlan.amount)}
                             </div>
                         </div>

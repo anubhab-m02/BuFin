@@ -30,7 +30,7 @@ export const BudgetSummaryCard = () => {
 
     if (isDataLoading) {
         return (
-            <Card className="h-full shadow-sm">
+            <Card className="h-full">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium">Budgets</CardTitle>
                 </CardHeader>
@@ -43,7 +43,7 @@ export const BudgetSummaryCard = () => {
     }
 
     return (
-        <Card className="h-full shadow-sm cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => navigate('/budgets')}>
+        <Card className="h-full cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => navigate('/budgets')}>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Budgets</CardTitle>
             </CardHeader>

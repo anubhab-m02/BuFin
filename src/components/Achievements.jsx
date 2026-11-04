@@ -23,7 +23,7 @@ const Achievements = () => {
             icon: Star,
             condition: () => transactions.length > 0,
             progress: () => transactions.length > 0 ? 100 : 0,
-            color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/20'
+            color: 'text-foreground'
         },
         {
             id: 'saver',
@@ -32,7 +32,7 @@ const Achievements = () => {
             icon: PiggyBank,
             condition: () => savingsGoals.length > 0,
             progress: () => savingsGoals.length > 0 ? 100 : 0,
-            color: 'text-green-500 bg-green-100 dark:bg-green-900/20'
+            color: 'text-foreground'
         },
         {
             id: 'planner',
@@ -41,7 +41,7 @@ const Achievements = () => {
             icon: Target,
             condition: () => recurringPlans.length > 0,
             progress: () => recurringPlans.length > 0 ? 100 : 0,
-            color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/20'
+            color: 'text-foreground'
         },
         {
             id: 'debt_free',
@@ -51,7 +51,7 @@ const Achievements = () => {
             condition: () => debts.length > 0 && debts.every(d => d.status === 'repaid'),
             progress: () => debts.length === 0 ? 0 : Math.min(100, (repaidDebtsCount / debts.length) * 100),
             progressLabel: () => debts.length === 0 ? null : `${repaidDebtsCount}/${debts.length} debts repaid`,
-            color: 'text-purple-500 bg-purple-100 dark:bg-purple-900/20'
+            color: 'text-foreground'
         },
         {
             id: 'big_saver',
@@ -75,7 +75,7 @@ const Achievements = () => {
             condition: () => trackedDistinctDays >= 30,
             progress: () => Math.min(100, (trackedDistinctDays / 30) * 100),
             progressLabel: () => `${trackedDistinctDays}/30 days`,
-            color: 'text-orange-500 bg-orange-100 dark:bg-orange-900/20'
+            color: 'text-foreground'
         }
     ];
 
@@ -97,7 +97,7 @@ const Achievements = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {unlocked.map(achievement => (
                         <div key={achievement.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                            <div className={cn("p-2 rounded-full shrink-0", achievement.color)}>
+                            <div className={cn("shrink-0", achievement.color)}>
                                 <achievement.icon className="h-5 w-5" />
                             </div>
                             <div>
@@ -111,7 +111,7 @@ const Achievements = () => {
                         const label = achievement.progressLabel ? achievement.progressLabel() : null;
                         return (
                             <div key={achievement.id} className="flex items-start gap-3 p-3 rounded-lg border border-dashed bg-muted/30 opacity-60 grayscale">
-                                <div className="p-2 rounded-full bg-muted shrink-0">
+                                <div className="shrink-0 text-muted-foreground">
                                     <achievement.icon className="h-5 w-5" />
                                 </div>
                                 <div className="flex-1 min-w-0">

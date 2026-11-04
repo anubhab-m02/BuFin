@@ -139,7 +139,7 @@ const ProfilePage = () => {
                         </Button>
                     </CardHeader>
                     <CardContent className="flex items-center gap-4 pt-4">
-                        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary uppercase">
+                        <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center text-2xl font-bold text-foreground uppercase">
                             {user?.full_name?.[0] || user?.email?.[0] || 'U'}
                         </div>
                         <div>
@@ -193,10 +193,10 @@ const ProfilePage = () => {
                 </Card>
 
                 {/* AI Personalization - the standout feature, surfaced right after identity */}
-                <Card className="md:col-span-2 border-primary/20 bg-primary/5">
+                <Card className="md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <div>
-                            <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
                                 <Brain className="h-4 w-4" /> AI Personalization
                             </CardTitle>
                             <CardDescription>
@@ -209,26 +209,26 @@ const ProfilePage = () => {
                     </CardHeader>
                     <CardContent className="grid md:grid-cols-4 gap-4 pt-4">
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Monthly Income</span>
+                            <span className="text-sm text-muted-foreground">Monthly income</span>
                             <div className="font-semibold text-lg">
-                                {user?.currency === 'USD' ? '$' : '₹'}{user?.monthly_income?.toLocaleString()}
+                                {user?.monthly_income != null ? `${user?.currency === 'USD' ? '$' : '₹'}${user.monthly_income.toLocaleString()}` : '—'}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Savings Goal</span>
+                            <span className="text-sm text-muted-foreground">Savings goal</span>
                             <div className="font-semibold text-lg">
-                                {user?.currency === 'USD' ? '$' : '₹'}{user?.savings_goal?.toLocaleString()}
+                                {user?.savings_goal != null ? `${user?.currency === 'USD' ? '$' : '₹'}${user.savings_goal.toLocaleString()}` : '—'}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Risk Tolerance</span>
-                            <div className="capitalize px-2 py-1 rounded-full bg-background border w-fit text-sm font-medium">
+                            <span className="text-sm text-muted-foreground">Risk tolerance</span>
+                            <div className="capitalize w-fit text-lg font-semibold">
                                 {user?.risk_tolerance}
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider">Financial Literacy</span>
-                            <div className="capitalize px-2 py-1 rounded-full bg-background border w-fit text-sm font-medium">
+                            <span className="text-sm text-muted-foreground">Financial literacy</span>
+                            <div className="capitalize w-fit text-lg font-semibold">
                                 {user?.financial_literacy}
                             </div>
                         </div>
