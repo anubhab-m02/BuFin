@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Wallet, MessageSquareText, Wallet2 } from 'lucide-react';
+import { MessageSquareText } from 'lucide-react';
 import SafeToSpendGauge from './SafeToSpendGauge';
+import BrandMark from './BrandMark';
 
 // Split-screen shell for Login/Signup: a brand panel on the left (hidden on mobile) that
 // auto-rotates through the product's core surfaces so the first impression communicates
@@ -21,10 +22,10 @@ const SLIDES = [
         title: 'Log an expense in plain English',
         description: '"Spent 500 on coffee with Rahul" - BuFin parses the merchant, category, and split automatically.',
         render: () => (
-            <div className="w-full max-w-xs mb-8 rounded-xl border border-border bg-card p-4 text-left shadow-sm">
+            <div className="w-full max-w-xs mb-8 rounded-xl border border-border bg-card p-4 text-left">
                 <p className="text-sm text-foreground">Spent 500 on coffee with Rahul</p>
                 <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">Food & Drink</span>
+                    <span className="px-2 py-0.5 rounded-md bg-secondary text-foreground font-medium">Food & Drink</span>
                     <span>-₹500</span>
                 </div>
             </div>
@@ -56,7 +57,7 @@ const SLIDES = [
         title: 'An AI coach that knows your numbers',
         description: 'Ask questions, get grounded advice, and let the coach flag risky purchases before you make them.',
         render: () => (
-            <div className="w-full max-w-xs mb-8 rounded-xl border border-border bg-card p-4 text-left shadow-sm space-y-2">
+            <div className="w-full max-w-xs mb-8 rounded-xl border border-border bg-card p-4 text-left space-y-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-primary">
                     <MessageSquareText className="h-3.5 w-3.5" /> Coach
                 </div>
@@ -102,9 +103,9 @@ const AuthLayout = ({ children }) => {
             <div className="hidden md:flex md:w-1/2 lg:w-2/5 bg-surface-hero flex-col items-center justify-center p-12 text-center">
                 <div className="flex items-center gap-2 mb-10">
                     <div className="p-1.5 bg-primary/10 rounded-lg">
-                        <Wallet className="h-6 w-6 text-primary" />
+                        <BrandMark className="h-6 w-6 text-foreground" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-foreground">BuFin</span>
+                    <span className="text-xl font-semibold tracking-tight text-foreground">bufin</span>
                 </div>
 
                 <div key={slideIndex} className="flex flex-col items-center animate-in fade-in duration-normal">
