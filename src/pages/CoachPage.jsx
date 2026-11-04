@@ -254,7 +254,7 @@ const CoachPage = () => {
                 )}
             </div>
 
-            <Card className="flex-1 flex overflow-hidden border-border shadow-sm">
+            <Card className="flex-1 flex overflow-hidden">
                 {isSidebarOpen && (
                     <div className="w-64 shrink-0 border-r border-border flex flex-col bg-secondary/20">
                         <div className="p-3 border-b border-border flex items-center justify-between">
@@ -317,7 +317,7 @@ const CoachPage = () => {
                                     </div>
                                 )}
                                 <div className={cn(
-                                    "max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm",
+                                    "max-w-[80%] rounded-lg px-4 py-2 text-sm",
                                     msg.role === 'user'
                                         ? "bg-primary text-primary-foreground rounded-tr-none"
                                         : "bg-secondary text-secondary-foreground rounded-tl-none"
@@ -360,7 +360,7 @@ const CoachPage = () => {
                                     </ReactMarkdown>
                                 </div>
                                 {msg.role === 'user' && (
-                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
                                         <User className="h-5 w-5 text-primary" />
                                     </div>
                                 )}
@@ -387,10 +387,8 @@ const CoachPage = () => {
                                 >
                                     <Bot className="h-5 w-5" />
                                 </div>
-                                <div className="bg-secondary text-secondary-foreground rounded-2xl rounded-tl-none px-4 py-2 text-sm shadow-sm flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                    <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <div className="bg-secondary text-muted-foreground rounded-lg px-4 py-2 text-sm">
+                                    Thinking…
                                 </div>
                             </div>
                         )}

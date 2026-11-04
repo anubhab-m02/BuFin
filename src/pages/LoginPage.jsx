@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardDescription } from '../components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 
@@ -32,9 +32,9 @@ const LoginPage = () => {
 
     return (
         <AuthLayout>
-            <Card className="w-full max-w-md border-border shadow-lg">
+            <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
+                    <h1 className="text-2xl font-semibold leading-none tracking-tight text-center">Welcome back</h1>
                     <CardDescription className="text-center">
                         Enter your credentials to access your account
                     </CardDescription>

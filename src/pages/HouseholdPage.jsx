@@ -94,7 +94,7 @@ const HouseholdCard = ({ household, currentUserId, isActive, onSwitch }) => {
             <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <div className="h-9 w-9 rounded-full bg-secondary text-foreground flex items-center justify-center shrink-0">
                             <Users className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
@@ -220,7 +220,7 @@ const HouseholdPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Create a Household</CardTitle>
+                        <CardTitle className="text-base font-semibold">Create a household</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleCreate} className="flex gap-3">
@@ -235,7 +235,7 @@ const HouseholdPage = () => {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Join with an Invite Code</CardTitle>
+                        <CardTitle className="text-base font-semibold">Join with an invite code</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleJoin} className="flex gap-3">

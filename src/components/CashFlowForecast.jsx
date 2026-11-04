@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp } from 'lucide-react';
 import { addDays, isSameDay, format } from 'date-fns';
 import { resolveExpectedDay } from '../lib/utils';
 import { chartTooltipStyle } from '../lib/chartTheme';
@@ -112,19 +111,14 @@ const CashFlowForecast = () => {
         return weeks;
     }, [balance, recurringPlans, transactions, debts]);
 
-    const barColor = (week) => week.balance < 0 ? 'var(--destructive)' : week.isDanger ? 'var(--warning)' : 'var(--primary)';
+    const barColor = (week) => week.balance < 0 ? 'var(--destructive)' : week.isDanger ? 'var(--warning)' : 'var(--data)';
 
     return (
-        <Card className="h-full border-none shadow-lg bg-card flex flex-col overflow-hidden">
+        <Card className="h-full bg-card flex flex-col overflow-hidden">
             <CardHeader className="pb-2 pt-4 px-5 flex-shrink-0">
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-foreground/90">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        8-Week Forecast
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold bg-secondary/50 px-2 py-0.5 rounded-full">
-                        Net Balance
-                    </span>
+                    <span className="text-foreground">8-week forecast</span>
+                    <span className="text-xs font-normal text-muted-foreground">Projected net balance</span>
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 p-2">
@@ -146,7 +140,7 @@ const CashFlowForecast = () => {
                         />
                         <ReferenceLine y={0} stroke="var(--border)" />
                         <Tooltip content={<ForecastTooltip isPrivacyMode={isPrivacyMode} />} cursor={{ fill: 'var(--secondary)', opacity: 0.4 }} />
-                        <Bar dataKey="balance" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                        <Bar dataKey="balance" radius={[3, 3, 0, 0]} maxBarSize={40}>
                             {forecast.map((week, idx) => (
                                 <Cell key={idx} fill={barColor(week)} fillOpacity={idx === 0 ? 1 : 0.75} />
                             ))}

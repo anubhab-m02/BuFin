@@ -2,18 +2,11 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, User, Target, Wallet2, Plus, MoreHorizontal, X, Users, ChevronsUpDown, Check, Settings2, Landmark } from 'lucide-react';
 import { cn } from '../lib/utils';
+import BrandMark from './BrandMark';
 import { useAuth } from '../context/AuthContext';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-
-// The product mark: a "b" whose bowl is a coin.
-const BrandMark = ({ className }) => (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-        <rect x="4" y="2.5" width="3" height="19" rx="1.5" fill="currentColor" />
-        <circle cx="14" cy="14.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="3" />
-    </svg>
-);
 
 const ALL_ITEMS = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
