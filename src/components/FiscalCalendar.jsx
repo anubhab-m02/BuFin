@@ -65,7 +65,7 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
 
 const AGENDA_DAYS_AHEAD = 21;
 
-const AgendaView = ({ recurringPlans, debts, transactions }) => {
+const AgendaView = ({ recurringPlans, debts, transactions, isPrivacyMode }) => {
     const days = Array.from({ length: AGENDA_DAYS_AHEAD }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i);
@@ -94,13 +94,13 @@ const AgendaView = ({ recurringPlans, debts, transactions }) => {
         <div className="flex-1 overflow-y-auto divide-y divide-border">
             {agenda.map(({ date, label, items }) => (
                 <div key={date.toISOString()} className="py-3 first:pt-0">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">{label}</p>
                     <div className="space-y-1.5">
                         {items.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/30">
+                            <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-md bg-secondary/60">
                                 <span className="text-sm font-medium truncate pr-2">{item.name}</span>
-                                <span className={cn('text-sm font-semibold tabular-nums shrink-0', item.type === 'income' ? 'text-success' : 'text-destructive')}>
-                                    {item.type === 'income' ? '+' : '-'}₹{item.amount.toFixed(0)}
+                                <span className={cn('text-sm font-semibold tabular-nums shrink-0', item.type === 'income' ? 'text-success' : 'text-foreground')}>
+                                    {isPrivacyMode ? '••••••' : `${item.type === 'income' ? '+' : '-'}₹${item.amount.toFixed(0)}`}
                                 </span>
                             </div>
                         ))}
@@ -112,7 +112,7 @@ const AgendaView = ({ recurringPlans, debts, transactions }) => {
 };
 
 const FiscalCalendar = () => {
-    const { recurringPlans, debts, transactions } = useFinancial();
+    const { recurringPlans, debts, transactions, isPrivacyMode } = useFinancial();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -147,7 +147,7 @@ const FiscalCalendar = () => {
 
     return (
         <>
-            <Card className="sticky top-6 shadow-lg bg-card flex flex-col min-h-[60vh] overflow-hidden">
+            <Card className="sticky top-6 bg-card flex flex-col min-h-[60vh] overflow-hidden">
                 <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 flex-shrink-0 border-b border-border/30">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -177,7 +177,7 @@ const FiscalCalendar = () => {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col min-h-0 p-4">
                     {view === 'agenda' ? (
-                        <AgendaView recurringPlans={recurringPlans} debts={debts} transactions={transactions} />
+                        <AgendaView recurringPlans={recurringPlans} debts={debts} transactions={transactions} isPrivacyMode={isPrivacyMode} />
                     ) : (
                         <>
                     <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-2 flex-shrink-0">
@@ -205,12 +205,12 @@ const FiscalCalendar = () => {
                                     onClick={() => handleCellClick(day, items)}
                                     className={cn(
                                         "p-1.5 rounded border border-border/20 bg-background flex flex-col gap-1 overflow-hidden transition-all hover:border-border/40 hover:shadow-sm cursor-pointer active:scale-95",
-                                        isToday && "ring-1 ring-primary/50 bg-primary/5 border-primary/30"
+                                        isToday && "ring-1 ring-data bg-secondary/60"
                                     )}
                                 >
                                     <span className={cn(
-                                        "text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0",
-                                        isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                                        "text-xs w-5 h-5 flex items-center justify-center flex-shrink-0",
+                                        isToday ? "font-bold text-foreground" : "font-medium text-muted-foreground"
                                     )}>
                                         {day}
                                     </span>
@@ -221,10 +221,10 @@ const FiscalCalendar = () => {
                                                 className={cn(
                                                     "text-[10px] px-1 py-0.5 rounded truncate flex justify-between items-center flex-shrink-0",
                                                     item.type === 'income'
-                                                        ? "bg-success/10 text-success"
-                                                        : "bg-destructive/10 text-destructive"
+                                                        ? "text-success"
+                                                        : "text-foreground"
                                                 )}
-                                                title={`${item.name} - ₹${item.amount}`}
+                                                title={isPrivacyMode ? item.name : `${item.name} - ₹${item.amount}`}
                                             >
                                                 <span className="truncate flex-1">{item.name}</span>
                                             </div>
@@ -257,12 +257,7 @@ const FiscalCalendar = () => {
                                     <div className="flex flex-col">
                                         <span className="font-medium text-sm">{item.name}</span>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span className={cn(
-                                                "px-1.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider",
-                                                item.isRecurring ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
-                                                    item.isDebt ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" :
-                                                        "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                                            )}>
+                                            <span className="text-xs">
                                                 {item.isRecurring ? 'Recurring' : item.isDebt ? 'Debt' : 'Transaction'}
                                             </span>
                                             <span>{item.category}</span>
@@ -270,9 +265,9 @@ const FiscalCalendar = () => {
                                     </div>
                                     <span className={cn(
                                         "font-bold text-sm tabular-nums",
-                                        item.type === 'income' ? "text-success" : "text-destructive"
+                                        item.type === 'income' ? "text-success" : "text-foreground"
                                     )}>
-                                        {item.type === 'income' ? '+' : '-'}₹{item.amount.toFixed(2)}
+                                        {isPrivacyMode ? '••••••' : `${item.type === 'income' ? '+' : '-'}₹${item.amount.toFixed(2)}`}
                                     </span>
                                 </div>
                             ))}
