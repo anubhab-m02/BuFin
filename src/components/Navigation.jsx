@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, User, Target, Wallet, Wallet2, Plus, MoreHorizontal, X, Users, ChevronsUpDown, Check, Settings2, Landmark } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, PieChart, MessageSquareText, LogOut, User, Target, Wallet2, Plus, MoreHorizontal, X, Users, ChevronsUpDown, Check, Settings2, Landmark } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+
+// The product mark: a "b" whose bowl is a coin.
+const BrandMark = ({ className }) => (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <rect x="4" y="2.5" width="3" height="19" rx="1.5" fill="currentColor" />
+        <circle cx="14" cy="14.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="3" />
+    </svg>
+);
 
 const ALL_ITEMS = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -39,15 +47,15 @@ const PersonaSwitcherPanel = ({ isOpen, onClose, households, activeHouseholdId, 
 
     return (
         <div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-fast"
+            className="fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-fast"
             onClick={onClose}
         >
             <div
-                className="absolute top-4 left-4 w-72 bg-card rounded-2xl shadow-lg p-2 animate-in fade-in slide-in-from-top-2 duration-normal md:top-20"
+                className="absolute top-4 left-4 w-72 bg-card rounded-lg border border-border shadow-lg p-2 animate-in fade-in slide-in-from-top-2 duration-normal md:top-20"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-2 py-1.5">
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Switch View</h2>
+                    <h2 className="text-sm font-medium text-muted-foreground">Switch View</h2>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
                         <X className="h-3.5 w-3.5" />
                     </Button>
@@ -74,7 +82,7 @@ const PersonaSwitcherPanel = ({ isOpen, onClose, households, activeHouseholdId, 
                         onClick={() => handleSelect(h.id)}
                         className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-secondary transition-colors duration-fast text-left"
                     >
-                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <div className="h-8 w-8 rounded-full bg-secondary text-foreground flex items-center justify-center shrink-0">
                             <Users className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -119,22 +127,20 @@ const Navigation = () => {
 
     return (
         <>
-            {/* Desktop Sidebar - unchanged */}
-            <nav className="hidden md:flex md:w-64 md:shrink-0 md:sticky md:top-4 md:h-[calc(100vh-2rem)] bg-background shadow-lg rounded-2xl p-6 flex-col justify-between">
+            {/* Desktop sidebar: flat, on a 1px edge */}
+            <nav className="hidden md:flex md:w-60 md:shrink-0 md:sticky md:top-0 md:h-dvh bg-card border-r border-border p-4 flex-col justify-between">
                 <div className="flex flex-col gap-1 w-full">
-                    <div className="flex items-center gap-2 mb-4 px-2">
-                        <div className="p-1.5 bg-primary/10 rounded-lg">
-                            <Wallet className="h-6 w-6 text-primary" />
-                        </div>
-                        <span className="text-xl font-bold tracking-tight text-foreground">BuFin</span>
+                    <div className="flex items-center gap-2 mb-5 px-2">
+                        <BrandMark className="h-6 w-6 text-foreground" />
+                        <span className="text-lg font-semibold tracking-tight text-foreground">bufin</span>
                     </div>
 
                     <button
                         onClick={() => setIsPersonaOpen(true)}
-                        className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary transition-colors duration-fast text-left"
+                        className="flex items-center gap-2 mb-4 px-3 py-2 rounded-md border border-border bg-background hover:bg-secondary transition-colors duration-fast text-left"
                     >
                         {activeHousehold ? (
-                            <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <div className="h-6 w-6 rounded-full bg-secondary text-foreground flex items-center justify-center shrink-0">
                                 <Users className="h-3.5 w-3.5" />
                             </div>
                         ) : (
@@ -154,10 +160,10 @@ const Navigation = () => {
                                 to={item.path}
                                 end={item.path === '/'}
                                 className={({ isActive }) => cn(
-                                    "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-fast text-sm font-medium",
+                                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-fast text-sm font-medium",
                                     isActive
-                                        ? "bg-primary/10 text-primary"
-                                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                        ? "bg-secondary text-foreground"
+                                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                                 )}
                             >
                                 <item.icon className="h-4 w-4" />
@@ -167,16 +173,16 @@ const Navigation = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-border/40">
+                <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-border">
                     {bottomItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
                             className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors duration-fast text-sm font-medium",
+                                "flex items-center gap-3 px-3 py-2 rounded-md transition-colors duration-fast text-sm font-medium",
                                 isActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                    ? "bg-secondary text-foreground"
+                                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                             )}
                         >
                             <item.icon className="h-4 w-4" />
@@ -189,7 +195,7 @@ const Navigation = () => {
                         of doubling as a second, hover-only, easier-to-fat-finger sign-out. */}
                     <NavLink
                         to="/profile"
-                        className="flex items-center gap-3 px-3 py-3 mt-2 rounded-xl hover:bg-secondary/50 transition-colors duration-fast"
+                        className="flex items-center gap-3 px-3 py-3 mt-2 rounded-md hover:bg-secondary/60 transition-colors duration-fast"
                     >
                         <Avatar className="h-9 w-9 border border-border">
                             <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name}`} />
@@ -225,7 +231,7 @@ const Navigation = () => {
                     <div className="flex items-center justify-center">
                         <button
                             onClick={() => navigate('/')}
-                            className="h-14 w-14 -mt-6 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-transform duration-fast active:scale-95"
+                            className="h-14 w-14 -mt-6 rounded-full bg-primary text-primary-foreground ring-4 ring-background flex items-center justify-center transition-transform duration-fast active:scale-95"
                             aria-label="Add transaction"
                         >
                             <Plus className="h-6 w-6" />
@@ -260,11 +266,11 @@ const Navigation = () => {
             {/* "More" sheet - remaining nav items + profile, off the primary 5 mobile slots */}
             {isMoreOpen && (
                 <div
-                    className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in duration-fast"
+                    className="md:hidden fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-fast"
                     onClick={() => setIsMoreOpen(false)}
                 >
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-in slide-in-from-bottom duration-normal"
+                        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-in slide-in-from-bottom duration-normal"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-3">
@@ -276,7 +282,7 @@ const Navigation = () => {
                         <div className="grid grid-cols-4 gap-3">
                             <button
                                 onClick={() => { setIsMoreOpen(false); setIsPersonaOpen(true); }}
-                                className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-secondary text-muted-foreground text-xs font-medium"
+                                className="flex flex-col items-center gap-1.5 p-3 rounded-md hover:bg-secondary text-muted-foreground text-xs font-medium"
                             >
                                 <Users className="h-5 w-5" />
                                 <span>Switch View</span>
@@ -286,7 +292,7 @@ const Navigation = () => {
                                     key={item.path}
                                     to={item.path}
                                     onClick={() => setIsMoreOpen(false)}
-                                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-secondary text-muted-foreground text-xs font-medium"
+                                    className="flex flex-col items-center gap-1.5 p-3 rounded-md hover:bg-secondary text-muted-foreground text-xs font-medium"
                                 >
                                     <item.icon className="h-5 w-5" />
                                     <span>{item.name}</span>
@@ -294,7 +300,7 @@ const Navigation = () => {
                             ))}
                             <button
                                 onClick={() => { setIsMoreOpen(false); logout(); }}
-                                className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-destructive/10 text-destructive text-xs font-medium"
+                                className="flex flex-col items-center gap-1.5 p-3 rounded-md hover:bg-destructive/10 text-destructive text-xs font-medium"
                             >
                                 <LogOut className="h-5 w-5" />
                                 <span>Sign Out</span>
