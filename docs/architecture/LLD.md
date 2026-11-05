@@ -12,7 +12,7 @@ Dependencies injected into handlers:
 | Dependency | File | Does |
 |---|---|---|
 | `get_db` | `database.py` | Yields a `SessionLocal()`; closes in `finally`. |
-| `get_current_user` | `routers/auth.py` | Decodes the bearer JWT (`sub` = email), loads the `User`, else 401. Declared `async def` but uses a synchronous session. |
+| `get_current_user` | `routers/auth.py` | Decodes the bearer JWT (`sub` = email), loads the `User`, else 401. Declared `async def` but uses a synchronous session, so every authenticated request runs one synchronous DB query on the event loop. |
 | `get_active_household_id` | `routers/auth.py` | Reads `X-Household-Id`. No header gives `None` (personal). Header present but caller not a member gives 403. |
 
 ### 1.2 Endpoints (57)
@@ -77,7 +77,7 @@ Idempotent because the anchor always moves forward from the last tagged row. Kno
 
 **AI routing** (`ai_service.py`):
 - `_try_ollama` returns `None` when Ollama is disabled, skipped, or fails; a failure opens a 5-minute skip window (`_ollama_unavailable_until`, a process-local module global).
-- `classify_transaction`: try Ollama, parse JSON, run `_amounts_plausible` (single-action responses must contain an amount literally present in the input, "k" expanded); on any failure call Gemini and check again.
+- `classify_transaction`: try Ollama, parse JSON, run `_amounts_plausible` (single-action responses must contain an amount literally present in the input, "k" expanded); on any failure call Gemini and check again. The second check is not fail-closed: if the Gemini result also fails `_amounts_plausible` it is only logged and the actions are still returned (`ai_service.py`, tracked for the harness work).
 - Prompt: one large string (`DATA_ANALYST_PROMPT`) with four action shapes (`transaction`, `debt`, `recurring`, `update_recurring`) and few-shot examples.
 - `coach_chat` bypasses the SDK with a manual REST call to get `google_search` grounding.
 

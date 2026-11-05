@@ -32,7 +32,7 @@ Change: composite indexes `(user_id, date DESC)` and `(household_id, date DESC)`
 Done when: `EXPLAIN` on the main list queries shows index scans and bad enum values are rejected by the database.
 
 ### P1.3 Server-side aggregates and pagination
-Why: the SPA downloads every transaction and computes balance, safe-to-spend, forecasts and category totals itself. That is slow at scale and duplicates money rules in the client.
+Why: the SPA downloads the whole ledger (in pages of 500; it silently received only 100 rows before PR #170) and computes balance, safe-to-spend, forecasts and category totals itself. That is slow at scale and duplicates money rules in the client.
 Change: endpoints for `GET /summary` (balance, income, expense for a window), `GET /safe-to-spend`, `GET /spending/by-category?from&to`, `GET /spending/trend?category`, `GET /forecast`; keyset pagination for the ledger; the SPA keeps only presentation logic.
 Done when: the dashboard loads from a constant number of small requests regardless of ledger size.
 
@@ -49,18 +49,18 @@ Change: `routers` (HTTP only) -> `services` (rules: scoping, materialization, co
 Done when: services are unit-testable without HTTP or a database session.
 
 ### P2.2 Non-blocking I/O
-Why: `async def` handlers call synchronous SQLAlchemy and `requests`; one slow AI call stalls the worker.
+Why: the CRUD handlers are plain `def` (threadpool), but `get_current_user` is `async def` with a synchronous query on the event loop, and the AI handlers call synchronous model clients; one slow AI call stalls other requests.
 Change: either make handlers plain `def` (FastAPI runs them in a threadpool) or move to async SQLAlchemy and `httpx.AsyncClient`; AI calls always off the request thread or streamed.
 Done when: a 20-second model call does not delay an unrelated `GET /transactions`.
 
 ### P2.3 Background jobs
 Why: there is no scheduler, so time-based work happens on page load (materialization) or on mutation (net-worth snapshots), and notifications (#36) cannot exist.
-Change: a worker (arq or Celery with Redis) for nightly materialization with backfill (fixes #74), net-worth snapshots, anomaly scans, alert generation, statement import parsing; idempotent jobs keyed by `(user, day)`.
+Change: a worker on a Postgres-backed queue (Procrastinate or PGQueuer; see ADR-6 in `DECISIONS.md`; Redis only if throughput later demands it) for nightly materialization with backfill (fixes #74), net-worth snapshots, anomaly scans, alert generation, statement import parsing; idempotent jobs keyed by `(user, day)`.
 Done when: loading the app performs no writes and a missed day is recovered by the next run.
 
 ### P2.4 AI gateway
 Why: model calls are spread across `ai_service.py` with a process-local skip cache, no per-user limits, no cache, prompts as inline strings, and no way to measure quality.
-Change: a gateway module with a provider interface (Gemini, local, future), per-user daily budget and token accounting, response cache keyed on normalized prompt, retries with a shared (Redis) circuit breaker replacing `_ollama_unavailable_until`, versioned prompts, structured-output (JSON schema) calls instead of regex JSON extraction, and an offline evaluation set (see `AI-FEATURES.md`).
+Change: a gateway module with a Gemini-only model access (ADR-1; Ollama is removed), per-user daily budget and token accounting, retries with a circuit breaker kept in Postgres, scoped per key source (replacing the process-local `_ollama_unavailable_until`), versioned prompts, structured-output (JSON schema) calls instead of regex JSON extraction, and an offline evaluation set (see `AI-FEATURES.md`).
 Done when: every model call goes through one function that records cost, latency, provider and prompt version.
 
 ## P3: frontend
@@ -84,9 +84,11 @@ Data export and delete-my-data endpoints, PII redaction before any cloud model c
 
 ## Suggested sequence
 
-1. P0.1, P0.3 (secret fix and first tests), P4.1 (CI) in parallel.
-2. P1.1 and P1.2, then P0.2 migration on Postgres.
-3. P2.1 layering while adding P1.3 aggregates one endpoint at a time.
-4. P2.2, P2.3, P2.4 together with the first new AI features.
-5. P3 alongside design v2.
-6. P4.2 and P4.3 before a public launch.
+This order is superseded by the delivery order in `AGENT-HARNESS.md` section 11 (Postgres comes before the AI gateway). In short:
+
+1. P0.1, P0.3 (secret fix, first tests, CI, Dockerfiles). The live bugs from the baseline review are fixed first (issues #152 to #163).
+2. P1.1 and P1.2 (Postgres, baseline migration, indexes, constraints), then the P0.2 money/date type migration on Postgres.
+3. P2.4 gateway (Gemini only, Settings page, key storage, redaction, quotas, run tables), then the LangGraph harness.
+4. P1.3 server-side aggregates one endpoint at a time, which unlock the Analyst and Planner agents; P2.1 layering as the services appear.
+5. P2.3 worker and the Curator; the shared knowledge graph.
+6. P3 alongside design v2; P4.2 and P4.3 before a public launch.
