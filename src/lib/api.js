@@ -15,6 +15,26 @@ const getScopeHeaders = (extra = {}) => {
 
 const TRANSACTIONS_PAGE_SIZE = 500;
 
+// Every request goes through here so an expired or revoked token is noticed on the first call
+// that hits it, not whenever some page happens to refetch. AuthContext listens for the event
+// and logs out. Sign-in and sign-up legitimately answer 401 for bad credentials, so they are
+// excluded (a wrong old password on change-password is a 400 and is not affected).
+export const UNAUTHORIZED_EVENT = 'bufin:unauthorized';
+const CREDENTIAL_PATHS = ['/auth/login', '/auth/signup'];
+
+const apiFetch = async (url, options) => {
+    const sentAuthorization = options?.headers?.Authorization;
+    const response = await fetch(url, options);
+    const path = new URL(url, window.location.origin).pathname;
+    if (response.status === 401 && !CREDENTIAL_PATHS.some((credentialPath) => path.endsWith(credentialPath))) {
+        // A slow request from a previous session can come back 401 after a new login; only end
+        // the session if the token that request carried is still the current one.
+        const stale = sentAuthorization && sentAuthorization !== `Bearer ${localStorage.getItem('token')}`;
+        if (!stale) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    return response;
+};
+
 // The AI routes spend the shared Gemini quota, so the backend requires a logged-in user.
 const getAiHeaders = () => {
     const token = localStorage.getItem('token');
@@ -27,7 +47,7 @@ const getAiHeaders = () => {
 export const api = {
     // Auth
     signup: async (email, password, full_name) => {
-        const response = await fetch(`${API_URL}/auth/signup`, {
+        const response = await apiFetch(`${API_URL}/auth/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, full_name }),
@@ -36,7 +56,7 @@ export const api = {
         return response.json();
     },
     login: async (email, password) => {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await apiFetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
@@ -45,7 +65,7 @@ export const api = {
         return response.json();
     },
     getMe: async (token) => {
-        const response = await fetch(`${API_URL}/auth/me`, {
+        const response = await apiFetch(`${API_URL}/auth/me`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             },
@@ -55,7 +75,7 @@ export const api = {
     },
     updateProfile: async (data) => {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/me`, {
+        const response = await apiFetch(`${API_URL}/auth/me`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -68,7 +88,7 @@ export const api = {
     },
     changePassword: async (oldPassword, newPassword) => {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/change-password`, {
+        const response = await apiFetch(`${API_URL}/auth/change-password`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -84,7 +104,7 @@ export const api = {
     },
     deleteAccount: async () => {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/me`, {
+        const response = await apiFetch(`${API_URL}/auth/me`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -102,7 +122,7 @@ export const api = {
         const headers = getScopeHeaders();
         const byId = new Map();
         for (let skip = 0; ; skip += TRANSACTIONS_PAGE_SIZE) {
-            const response = await fetch(
+            const response = await apiFetch(
                 `${API_URL}/transactions?skip=${skip}&limit=${TRANSACTIONS_PAGE_SIZE}`,
                 { headers }
             );
@@ -114,7 +134,7 @@ export const api = {
         }
     },
     createTransaction: async (transaction) => {
-        const response = await fetch(`${API_URL}/transactions`, {
+        const response = await apiFetch(`${API_URL}/transactions`, {
             method: 'POST',
             headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(transaction),
@@ -123,7 +143,7 @@ export const api = {
         return response.json();
     },
     updateTransaction: async (id, transaction) => {
-        const response = await fetch(`${API_URL}/transactions/${id}`, {
+        const response = await apiFetch(`${API_URL}/transactions/${id}`, {
             method: 'PUT',
             headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(transaction),
@@ -132,7 +152,7 @@ export const api = {
         return response.json();
     },
     deleteTransaction: async (id) => {
-        const response = await fetch(`${API_URL}/transactions/${id}`, {
+        const response = await apiFetch(`${API_URL}/transactions/${id}`, {
             method: 'DELETE',
             headers: getScopeHeaders()
         });
@@ -144,7 +164,7 @@ export const api = {
     getRecurringPlans: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/recurring_plans`, { headers });
+        const response = await apiFetch(`${API_URL}/recurring_plans`, { headers });
         if (!response.ok) throw new Error('Failed to fetch recurring plans');
         return response.json();
     },
@@ -154,7 +174,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/recurring_plans`, {
+        const response = await apiFetch(`${API_URL}/recurring_plans`, {
             method: 'POST',
             headers,
             body: JSON.stringify(plan),
@@ -170,7 +190,7 @@ export const api = {
     deleteRecurringPlan: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/recurring_plans/${id}`, {
+        const response = await apiFetch(`${API_URL}/recurring_plans/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -183,7 +203,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/recurring_plans/${id}`, {
+        const response = await apiFetch(`${API_URL}/recurring_plans/${id}`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(plan),
@@ -196,7 +216,7 @@ export const api = {
     getDebts: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/debts`, { headers });
+        const response = await apiFetch(`${API_URL}/debts`, { headers });
         if (!response.ok) throw new Error('Failed to fetch debts');
         return response.json();
     },
@@ -206,7 +226,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/debts`, {
+        const response = await apiFetch(`${API_URL}/debts`, {
             method: 'POST',
             headers,
             body: JSON.stringify(debt),
@@ -217,7 +237,7 @@ export const api = {
     deleteDebt: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/debts/${id}`, {
+        const response = await apiFetch(`${API_URL}/debts/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -230,7 +250,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/debts/${id}`, {
+        const response = await apiFetch(`${API_URL}/debts/${id}`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(debt),
@@ -241,7 +261,7 @@ export const api = {
     getBudgets: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/budgets`, { headers });
+        const response = await apiFetch(`${API_URL}/budgets`, { headers });
         if (!response.ok) throw new Error('Failed to fetch budgets');
         return response.json();
     },
@@ -251,7 +271,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/budgets`, {
+        const response = await apiFetch(`${API_URL}/budgets`, {
             method: 'POST',
             headers,
             body: JSON.stringify(budget),
@@ -265,7 +285,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/budgets/${id}`, {
+        const response = await apiFetch(`${API_URL}/budgets/${id}`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(budget),
@@ -276,7 +296,7 @@ export const api = {
     deleteBudget: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/budgets/${id}`, {
+        const response = await apiFetch(`${API_URL}/budgets/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -286,12 +306,12 @@ export const api = {
 
     // Goals
     getGoals: async () => {
-        const response = await fetch(`${API_URL}/goals`, { headers: getScopeHeaders() });
+        const response = await apiFetch(`${API_URL}/goals`, { headers: getScopeHeaders() });
         if (!response.ok) throw new Error('Failed to fetch goals');
         return response.json();
     },
     createGoal: async (goal) => {
-        const response = await fetch(`${API_URL}/goals`, {
+        const response = await apiFetch(`${API_URL}/goals`, {
             method: 'POST',
             headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(goal),
@@ -300,7 +320,7 @@ export const api = {
         return response.json();
     },
     updateGoal: async (id, goal) => {
-        const response = await fetch(`${API_URL}/goals/${id}`, {
+        const response = await apiFetch(`${API_URL}/goals/${id}`, {
             method: 'PUT',
             headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(goal),
@@ -309,7 +329,7 @@ export const api = {
         return response.json();
     },
     deleteGoal: async (id) => {
-        const response = await fetch(`${API_URL}/goals/${id}`, {
+        const response = await apiFetch(`${API_URL}/goals/${id}`, {
             method: 'DELETE',
             headers: getScopeHeaders()
         });
@@ -321,7 +341,7 @@ export const api = {
     getHouseholds: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households`, { headers });
+        const response = await apiFetch(`${API_URL}/households`, { headers });
         if (!response.ok) throw new Error('Failed to fetch households');
         return response.json();
     },
@@ -331,7 +351,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/households`, {
+        const response = await apiFetch(`${API_URL}/households`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ name }),
@@ -342,7 +362,7 @@ export const api = {
     createHouseholdInvite: async (householdId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households/${householdId}/invites`, {
+        const response = await apiFetch(`${API_URL}/households/${householdId}/invites`, {
             method: 'POST',
             headers
         });
@@ -355,7 +375,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/households/join`, {
+        const response = await apiFetch(`${API_URL}/households/join`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ code }),
@@ -369,7 +389,7 @@ export const api = {
     getHouseholdMembers: async (householdId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households/${householdId}/members`, { headers });
+        const response = await apiFetch(`${API_URL}/households/${householdId}/members`, { headers });
         if (!response.ok) throw new Error('Failed to fetch members');
         return response.json();
     },
@@ -379,7 +399,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/households/${householdId}/members/${userId}/role`, {
+        const response = await apiFetch(`${API_URL}/households/${householdId}/members/${userId}/role`, {
             method: 'PUT',
             headers,
             body: JSON.stringify({ role }),
@@ -390,7 +410,7 @@ export const api = {
     removeHouseholdMember: async (householdId, userId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households/${householdId}/members/${userId}`, {
+        const response = await apiFetch(`${API_URL}/households/${householdId}/members/${userId}`, {
             method: 'DELETE',
             headers
         });
@@ -403,7 +423,7 @@ export const api = {
     leaveHousehold: async (householdId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households/${householdId}/leave`, {
+        const response = await apiFetch(`${API_URL}/households/${householdId}/leave`, {
             method: 'POST',
             headers
         });
@@ -416,7 +436,7 @@ export const api = {
     deleteHousehold: async (householdId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/households/${householdId}`, {
+        const response = await apiFetch(`${API_URL}/households/${householdId}`, {
             method: 'DELETE',
             headers
         });
@@ -428,7 +448,7 @@ export const api = {
     getAssets: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/net-worth/assets`, { headers });
+        const response = await apiFetch(`${API_URL}/net-worth/assets`, { headers });
         if (!response.ok) throw new Error('Failed to fetch assets');
         return response.json();
     },
@@ -438,7 +458,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/net-worth/assets`, {
+        const response = await apiFetch(`${API_URL}/net-worth/assets`, {
             method: 'POST',
             headers,
             body: JSON.stringify(asset),
@@ -452,7 +472,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/net-worth/assets/${id}`, {
+        const response = await apiFetch(`${API_URL}/net-worth/assets/${id}`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(asset),
@@ -463,7 +483,7 @@ export const api = {
     deleteAsset: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/net-worth/assets/${id}`, {
+        const response = await apiFetch(`${API_URL}/net-worth/assets/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -475,7 +495,7 @@ export const api = {
     getLiabilities: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/net-worth/liabilities`, { headers });
+        const response = await apiFetch(`${API_URL}/net-worth/liabilities`, { headers });
         if (!response.ok) throw new Error('Failed to fetch liabilities');
         return response.json();
     },
@@ -485,7 +505,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/net-worth/liabilities`, {
+        const response = await apiFetch(`${API_URL}/net-worth/liabilities`, {
             method: 'POST',
             headers,
             body: JSON.stringify(liability),
@@ -499,7 +519,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/net-worth/liabilities/${id}`, {
+        const response = await apiFetch(`${API_URL}/net-worth/liabilities/${id}`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(liability),
@@ -510,7 +530,7 @@ export const api = {
     deleteLiability: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/net-worth/liabilities/${id}`, {
+        const response = await apiFetch(`${API_URL}/net-worth/liabilities/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -522,7 +542,7 @@ export const api = {
     getNetWorthSnapshots: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/net-worth/snapshots`, { headers });
+        const response = await apiFetch(`${API_URL}/net-worth/snapshots`, { headers });
         if (!response.ok) throw new Error('Failed to fetch net worth snapshots');
         return response.json();
     },
@@ -531,7 +551,7 @@ export const api = {
     getWishlist: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/wishlist`, { headers });
+        const response = await apiFetch(`${API_URL}/wishlist`, { headers });
         if (!response.ok) throw new Error('Failed to fetch wishlist');
         return response.json();
     },
@@ -541,7 +561,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/wishlist`, {
+        const response = await apiFetch(`${API_URL}/wishlist`, {
             method: 'POST',
             headers,
             body: JSON.stringify(item),
@@ -552,7 +572,7 @@ export const api = {
     deleteWishlistItem: async (id) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/wishlist/${id}`, {
+        const response = await apiFetch(`${API_URL}/wishlist/${id}`, {
             method: 'DELETE',
             headers
         });
@@ -562,7 +582,7 @@ export const api = {
 
     // AI
     classifyTransaction: async (text) => {
-        const response = await fetch(`${API_URL}/ai/classify`, {
+        const response = await apiFetch(`${API_URL}/ai/classify`, {
             method: 'POST',
             headers: getAiHeaders(),
             body: JSON.stringify({ text }),
@@ -571,7 +591,7 @@ export const api = {
         return response.json();
     },
     analyzePurchase: async (query, context) => {
-        const response = await fetch(`${API_URL}/ai/analyze`, {
+        const response = await apiFetch(`${API_URL}/ai/analyze`, {
             method: 'POST',
             headers: getAiHeaders(),
             body: JSON.stringify({ query, context }),
@@ -580,7 +600,7 @@ export const api = {
         return response.json();
     },
     generateSpendingAlert: async (transactions, balance, recurringPlans, today) => {
-        const response = await fetch(`${API_URL}/ai/alert`, {
+        const response = await apiFetch(`${API_URL}/ai/alert`, {
             method: 'POST',
             headers: getAiHeaders(),
             body: JSON.stringify({ transactions, balance, recurringPlans, today }),
@@ -589,7 +609,7 @@ export const api = {
         return response.json();
     },
     generateFinancialTips: async (transactions, balance) => {
-        const response = await fetch(`${API_URL}/ai/tips`, {
+        const response = await apiFetch(`${API_URL}/ai/tips`, {
             method: 'POST',
             headers: getAiHeaders(),
             body: JSON.stringify({ transactions, balance }),
@@ -598,7 +618,7 @@ export const api = {
         return response.json();
     },
     coachChat: async (message, mode, context) => {
-        const response = await fetch(`${API_URL}/coach/chat`, {
+        const response = await apiFetch(`${API_URL}/coach/chat`, {
             method: 'POST',
             headers: getAiHeaders(),
             body: JSON.stringify({ message, mode, context }),
@@ -611,14 +631,14 @@ export const api = {
     getChatSessions: async () => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/chat/sessions`, { headers });
+        const response = await apiFetch(`${API_URL}/chat/sessions`, { headers });
         if (!response.ok) throw new Error('Failed to fetch chat sessions');
         return response.json();
     },
     getChatSession: async (sessionId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}`, { headers });
+        const response = await apiFetch(`${API_URL}/chat/sessions/${sessionId}`, { headers });
         if (!response.ok) throw new Error('Failed to fetch chat session');
         return response.json();
     },
@@ -628,7 +648,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/chat/sessions`, {
+        const response = await apiFetch(`${API_URL}/chat/sessions`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ mode }),
@@ -642,7 +662,7 @@ export const api = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
-        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}/messages`, {
+        const response = await apiFetch(`${API_URL}/chat/sessions/${sessionId}/messages`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ role, content }),
@@ -653,7 +673,7 @@ export const api = {
     deleteChatSession: async (sessionId) => {
         const token = localStorage.getItem('token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`${API_URL}/chat/sessions/${sessionId}`, {
+        const response = await apiFetch(`${API_URL}/chat/sessions/${sessionId}`, {
             method: 'DELETE',
             headers
         });

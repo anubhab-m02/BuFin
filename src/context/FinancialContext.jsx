@@ -6,6 +6,8 @@ import { useToast } from './ToastContext';
 
 const FinancialContext = createContext();
 
+// A context module exports its hook next to its provider by design.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFinancial = () => {
   const context = useContext(FinancialContext);
   if (!context) {
@@ -16,7 +18,15 @@ export const useFinancial = () => {
 
 export const FinancialProvider = ({ children }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
+
+  // Every mutation reports failure to the user instead of only to the console: a save that
+  // silently did nothing looks exactly like a save that worked.
+  const fail = (title, error) => {
+    console.error(title, error);
+    toast({ title, description: 'Nothing was changed. Please try again.', variant: 'destructive' });
+    return false;
+  };
   // State
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -43,6 +53,7 @@ export const FinancialProvider = ({ children }) => {
       const saved = localStorage.getItem('bufin_categories');
       return saved ? JSON.parse(saved) : ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
     } catch (e) {
+      console.warn('Saved categories were unreadable; using the defaults', e);
       return ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Travel', 'Savings', 'Income', 'Housing', 'Utilities'];
     }
   });
@@ -52,6 +63,7 @@ export const FinancialProvider = ({ children }) => {
       const saved = localStorage.getItem('bufin_ignored_merchants');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
+      console.warn('Saved ignored merchants were unreadable; starting empty', e);
       return [];
     }
   });
@@ -66,48 +78,63 @@ export const FinancialProvider = ({ children }) => {
 
   // Initial Fetch
   useEffect(() => {
+    // The failure toast is sticky (duration 0). Dismiss it when this effect run is torn down
+    // so a remount (StrictMode in dev, a re-login) does not leave duplicates behind.
+    let loadToastId = null;
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
         // getRecurringPlans() has a server-side side effect (materializing overdue
         // occurrences into real transactions) that getTransactions() needs to see, so
         // it has to resolve first rather than racing it inside the Promise.all below.
-        const plans = await api.getRecurringPlans();
+        const [plansResult] = await Promise.allSettled([api.getRecurringPlans()]);
 
-        const [txs, dbt, wish, goals, budgetList, householdList, assetList, liabilityList, snapshots] = await Promise.all([
-          api.getTransactions(),
-          api.getDebts(),
-          api.getWishlist(),
-          api.getGoals(),
-          api.getBudgets(),
-          api.getHouseholds(),
-          api.getAssets(),
-          api.getLiabilities(),
-          api.getNetWorthSnapshots()
-        ]);
-        setTransactions(txs);
-        setRecurringPlans(plans);
-        setDebts(dbt);
-        setWishlist(wish);
-        setSavingsGoals(goals);
-        setBudgets(budgetList);
-        setHouseholds(householdList);
-        setAssets(assetList);
-        setLiabilities(liabilityList);
-        setNetWorthSnapshots(snapshots);
+        // Each collection loads on its own: one failing endpoint must not blank the others,
+        // because an app showing empty lists looks exactly like a brand-new account.
+        const loaders = [
+          ['transactions', api.getTransactions, setTransactions],
+          ['debts', api.getDebts, setDebts],
+          ['wishlist', api.getWishlist, setWishlist],
+          ['goals', api.getGoals, setSavingsGoals],
+          ['budgets', api.getBudgets, setBudgets],
+          ['households', api.getHouseholds, setHouseholds],
+          ['assets', api.getAssets, setAssets],
+          ['liabilities', api.getLiabilities, setLiabilities],
+          ['net worth history', api.getNetWorthSnapshots, setNetWorthSnapshots],
+        ];
+        const results = await Promise.allSettled(loaders.map(([, load]) => load()));
+
+        const failed = [];
+        if (plansResult.status === 'fulfilled') setRecurringPlans(plansResult.value);
+        else failed.push('recurring plans');
+        results.forEach((result, i) => {
+          if (result.status === 'fulfilled') loaders[i][2](result.value);
+          else failed.push(loaders[i][0]);
+        });
+
+        if (failed.length > 0) {
+          console.error('Failed to load:', failed.join(', '));
+          const everything = failed.length === loaders.length + 1;
+          loadToastId = toast({
+            title: everything ? 'Could not load your data' : 'Some of your data did not load',
+            description: everything
+              ? 'Check that the backend is running and try refreshing.'
+              : `Missing: ${failed.join(', ')}. Refresh to try again.`,
+            variant: 'destructive',
+            duration: 0
+          });
+        }
       } catch (error) {
         console.error("Failed to fetch initial data:", error);
-        toast({
-          title: 'Could not load your data',
-          description: 'Check that the backend is running and try refreshing.',
-          variant: 'destructive'
-        });
       } finally {
         setIsDataLoading(false);
       }
     };
     fetchData();
-  }, [toast]);
+    return () => {
+      if (loadToastId !== null) dismiss(loadToastId);
+    };
+  }, [toast, dismiss]);
 
   // Actions
   const addTransaction = async (transaction) => {
@@ -140,7 +167,7 @@ export const FinancialProvider = ({ children }) => {
       // For now, I'll leave the hook here.
 
     } catch (error) {
-      console.error("Failed to add transaction:", error);
+      fail('Could not add transaction', error);
     }
   };
 
@@ -159,7 +186,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteTransaction(id);
       setTransactions(prev => prev.filter(t => t.id !== id));
     } catch (error) {
-      console.error("Failed to delete transaction:", error);
+      fail('Could not delete transaction', error);
     }
   };
 
@@ -181,7 +208,7 @@ export const FinancialProvider = ({ children }) => {
 
       setTransactions(prev => prev.map(t => t.id === id ? updatedTx : t));
     } catch (error) {
-      console.error("Failed to update transaction:", error);
+      fail('Could not update transaction', error);
     }
   };
 
@@ -190,7 +217,7 @@ export const FinancialProvider = ({ children }) => {
       const newPlan = await api.createRecurringPlan(plan);
       setRecurringPlans(prev => [...prev, newPlan]);
     } catch (error) {
-      console.error("Failed to add recurring plan:", error);
+      fail('Could not add recurring plan', error);
     }
   };
 
@@ -199,7 +226,7 @@ export const FinancialProvider = ({ children }) => {
       const updated = await api.updateRecurringPlan(id, updatedPlan);
       setRecurringPlans(prev => prev.map(p => p.id === id ? updated : p));
     } catch (error) {
-      console.error("Failed to update recurring plan:", error);
+      fail('Could not update recurring plan', error);
     }
   };
 
@@ -208,7 +235,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteRecurringPlan(id);
       setRecurringPlans(prev => prev.filter(p => p.id !== id));
     } catch (error) {
-      console.error("Failed to delete recurring plan:", error);
+      fail('Could not delete recurring plan', error);
     }
   };
 
@@ -235,7 +262,7 @@ export const FinancialProvider = ({ children }) => {
       // unless we add a checkbox "Record as Expense?". 
       // But for "Borrowed", it's definitely Income.
     } catch (error) {
-      console.error("Failed to add debt:", error);
+      fail('Could not add debt', error);
     }
   };
 
@@ -244,7 +271,7 @@ export const FinancialProvider = ({ children }) => {
       const updated = await api.updateDebt(id, updatedDebt);
       setDebts(prev => prev.map(d => d.id === id ? updated : d));
     } catch (error) {
-      console.error("Failed to update debt:", error);
+      fail('Could not update debt', error);
     }
   };
 
@@ -253,7 +280,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteDebt(id);
       setDebts(prev => prev.filter(d => d.id !== id));
     } catch (error) {
-      console.error("Failed to delete debt:", error);
+      fail('Could not delete debt', error);
     }
   };
 
@@ -288,7 +315,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteBudget(id);
       setBudgets(prev => prev.filter(b => b.id !== id));
     } catch (error) {
-      console.error("Failed to delete budget:", error);
+      fail('Could not delete budget', error);
     }
   };
 
@@ -332,7 +359,7 @@ export const FinancialProvider = ({ children }) => {
       setAssets(prev => prev.filter(a => a.id !== id));
       await refreshNetWorthSnapshots();
     } catch (error) {
-      console.error("Failed to delete asset:", error);
+      fail('Could not delete asset', error);
     }
   };
 
@@ -364,7 +391,7 @@ export const FinancialProvider = ({ children }) => {
       setLiabilities(prev => prev.filter(l => l.id !== id));
       await refreshNetWorthSnapshots();
     } catch (error) {
-      console.error("Failed to delete liability:", error);
+      fail('Could not delete liability', error);
     }
   };
 
@@ -407,7 +434,7 @@ export const FinancialProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("Failed to repay debt:", error);
+      fail('Could not repay debt', error);
     } finally {
       repayingDebtIds.current.delete(id);
     }
@@ -421,7 +448,7 @@ export const FinancialProvider = ({ children }) => {
       });
       setWishlist(prev => [...prev, newItem]);
     } catch (error) {
-      console.error("Failed to add wishlist item:", error);
+      fail('Could not add wishlist item', error);
     }
   };
 
@@ -430,7 +457,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteWishlistItem(id);
       setWishlist(prev => prev.filter(item => item.id !== id));
     } catch (error) {
-      console.error("Failed to delete wishlist item:", error);
+      fail('Could not delete wishlist item', error);
     }
   };
 
@@ -440,7 +467,7 @@ export const FinancialProvider = ({ children }) => {
       const newGoal = await api.createGoal(goal);
       setSavingsGoals(prev => [...prev, newGoal]);
     } catch (error) {
-      console.error("Failed to add savings goal:", error);
+      fail('Could not add savings goal', error);
     }
   };
 
@@ -477,7 +504,7 @@ export const FinancialProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("Failed to update savings goal:", error);
+      fail('Could not update savings goal', error);
     }
   };
 
@@ -486,7 +513,7 @@ export const FinancialProvider = ({ children }) => {
       const updatedGoal = await api.updateGoal(id, goalData);
       setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
     } catch (error) {
-      console.error("Failed to edit savings goal:", error);
+      fail('Could not edit savings goal', error);
     }
   };
 
@@ -497,7 +524,7 @@ export const FinancialProvider = ({ children }) => {
       await api.deleteGoal(id);
       setSavingsGoals(prev => prev.filter(g => g.id !== id));
     } catch (error) {
-      console.error("Failed to delete savings goal:", error);
+      fail('Could not delete savings goal', error);
     }
   };
 
