@@ -40,6 +40,9 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
       - name: App imports cleanly
+        # database.py requires DATABASE_URL at import; the engine is lazy, so no server is needed.
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/ci
         run: python -c "import main"
       - name: Alembic has a single head
         run: python scripts/check_alembic_heads.py

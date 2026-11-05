@@ -5,7 +5,7 @@ Describes `main` as of November 2026. Pair with `HLD.md`.
 ## 1. Backend
 
 ### 1.1 Request lifecycle
-`main.py` creates the FastAPI app, adds `CORSMiddleware`, mounts ten routers under `/api`, and calls `Base.metadata.create_all()` at import (Alembic remains the source of truth for schema changes).
+`main.py` creates the FastAPI app, adds `CORSMiddleware`, mounts ten routers under `/api`, and no longer creates tables at startup: PostgreSQL is the only database (`DATABASE_URL` is required) and the schema comes from migrations (a temporary `scripts/create_schema.py` until the baseline in #164 lands).
 
 Dependencies injected into handlers:
 
@@ -84,7 +84,7 @@ Idempotent because the anchor always moves forward from the last tagged row. Kno
 **Goal contribution diff** (`goals.py`): the client sends the new total; the server computes `delta = new - old` and stores a signed contribution tagged to the caller.
 
 ### 1.5 Migrations
-Alembic, linear chain, single head expected. Two earlier collisions came from parallel branches with the same `down_revision`. Baseline migration assumes tables already exist (created by `create_all`), so `alembic upgrade head` does not work on an empty database.
+Alembic, linear chain, single head expected. Two earlier collisions came from parallel branches with the same `down_revision`. The old baseline assumed tables created by `create_all`, so `alembic upgrade head` does not work on an empty database; #164 replaces the chain with a Postgres baseline.
 
 ### 1.6 Error handling
 Handlers raise `HTTPException`. There is no global exception layer other than one handler mapping Gemini quota errors to 429. No structured logging or request ids.
