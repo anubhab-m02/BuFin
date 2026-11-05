@@ -90,3 +90,24 @@ An independent architecture review, a four-voice council and ten read-only revie
 
 **ADR-3: Neo4j AuraDB Free versus Postgres tables for the shared graph**
 11. The council (Skeptic, Pragmatist, Critic and the author) all leaned the same way: the data is a lookup table with one or two hops and tens of thousands of rows, so Postgres tables (`kg_alias`, `kg_edge`, recursive CTE) behind `backend/kg/repository.py` do the job with one backup, one migration tool and no pause or deletion risk. A paused Aura instance would make the agent's hot path (merchant to category) time out, which forces a Postgres fallback anyway. Their suggestion for the learning goal: run Neo4j locally in Docker as a free sandbox loaded from a versioned export, and never overwrite the last good export. Strongest dissent: a graph that never leaves Postgres may stay an ordinary lookup table. ADR-3 stays Accepted as the owner decided; this item records the recommendation to revisit it, and the repository interface keeps either choice cheap to change. If the free Postgres tier also pauses or expires, the same objection applies to it, so check that tier's rules first.
+
+## Verification results (context7, 2026-11-05)
+
+Checked against the current LangGraph and langchain-google documentation. Items 2 to 4 of the amendments above are updated here; nothing was run against a live model yet (that is the rest of the spike, issue #166).
+
+**Confirmed**
+- `interrupt()` resumes by restarting the whole node from its first line. Code before the interrupt runs again; resuming needs the same `thread_id` and a checkpointer; the value given to `Command(resume=...)` becomes the return value of `interrupt()`. The docs state that side effects before `interrupt` must be idempotent, which is exactly the rule proposed in amendment 2. Replaying or forking from a checkpoint re-triggers the interrupt.
+- `AsyncPostgresSaver` exists (`langgraph.checkpoint.postgres.aio`), is created with `AsyncPostgresSaver.from_conn_string(DB_URI)` as an async context manager, and `setup()` creates the tables and indexes (run once). The docs recommend a cron job that deletes old checkpoints, so a retention job is part of the design, not optional.
+- `ChatGoogleGenerativeAI(google_api_key=SecretStr(...))` is the per-instance key; `api_key` is an alias.
+
+**New facts that change the design**
+1. **Environment fallback.** If no key is passed, the class reads `GOOGLE_API_KEY` first, then `GEMINI_API_KEY`. The backend already uses `GEMINI_API_KEY` for the server key, so any model instance built without an explicit key silently uses the server key. Rule for the gateway: always pass the key explicitly, and make the "no key resolved" case raise before an instance is built. This strengthens security addendum item 1.
+2. **Retries.** `max_retries` defaults to 6. On the Gemini free tier with tight per-minute limits that multiplies a rate-limited call into six, and also holds the request open. Set it explicitly low (1 or 2) and let the gateway own retries and quota accounting.
+3. **Temperature.** The default is 0.7. Classification and extraction (Capture) must set 0.
+4. **Structured output.** `with_structured_output` defaults to function calling (`bind_tools` plus a Pydantic parser). `method="json_schema"` and `method="json_mode"` are also supported, using Gemini's `response_json_schema`. Prefer `json_schema` for Capture so no tool round-trip is involved; the function-calling default is what the graph uses for tools.
+5. **Search grounding with tools.** The langchain-google layer splits special tools such as `{"google_search": {}}` into their own tool objects next to the function declarations, so the library permits sending them together. Whether a particular Gemini model accepts that combination, and whether `grounding_metadata` (the source of citations) is returned, is a server-side property of the model and is not documented at the library level. **Still unverified; needs a live call.** Until it is tested, the Coach keeps using search grounding with no function tools in the same request (as `coach_chat` does today).
+
+**Still unverified (spike #166)**
+- The `gemini-3-flash` model id (may be a preview id) and which models accept search grounding plus tools.
+- `AsyncPostgresSaver` across two processes, resuming a paused run in a different process than the one that paused it.
+- Alembic `include_object` excluding the checkpoint tables, and the checkpointer's connection pool against a free Postgres tier's connection limit.
