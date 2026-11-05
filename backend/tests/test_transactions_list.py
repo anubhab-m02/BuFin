@@ -76,3 +76,29 @@ def test_limit_has_a_hard_cap(client):
     assert client.get("/api/transactions?limit=100000").status_code == 422
     assert client.get("/api/transactions?limit=0").status_code == 422
     assert client.get("/api/transactions?skip=-1").status_code == 422
+
+
+def test_dates_stay_newest_first_across_page_boundaries(client):
+    first = client.get("/api/transactions?skip=0&limit=75").json()
+    second = client.get("/api/transactions?skip=75&limit=75").json()
+    dates = [r["date"] for r in first + second]
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_default_limit_and_limit_boundary(client):
+    assert len(client.get("/api/transactions").json()) == 100
+    assert client.get("/api/transactions?limit=1000").status_code == 200
+    assert client.get("/api/transactions?limit=1001").status_code == 422
+
+
+def test_same_day_rows_tie_break_by_id_and_mixed_formats_group_by_day(client):
+    app = client.app
+    db = next(app.dependency_overrides[get_db]())
+    for tx_id, date in (("z1", "2030-01-01"), ("z2", "2030-01-01"), ("z3", "2030-01-01T09:30:00"), ("z0", "2029-12-31")):
+        db.add(models.Transaction(id=tx_id, user_id="u1", amount=1.0, type="expense", necessity="variable",
+                                  category="Food", description="x", merchant="m", date=date))
+    db.commit()
+    top = [(r["id"], r["date"]) for r in client.get("/api/transactions?limit=4").json()]
+    # all three 2030-01-01 rows come before 2029-12-31, and the order is deterministic
+    assert [d[:10] for _, d in top] == ["2030-01-01"] * 3 + ["2029-12-31"]
+    assert top == [(r["id"], r["date"]) for r in client.get("/api/transactions?limit=4").json()]

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import models, schemas
@@ -26,7 +26,7 @@ def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, 
     transactions = (
         db.query(models.Transaction)
         .filter(_scope_filter(current_user, active_household_id))
-        .order_by(models.Transaction.date.desc(), models.Transaction.id.desc())
+        .order_by(func.substr(models.Transaction.date, 1, 10).desc(), models.Transaction.date.desc(), models.Transaction.id.desc())
         .offset(skip)
         .limit(limit)
         .all()

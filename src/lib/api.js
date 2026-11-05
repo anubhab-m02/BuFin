@@ -98,16 +98,19 @@ export const api = {
     // The API pages the list (newest first). Balance, safe-to-spend and insights are computed
     // from the whole ledger, so keep fetching until a short page says there is no more.
     getTransactions: async () => {
-        const all = [];
+        // Read the active persona once: a persona switch mid-load must not mix scopes.
+        const headers = getScopeHeaders();
+        const byId = new Map();
         for (let skip = 0; ; skip += TRANSACTIONS_PAGE_SIZE) {
             const response = await fetch(
                 `${API_URL}/transactions?skip=${skip}&limit=${TRANSACTIONS_PAGE_SIZE}`,
-                { headers: getScopeHeaders() }
+                { headers }
             );
             if (!response.ok) throw new Error('Failed to fetch transactions');
             const page = await response.json();
-            all.push(...page);
-            if (page.length < TRANSACTIONS_PAGE_SIZE) return all;
+            // Offset paging can repeat a row if one is inserted between pages.
+            page.forEach((tx) => byId.set(tx.id, tx));
+            if (page.length < TRANSACTIONS_PAGE_SIZE) return [...byId.values()];
         }
     },
     createTransaction: async (transaction) => {
