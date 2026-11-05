@@ -1,19 +1,37 @@
+import asyncio
 import google.generativeai as genai
+import logging
 import os
 import json
 import re
 import requests
 import time
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("VITE_GEMINI_API_KEY")
+logger = logging.getLogger(__name__)
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+if not API_KEY and os.getenv("VITE_GEMINI_API_KEY"):
+    # VITE_-prefixed variables are meant for the browser bundle; a server secret must not use the prefix.
+    logger.warning("VITE_GEMINI_API_KEY is deprecated for the backend key; rename it to GEMINI_API_KEY")
+    API_KEY = os.getenv("VITE_GEMINI_API_KEY")
 
 if not API_KEY:
-    print("Warning: GEMINI_API_KEY not found in environment variables.")
+    logger.warning("GEMINI_API_KEY not found in environment variables.")
 else:
     genai.configure(api_key=API_KEY)
+
+# Grounded (google_search) answers can take a while; without a timeout a hung upstream pins a worker.
+GEMINI_REQUEST_TIMEOUT_SECONDS = 60
+
+
+def _redact(text) -> str:
+    """Remove the API key from anything that is about to be logged or returned."""
+    text = str(text)
+    return text.replace(API_KEY, "***") if API_KEY else text
 
 # Gemini 3 Flash is the current frontier "flash" tier as of this integration; 2.5 Flash is
 # kept as the fallback model name for the lightweight calls that also try a local model first.
@@ -80,11 +98,11 @@ def _try_ollama(prompt: str, label: str):
     try:
         raw = _call_ollama(prompt)
         _mark_ollama(True)
-        print(f"[ai_service] {label}: Ollama responded in {time.perf_counter() - start:.2f}s")
+        logger.info(f"[ai_service] {label}: Ollama responded in {time.perf_counter() - start:.2f}s")
         return raw
     except Exception as e:
         _mark_ollama(False)
-        print(f"[ai_service] {label}: Ollama unavailable after {time.perf_counter() - start:.2f}s ({e}); "
+        logger.warning(f"[ai_service] {label}: Ollama unavailable after {time.perf_counter() - start:.2f}s ({e}); "
               f"skipping it for {OLLAMA_RECHECK_SECONDS}s and falling back to Gemini")
         return None
 
@@ -258,9 +276,10 @@ async def classify_transaction(text: str):
             actions = _parse_action_array(raw)
             if _amounts_plausible(actions, text):
                 return actions
-            print(f"Local model amount failed plausibility check, falling back to Gemini: {actions}")
+            logger.warning("Local model amount failed plausibility check, falling back to Gemini")
+            logger.debug("Rejected local actions: %s", actions)
         except Exception as e:
-            print(f"[ai_service] classify_transaction: Ollama response didn't parse ({e}), falling back to Gemini")
+            logger.warning(f"[ai_service] classify_transaction: Ollama response didn't parse ({e}), falling back to Gemini")
 
     if not API_KEY:
         raise Exception("API Key missing")
@@ -268,17 +287,18 @@ async def classify_transaction(text: str):
     gemini_start = time.perf_counter()
     model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
     response = model.generate_content([formatted_prompt, text])
-    print(f"[ai_service] classify_transaction: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
+    logger.info(f"[ai_service] classify_transaction: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
 
     try:
         actions = _parse_action_array(response.text)
     except Exception as e:
-        print(f"Failed to parse AI response: {e}")
-        print(f"Raw response: {response.text}")
+        logger.warning(f"Failed to parse AI response: {e}")
+        logger.debug(f"Raw response: {response.text}")
         raise Exception("Failed to classify transaction")
 
     if not _amounts_plausible(actions, text):
-        print(f"Gemini amount also failed plausibility check, no further fallback: {actions}")
+        logger.warning("Gemini amount also failed plausibility check, no further fallback")
+        logger.debug("Rejected Gemini actions: %s", actions)
     return actions
 
 async def analyze_purchase(query: str, context: dict):
@@ -363,7 +383,8 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
             if expected_day >= now.day:
                 total_recurring += p['amount']
         except Exception as e:
-            print(f"Error processing recurring plan {p.get('name')}: {e}")
+            logger.warning("Error processing a recurring plan: %s", e)
+            logger.debug("Plan that failed: %s", p.get('name'))
             continue
 
     # 2. Future One-off Expenses (from transactions list)
@@ -409,10 +430,10 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
         gemini_start = time.perf_counter()
         model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
-        print(f"[ai_service] generate_spending_alert: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
+        logger.info(f"[ai_service] generate_spending_alert: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
         return response.text.strip()
     except Exception as e:
-        print(f"Alert generation failed: {e}")
+        logger.warning(f"Alert generation failed: {e}")
         return None
 
 DEFAULT_TIPS = ["Track your daily expenses to identify leaks.", "Try to save 20% of your income.", "Review your subscriptions monthly."]
@@ -442,7 +463,7 @@ async def generate_financial_tips(transactions: list, balance: float):
         try:
             return _parse_tip_list(raw)
         except Exception as e:
-            print(f"[ai_service] generate_financial_tips: Ollama response didn't parse ({e}), falling back to Gemini")
+            logger.warning(f"[ai_service] generate_financial_tips: Ollama response didn't parse ({e}), falling back to Gemini")
 
     if not API_KEY:
         return DEFAULT_TIPS
@@ -451,15 +472,15 @@ async def generate_financial_tips(transactions: list, balance: float):
         gemini_start = time.perf_counter()
         model = genai.GenerativeModel(GEMINI_FALLBACK_MODEL)
         response = model.generate_content(prompt)
-        print(f"[ai_service] generate_financial_tips: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
+        logger.info(f"[ai_service] generate_financial_tips: Gemini responded in {time.perf_counter() - gemini_start:.2f}s")
         return _parse_tip_list(response.text)
     except Exception as e:
-        print(f"Error generating tips: {e}")
+        logger.warning(f"Error generating tips: {e}")
         return DEFAULT_TIPS
 
 async def coach_chat(message: str, mode: str, context: dict):
     if not API_KEY:
-        raise Exception("API Key missing")
+        raise HTTPException(status_code=503, detail="AI is not configured on this server.")
 
     # Specialized prompts
     prompts = {
@@ -543,8 +564,10 @@ async def coach_chat(message: str, mode: str, context: dict):
     """
 
     # Use REST API directly to support google_search tool reliably
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_REASONING_MODEL}:generateContent?key={API_KEY}"
-    
+    # The key goes in a header, never the URL: URLs end up in exception text, proxies and access logs.
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_REASONING_MODEL}:generateContent"
+    headers = {"x-goog-api-key": API_KEY}
+
     payload = {
         "contents": [{
             "parts": [{"text": full_prompt}]
@@ -556,7 +579,10 @@ async def coach_chat(message: str, mode: str, context: dict):
         payload["tools"] = [{"google_search": {}}]
 
     try:
-        response = requests.post(url, json=payload)
+        # requests is blocking; run it off the event loop so one slow answer cannot stall every request.
+        response = await asyncio.to_thread(
+            requests.post, url, json=payload, headers=headers, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS
+        )
         response.raise_for_status()
         result = response.json()
         
@@ -596,8 +622,19 @@ async def coach_chat(message: str, mode: str, context: dict):
 
         return text.strip()
 
-    except Exception as e:
-        print(f"Coach chat failed: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response: {e.response.text}")
-        return "I'm having trouble connecting to my financial brain right now. Please try again."
+    except requests.Timeout as e:
+        logger.warning("Coach chat timed out: %s", _redact(e))
+        raise HTTPException(status_code=504, detail="The AI took too long to answer. Please try again.")
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else None
+        logger.warning("Coach chat upstream error %s: %s", status, _redact(e))
+        if status == 429:
+            raise HTTPException(status_code=429, detail="AI Quota Exceeded. Please try again later.")
+        raise HTTPException(status_code=502, detail="The AI service returned an error. Please try again.")
+    except requests.RequestException as e:
+        logger.warning("Coach chat could not reach the AI service: %s", _redact(e))
+        raise HTTPException(status_code=502, detail="Could not reach the AI service. Please try again.")
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError) as e:
+        # e.g. an empty "candidates" list when the answer was blocked, or a non-JSON body.
+        logger.warning("Coach chat got an unexpected AI response: %r", _redact(e))
+        raise HTTPException(status_code=502, detail="The AI returned an unreadable answer. Please try again.")
