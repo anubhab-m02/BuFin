@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -28,15 +28,12 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
         return emi.toFixed(2);
     };
 
-    // Auto-calculate EMI if loan fields change
-    useEffect(() => {
-        if (formData.type === 'loan' && formData.principal && formData.interestRate && formData.termMonths) {
-            // Only recalc if not editing an existing loan with fixed amount, or if user changes params
-            // For simplicity, always recalc on change
-            const emi = calculateEMI(parseFloat(formData.principal), parseFloat(formData.interestRate), parseFloat(formData.termMonths));
-            setFormData(prev => ({ ...prev, amount: emi }));
-        }
-    }, [formData.principal, formData.interestRate, formData.termMonths, formData.type]);
+    // Loan EMI follows principal/rate/term; derived in the change handlers rather than an effect.
+    const withEmi = (next) => (
+        next.type === 'loan' && next.principal && next.interestRate && next.termMonths
+            ? { ...next, amount: calculateEMI(parseFloat(next.principal), parseFloat(next.interestRate), parseFloat(next.termMonths)) }
+            : next
+    );
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -90,7 +87,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                             { label: 'Loan (EMI)', value: 'loan' }
                         ]}
                         value={formData.type}
-                        onChange={(val) => setFormData({ ...formData, type: val })}
+                        onChange={(val) => setFormData(withEmi({ ...formData, type: val }))}
                     />
 
                     <div className="space-y-2">
@@ -112,7 +109,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.principal}
-                                    onChange={e => setFormData({ ...formData, principal: e.target.value })}
+                                    onChange={e => setFormData(withEmi({ ...formData, principal: e.target.value }))}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -121,7 +118,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.interestRate}
-                                    onChange={e => setFormData({ ...formData, interestRate: e.target.value })}
+                                    onChange={e => setFormData(withEmi({ ...formData, interestRate: e.target.value }))}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -130,7 +127,7 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.termMonths}
-                                    onChange={e => setFormData({ ...formData, termMonths: e.target.value })}
+                                    onChange={e => setFormData(withEmi({ ...formData, termMonths: e.target.value }))}
                                 />
                             </div>
                         </div>

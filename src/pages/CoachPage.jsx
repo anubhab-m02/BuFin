@@ -41,6 +41,13 @@ const MODES = [
     }
 ];
 
+// react-markdown passes the hast `node` to every renderer; keep it off the DOM element.
+const withoutNode = (props) => {
+    const rest = { ...props };
+    delete rest.node;
+    return rest;
+};
+
 const CoachPage = () => {
     const { balance, transactions, recurringPlans } = useFinancial();
     const [selectedMode, setSelectedMode] = useState(MODES[0]);
@@ -176,7 +183,7 @@ const CoachPage = () => {
 
             setMessages(prev => [...prev, { role: 'assistant', content: response }]);
             await api.postChatMessage(sessionId, 'assistant', response);
-        } catch (error) {
+        } catch {
             setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
             setIsLoading(false);
@@ -325,19 +332,19 @@ const CoachPage = () => {
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
                                         components={{
-                                            h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props} />,
-                                            strong: ({ node, ...props }) => <span className="font-bold text-foreground" {...props} />,
-                                            table: ({ node, ...props }) => (
+                                            h3: (props) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...withoutNode(props)} />,
+                                            strong: (props) => <span className="font-bold text-foreground" {...withoutNode(props)} />,
+                                            table: (props) => (
                                                 <div className="my-4 w-full overflow-hidden rounded-lg border border-border">
-                                                    <table className="w-full text-sm text-left" {...props} />
+                                                    <table className="w-full text-sm text-left" {...withoutNode(props)} />
                                                 </div>
                                             ),
-                                            thead: ({ node, ...props }) => <thead className="bg-muted/50 text-muted-foreground font-medium" {...props} />,
-                                            tbody: ({ node, ...props }) => <tbody className="divide-y divide-border bg-card" {...props} />,
-                                            tr: ({ node, ...props }) => <tr className="transition-colors hover:bg-muted/20" {...props} />,
-                                            th: ({ node, ...props }) => <th className="px-4 py-3 font-medium" {...props} />,
-                                            td: ({ node, ...props }) => <td className="px-4 py-3" {...props} />,
-                                            a: ({ node, href, children, ...props }) => {
+                                            thead: (props) => <thead className="bg-muted/50 text-muted-foreground font-medium" {...withoutNode(props)} />,
+                                            tbody: (props) => <tbody className="divide-y divide-border bg-card" {...withoutNode(props)} />,
+                                            tr: (props) => <tr className="transition-colors hover:bg-muted/20" {...withoutNode(props)} />,
+                                            th: (props) => <th className="px-4 py-3 font-medium" {...withoutNode(props)} />,
+                                            td: (props) => <td className="px-4 py-3" {...withoutNode(props)} />,
+                                            a: ({ href, children, ...props }) => {
                                                 const isCitation = href && href.startsWith('http');
                                                 return (
                                                     <a
@@ -349,14 +356,14 @@ const CoachPage = () => {
                                                             : "text-primary underline underline-offset-2"}
                                                         title={href}
                                                         aria-label={isCitation && typeof children === 'string' ? `Source ${children}` : undefined}
-                                                        {...props}
+                                                        {...withoutNode(props)}
                                                     >
                                                         {children}
                                                     </a>
                                                 );
                                             },
-                                            ul: ({ node, ...props }) => <ul className="my-2 pl-4 list-disc space-y-1 marker:text-muted-foreground" {...props} />,
-                                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                            ul: (props) => <ul className="my-2 pl-4 list-disc space-y-1 marker:text-muted-foreground" {...withoutNode(props)} />,
+                                            li: (props) => <li className="pl-1" {...withoutNode(props)} />,
                                         }}
                                     >
                                         {msg.content}
