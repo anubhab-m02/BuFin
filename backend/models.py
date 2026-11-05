@@ -165,7 +165,9 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     full_name = Column(String)
-    
+    # Bumped to revoke every token issued before (e.g. on a password change); see auth.py.
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
+
     # Profile Data
     currency = Column(String, default="INR")
     monthly_income = Column(Float, default=0.0)

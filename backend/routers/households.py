@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from database import get_db
 import models
+import rate_limit
 from .auth import get_current_user
 import uuid
 import secrets
@@ -126,10 +127,12 @@ def create_invite(household_id: str, db: Session = Depends(get_db), current_user
     _require_owner(db, household_id, current_user.id)
 
     expires_at = (datetime.now(timezone.utc) + timedelta(days=INVITE_EXPIRY_DAYS)).isoformat()
-    # Collision odds on an 8-char hex code are negligible, but retry a few times rather
-    # than trusting that rather than letting a freak collision surface as a 500.
+    # 16 hex characters = 64 bits (codes were 8 characters / 32 bits, which a determined guesser
+    # could brute-force). Hex keeps the existing case-insensitive join working, and codes issued
+    # before this change stay valid. A collision is still vanishingly unlikely, but retry a few
+    # times rather than letting a freak one surface as a 500.
     for _ in range(5):
-        code = secrets.token_hex(4).upper()
+        code = secrets.token_hex(8).upper()
         invite = models.HouseholdInvite(
             id=str(uuid.uuid4()),
             household_id=household_id,
@@ -149,8 +152,11 @@ def create_invite(household_id: str, db: Session = Depends(get_db), current_user
 
 @router.post("/households/join", response_model=HouseholdResponse)
 def join_household(join: JoinRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # A valid code grants access to a household's finances, so wrong guesses are limited per user.
+    rate_limit.invite_failures.check(current_user.id)
     invite = db.query(models.HouseholdInvite).filter(models.HouseholdInvite.code == join.code.strip().upper()).first()
     if not invite:
+        rate_limit.invite_failures.record(current_user.id)
         raise HTTPException(status_code=404, detail="Invalid invite code")
     if invite.used_by:
         raise HTTPException(status_code=400, detail="This invite has already been used")

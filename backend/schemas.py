@@ -15,12 +15,30 @@ def _iso_date(value: str) -> str:
 # to guess a timezone (the old flows stamped UTC timestamps, which land on the wrong day in IST).
 IsoDate = Annotated[str, AfterValidator(_iso_date)]
 
+
+def _strong_password(value: str) -> str:
+    if len(value) < 10:
+        raise ValueError("Password must be at least 10 characters")
+    if len(value) > 128:
+        raise ValueError("Password must be at most 128 characters")
+    # bcrypt only ever uses the first 72 bytes; accepting more would silently ignore the rest.
+    if len(value.encode("utf-8")) > 72:
+        raise ValueError("Password is too long (at most 72 bytes; accented or non-Latin characters take more than one)")
+    if not value.strip():
+        raise ValueError("Password cannot be only spaces")
+    return value
+
+
+# Applied to NEW passwords only (sign-up, change-password). Sign-in does not enforce it, so
+# existing accounts with shorter passwords can still log in and are nudged to change them.
+StrongPassword = Annotated[str, AfterValidator(_strong_password)]
+
 # --- User Schemas ---
 class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
-    password: str
+    password: StrongPassword
     full_name: str
 
 class UserUpdate(BaseModel):
@@ -38,7 +56,7 @@ class UserLogin(BaseModel):
 
 class UserChangePassword(BaseModel):
     old_password: str
-    new_password: str
+    new_password: StrongPassword
 
 class User(UserBase):
     id: str

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Optional
 import uuid
-import models, schemas, auth_utils
+import models, schemas, auth_utils, rate_limit
 from database import get_db
 
 router = APIRouter()
@@ -26,9 +26,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         token_data = schemas.TokenData(email=email)
     except auth_utils.JWTError:
         raise credentials_exception
-        
+
     user = db.query(models.User).filter(models.User.email == token_data.email).first()
     if user is None:
+        raise credentials_exception
+    # A token is only valid for the version it was issued under; changing the password bumps the
+    # user's version and so revokes every earlier token. Tokens issued before this claim existed
+    # carry no "tv" and count as version 0, so the upgrade itself signs nobody out.
+    if payload.get("tv", 0) != (user.token_version or 0):
         raise credentials_exception
     return user
 
@@ -51,15 +56,22 @@ def get_active_household_id(
     return x_household_id
 
 @router.post("/signup", response_model=schemas.Token)
-def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
+    client = rate_limit.client_key(request)
+    rate_limit.signups_by_client.check(client)
+    rate_limit.signups_by_client.record(client)
+
+    # Emails are case-insensitive: stored lowercase, and looked up that way, so "A@x.com" and
+    # "a@x.com" cannot be two accounts.
+    email = user.email.strip().lower()
+    db_user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     hashed_password = auth_utils.get_password_hash(user.password)
     db_user = models.User(
         id=str(uuid.uuid4()),
-        email=user.email,
+        email=email,
         hashed_password=hashed_password,
         full_name=user.full_name
     )
@@ -69,23 +81,39 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth_utils.create_access_token(
-        data={"sub": db_user.email}, expires_delta=access_token_expires
+        data={"sub": db_user.email, "tv": db_user.token_version or 0}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login", response_model=schemas.Token)
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if not db_user or not auth_utils.verify_password(user.password, db_user.hashed_password):
+def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_db)):
+    client = rate_limit.client_key(request)
+    email = user.email.strip().lower()
+    # Five wrong passwords for one account from one client lock that pair out for 15 minutes
+    # (even the right password is refused meanwhile); a separate, looser cap stops one client
+    # from guessing across many accounts.
+    pair = f"{client}|{email}"
+    rate_limit.login_failures.check(pair)
+    rate_limit.login_failures_by_client.check(client)
+
+    db_user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+    # An unknown email still pays for one bcrypt check, so response time does not reveal which
+    # emails have accounts.
+    stored_hash = db_user.hashed_password if db_user else auth_utils.DUMMY_PASSWORD_HASH
+    password_ok = auth_utils.verify_password(user.password, stored_hash)
+    if not db_user or not password_ok:
+        rate_limit.login_failures.record(pair)
+        rate_limit.login_failures_by_client.record(client)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+    rate_limit.login_failures.reset(pair)
+
     access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth_utils.create_access_token(
-        data={"sub": db_user.email}, expires_delta=access_token_expires
+        data={"sub": db_user.email, "tv": db_user.token_version or 0}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -117,12 +145,23 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
 
 @router.post("/change-password")
 def change_password(passwords: schemas.UserChangePassword, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # A stolen session must not be able to guess the current password at full speed.
+    rate_limit.password_change_failures.check(current_user.id)
     if not auth_utils.verify_password(passwords.old_password, current_user.hashed_password):
+        rate_limit.password_change_failures.record(current_user.id)
         raise HTTPException(status_code=400, detail="Incorrect old password")
-    
+    rate_limit.password_change_failures.reset(current_user.id)
+
     current_user.hashed_password = auth_utils.get_password_hash(passwords.new_password)
+    # Revoke every token issued so far (a stolen one included). This request's own session
+    # continues with the fresh token returned below.
+    current_user.token_version = (current_user.token_version or 0) + 1
     db.commit()
-    return {"message": "Password updated successfully"}
+    access_token = auth_utils.create_access_token(
+        data={"sub": current_user.email, "tv": current_user.token_version},
+        expires_delta=timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return {"message": "Password updated successfully", "access_token": access_token, "token_type": "bearer"}
 
 @router.delete("/me")
 def delete_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
