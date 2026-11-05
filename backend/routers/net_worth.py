@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from database import get_db
-import models
+import models, schemas
 from .auth import get_current_user
 import uuid
 from datetime import datetime, timezone
@@ -15,7 +15,7 @@ router = APIRouter()
 class AssetBase(BaseModel):
     name: str
     category: str
-    current_value: float
+    current_value: schemas.NonNegMoney
 
 class AssetCreate(AssetBase):
     pass
@@ -23,19 +23,19 @@ class AssetCreate(AssetBase):
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
-    current_value: Optional[float] = None
+    current_value: Optional[schemas.NonNegMoney] = None
 
 class AssetResponse(AssetBase):
     id: str
     user_id: str
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 class LiabilityBase(BaseModel):
     name: str
     category: str
-    current_balance: float
+    current_balance: schemas.NonNegMoney
 
 class LiabilityCreate(LiabilityBase):
     pass
@@ -43,12 +43,12 @@ class LiabilityCreate(LiabilityBase):
 class LiabilityUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
-    current_balance: Optional[float] = None
+    current_balance: Optional[schemas.NonNegMoney] = None
 
 class LiabilityResponse(LiabilityBase):
     id: str
     user_id: str
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,7 +57,7 @@ class NetWorthSnapshotResponse(BaseModel):
     user_id: str
     total_assets: float
     total_liabilities: float
-    recorded_at: str
+    recorded_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,14 +67,14 @@ def _record_snapshot(db: Session, user_id: str):
     # Net worth is a point-in-time calculation with no history of its own, so a snapshot
     # row is written on every asset/liability mutation - this is the only thing that
     # gives the trend chart real history instead of a single flat point.
-    total_assets = sum(a.current_value for a in db.query(models.Asset).filter(models.Asset.user_id == user_id).all())
-    total_liabilities = sum(l.current_balance for l in db.query(models.Liability).filter(models.Liability.user_id == user_id).all())
+    total_assets = round(sum(a.current_value for a in db.query(models.Asset).filter(models.Asset.user_id == user_id).all()), 2)
+    total_liabilities = round(sum(l.current_balance for l in db.query(models.Liability).filter(models.Liability.user_id == user_id).all()), 2)
     snapshot = models.NetWorthSnapshot(
         id=str(uuid.uuid4()),
         user_id=user_id,
         total_assets=total_assets,
         total_liabilities=total_liabilities,
-        recorded_at=datetime.now(timezone.utc).isoformat()
+        recorded_at=datetime.now(timezone.utc)
     )
     db.add(snapshot)
     db.commit()
@@ -90,7 +90,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db), current_user
     db_asset = models.Asset(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(timezone.utc),
         **asset.model_dump()
     )
     db.add(db_asset)
@@ -135,7 +135,7 @@ def create_liability(liability: LiabilityCreate, db: Session = Depends(get_db), 
     db_liability = models.Liability(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(timezone.utc),
         **liability.model_dump()
     )
     db.add(db_liability)

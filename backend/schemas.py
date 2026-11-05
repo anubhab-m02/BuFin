@@ -1,19 +1,38 @@
-from datetime import date
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
-from typing import Annotated, Optional
+from datetime import date, datetime
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
+from typing import Annotated, Literal, Optional
 
 
-def _iso_date(value: str) -> str:
-    # fromisoformat also accepts forms like 20261105 or 2026-W45-3; only the canonical
-    # YYYY-MM-DD may be stored, because dates are compared and sorted as strings.
-    if date.fromisoformat(value).isoformat() != value:  # a ValueError becomes a 422
+def _iso_date(value):
+    # Accepts the canonical YYYY-MM-DD only (fromisoformat also takes 20261105 or 2026-W45-3,
+    # and pydantic would take integers as unix timestamps). Dates read back from the database
+    # are already date objects and pass through.
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if not isinstance(value, str) or date.fromisoformat(value).isoformat() != value:  # a ValueError becomes a 422
         raise ValueError("date must be YYYY-MM-DD")
     return value
 
 
-# A calendar day as YYYY-MM-DD. The client sends its own local day, so the server never has
-# to guess a timezone (the old flows stamped UTC timestamps, which land on the wrong day in IST).
-IsoDate = Annotated[str, AfterValidator(_iso_date)]
+# A calendar day: read as YYYY-MM-DD, stored in a DATE column, serialised back as YYYY-MM-DD. The
+# client sends its own local day, so the server never has to guess a timezone (the old flows
+# stamped UTC timestamps, which land on the wrong day in IST).
+IsoDate = Annotated[date, BeforeValidator(_iso_date)]
+
+# Amounts match the NUMERIC(15,2) columns: anything larger would be a database error, so it is a 422.
+MAX_MONEY = 999_999_999_999.99
+def _cents(value: float) -> float:
+    # Round to what the column stores, so what the API echoes is what the database holds and
+    # in-request maths (e.g. goal totals) cannot drift from the stored value.
+    return round(value, 2)
+
+
+Money = Annotated[float, Field(gt=0, le=MAX_MONEY, allow_inf_nan=False), AfterValidator(_cents)]  # transactions, debts, plans
+NonNegMoney = Annotated[float, Field(ge=0, le=MAX_MONEY, allow_inf_nan=False), AfterValidator(_cents)]  # limits, wishlist cost
+SignedMoney = Annotated[float, Field(ge=-MAX_MONEY, le=MAX_MONEY, allow_inf_nan=False), AfterValidator(_cents)]  # profile balances
+
+TransactionType = Literal['income', 'expense']
+Necessity = Literal['fixed', 'variable', 'essential']
 
 
 def _strong_password(value: str) -> str:
@@ -44,9 +63,9 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     currency: Optional[str] = None
-    monthly_income: Optional[float] = None
-    current_balance: Optional[float] = None
-    savings_goal: Optional[float] = None
+    monthly_income: Optional[SignedMoney] = None
+    current_balance: Optional[SignedMoney] = None
+    savings_goal: Optional[SignedMoney] = None
     financial_literacy: Optional[str] = None
     risk_tolerance: Optional[str] = None
 
@@ -80,13 +99,13 @@ class TokenData(BaseModel):
     email: Optional[str] = None
 
 class TransactionBase(BaseModel):
-    amount: float
+    amount: Money
     category: str
     description: str
     merchant: Optional[str] = None
-    type: str
-    necessity: str = 'variable'
-    date: str
+    type: TransactionType
+    necessity: Necessity = 'variable'
+    date: IsoDate
     remarks: Optional[str] = None
     linked_debt_id: Optional[str] = None
 
@@ -101,11 +120,11 @@ class Transaction(TransactionBase):
 
 class RecurringPlanBase(BaseModel):
     name: str
-    amount: float
-    type: str
-    frequency: str
+    amount: Money
+    type: TransactionType
+    frequency: Literal['monthly', 'weekly', 'yearly']
     expectedDate: str
-    endDate: Optional[str] = None
+    endDate: Optional[IsoDate] = None
 
 class RecurringPlanCreate(RecurringPlanBase):
     id: Optional[str] = None
@@ -116,10 +135,10 @@ class RecurringPlan(RecurringPlanBase):
 
 class DebtBase(BaseModel):
     personName: str
-    amount: float
-    direction: str
-    dueDate: Optional[str] = None
-    status: str = 'active'
+    amount: Money
+    direction: Literal['payable', 'receivable']
+    dueDate: Optional[IsoDate] = None
+    status: Literal['active', 'repaid'] = 'active'
 
 class DebtCreate(DebtBase):
     id: Optional[str] = None
@@ -130,8 +149,8 @@ class Debt(DebtBase):
 
 class WishlistItemBase(BaseModel):
     name: str
-    cost: float
-    addedAt: str
+    cost: NonNegMoney
+    addedAt: datetime
 
 class WishlistItemCreate(WishlistItemBase):
     id: Optional[str] = None
@@ -142,7 +161,7 @@ class WishlistItem(WishlistItemBase):
 
 class BudgetBase(BaseModel):
     category: str
-    monthlyLimit: float
+    monthlyLimit: NonNegMoney
 
 class BudgetCreate(BudgetBase):
     id: Optional[str] = None
@@ -154,9 +173,6 @@ class Budget(BudgetBase):
 
 # --- Multi-step money operations (one request, one commit) ---
 class DebtCreateRequest(DebtCreate):
-    # The amount becomes a ledger transaction when cash_in_date is set, so it must be a real,
-    # positive, bounded number.
-    amount: float = Field(gt=0, le=1e12, allow_inf_nan=False)
     # Borrowing ("payable") is cash in. When set, the matching income transaction is recorded in
     # the same commit as the debt; unset keeps the old behaviour (debt only).
     cash_in_date: Optional[IsoDate] = None

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Annotated, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from database import get_db
 import models, schemas
@@ -16,25 +16,25 @@ router = APIRouter()
 
 class GoalBase(BaseModel):
     name: str
-    targetAmount: float
-    targetDate: Optional[str] = None
+    targetAmount: schemas.Money
+    targetDate: Optional[schemas.IsoDate] = None
     icon: Optional[str] = "PiggyBank"
     fundingSource: Optional[str] = "manual"
-    type: Optional[str] = "savings"
-    projectedReturnRate: Optional[float] = 0.0
+    type: Literal['savings', 'investment'] = "savings"
+    projectedReturnRate: Optional[Annotated[float, Field(ge=0, le=999.9999, allow_inf_nan=False)]] = 0.0  # NUMERIC(7,4)
 
 class GoalCreate(GoalBase):
     pass
 
 class GoalUpdate(BaseModel):
-    currentAmount: Optional[float] = None
+    currentAmount: Optional[schemas.NonNegMoney] = None
     name: Optional[str] = None
-    targetAmount: Optional[float] = None
+    targetAmount: Optional[schemas.Money] = None
 
 class GoalContributionResponse(BaseModel):
     user_id: Optional[str] = None  # NULL once the member who made it deleted their account
     amount: float
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,7 +57,7 @@ class WishlistItemCreate(WishlistItemBase):
 class WishlistItemResponse(WishlistItemBase):
     id: str
     user_id: str
-    addedAt: str
+    addedAt: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,7 +136,7 @@ def update_goal(goal_id: str, goal_update: GoalUpdate, db: Session = Depends(get
                 goal_id=goal_id,
                 user_id=current_user.id,
                 amount=delta,
-                created_at=datetime.now(timezone.utc).isoformat()
+                created_at=datetime.now(timezone.utc)
             ))
 
     for key, value in update_data.items():
@@ -158,7 +158,7 @@ def delete_goal(goal_id: str, db: Session = Depends(get_db), current_user: model
     return {"message": "Goal deleted"}
 
 class ContributeRequest(BaseModel):
-    amount: float = Field(allow_inf_nan=False, ge=-1e12, le=1e12)  # positive = deposit, negative = withdrawal
+    amount: schemas.SignedMoney  # positive = deposit, negative = withdrawal
     date: schemas.IsoDate
 
     @field_validator("amount")
@@ -195,7 +195,7 @@ def contribute_to_goal(goal_id: str, body: ContributeRequest, db: Session = Depe
 
     db.add(models.GoalContribution(
         id=str(uuid.uuid4()), goal_id=goal_id, user_id=current_user.id, amount=body.amount,
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(timezone.utc),
     ))
     if body.amount > 0:
         transfer = new_transaction(
@@ -230,7 +230,7 @@ def create_wishlist_item(item: WishlistItemCreate, db: Session = Depends(get_db)
         # Include the UTC offset.  An offset-less ISO timestamp is interpreted as
         # local time by browsers, which made the client-side 48-hour cooldown
         # start several hours early for wishlist items created by this endpoint.
-        addedAt=datetime.now(timezone.utc).isoformat()
+        addedAt=datetime.now(timezone.utc)
     )
     db.add(db_item)
     db.commit()

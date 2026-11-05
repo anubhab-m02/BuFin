@@ -3,9 +3,6 @@ import random
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 import models
 from database import get_db
@@ -14,11 +11,8 @@ from routers.auth import get_active_household_id, get_current_user
 
 
 @pytest.fixture
-def client():
-    # Throwaway in-memory database: never touches bufin.db.
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    models.Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
+def client(session_factory):
+    Session = session_factory
 
     with Session() as db:
         db.add(models.User(id="u1", email="a@b.c", hashed_password="x"))
