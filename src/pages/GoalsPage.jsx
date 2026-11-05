@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseLocalDate } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from '../components/ui/button';
 import { Plus, PiggyBank, Target } from 'lucide-react';
@@ -30,7 +31,7 @@ const GoalsPage = () => {
     const totalTarget = savingsGoals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
     const nextMilestone = savingsGoals
         .filter(g => g.targetDate && g.currentAmount < g.targetAmount)
-        .sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate))[0];
+        .sort((a, b) => parseLocalDate(a.targetDate) - parseLocalDate(b.targetDate))[0];
 
     return (
         <div className="space-y-6">
@@ -63,7 +64,7 @@ const GoalsPage = () => {
                         <div>
                             <p className="text-xs text-muted-foreground">Next Milestone</p>
                             <p className="text-lg font-semibold truncate">
-                                {nextMilestone ? `${nextMilestone.name} · ${formatDistanceToNow(new Date(nextMilestone.targetDate), { addSuffix: true })}` : 'No target dates set'}
+                                {nextMilestone ? `${nextMilestone.name} · ${formatDistanceToNow(parseLocalDate(nextMilestone.targetDate), { addSuffix: true })}` : 'No target dates set'}
                             </p>
                         </div>
                     </div>

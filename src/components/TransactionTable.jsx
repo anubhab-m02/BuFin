@@ -68,7 +68,7 @@ const TransactionTable = () => {
             }
             return true;
         })
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
     const groups = filteredData.reduce((acc, item) => {
         const key = dayLabel(item.date);

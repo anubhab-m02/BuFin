@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
-import { todayLocalStr } from '../lib/utils';
+import { parseLocalDate, todayLocalStr } from '../lib/utils';
 import { useToast } from './ToastContext';
 
 const FinancialContext = createContext();
@@ -144,7 +144,7 @@ export const FinancialProvider = ({ children }) => {
         t.amount === parseFloat(transaction.amount) &&
         (t.merchant === transaction.merchant || t.description === transaction.description) &&
         t.type === transaction.type &&
-        new Date(t.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+        parseLocalDate(t.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
       );
 
       if (isDuplicate) {

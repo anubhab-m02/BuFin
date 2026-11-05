@@ -168,7 +168,7 @@ export const ExpenseBreakdown = () => {
                     if (transaction.type !== 'expense' || (transaction.category || 'Other') !== selectedCategory) {
                         return false;
                     }
-                    const transactionDate = new Date(transaction.date);
+                    const transactionDate = parseLocalDate(transaction.date);
                     return transactionDate.getMonth() === month && transactionDate.getFullYear() === year;
                 })
                 .reduce((sum, transaction) => sum + (Number(transaction.amount) || 0), 0);

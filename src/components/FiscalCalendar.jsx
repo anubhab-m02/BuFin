@@ -32,7 +32,7 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
         if (plan.frequency === 'monthly' && planDate < tomorrow) return;
 
         if (plan.endDate) {
-            const end = new Date(plan.endDate);
+            const end = parseLocalDate(plan.endDate);
             if (planDate > end) return;
         }
         if (planDay === day) {
@@ -42,7 +42,7 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
 
     debts.forEach(debt => {
         if (debt.dueDate) {
-            const due = new Date(debt.dueDate);
+            const due = parseLocalDate(debt.dueDate);
             if (due.getDate() === day && due.getMonth() === month && due.getFullYear() === year) {
                 items.push({ id: debt.id, name: `Debt: ${debt.personName}`, amount: debt.amount, type: debt.direction === 'receivable' ? 'income' : 'expense', isDebt: true, category: 'Debt' });
             }

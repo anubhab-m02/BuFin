@@ -30,7 +30,7 @@ const ActivityFeed = () => {
     const todayStr = todayLocalStr();
     const recent = transactions
         .filter(t => (t.date || '').split('T')[0] <= todayStr)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))
         .slice(0, 8);
 
     const groups = recent.reduce((acc, t) => {

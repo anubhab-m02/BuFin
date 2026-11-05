@@ -25,7 +25,7 @@ export function useSafeToSpend() {
     // today here avoids counting it twice. Weekly/yearly plans are never materialized,
     // so their existing "today still counts as upcoming" behavior is unchanged.
     const isPlanUpcoming = (plan, expectedDay) =>
-        plan.frequency === 'monthly' ? expectedDay > today.getDate() : expectedDay >= today.getDate();
+        (plan.frequency ?? 'monthly') === 'monthly' ? expectedDay > today.getDate() : expectedDay >= today.getDate();
 
     const upcomingRecurringFixed = recurringPlans
         .filter(p => {

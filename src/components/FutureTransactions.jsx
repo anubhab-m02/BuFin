@@ -24,7 +24,7 @@ const FutureTransactions = () => {
     // sorts after the bare "2026-11-05", which wrongly listed today's entries as upcoming.
     const futureTransactions = transactions
         .filter(t => (t.date || '').split('T')[0] > todayStr)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
     if (futureTransactions.length === 0) {
         return (
