@@ -1,3 +1,4 @@
+import asyncio
 import google.generativeai as genai
 import logging
 import os
@@ -275,7 +276,8 @@ async def classify_transaction(text: str):
             actions = _parse_action_array(raw)
             if _amounts_plausible(actions, text):
                 return actions
-            logger.warning(f"Local model amount failed plausibility check, falling back to Gemini: {actions}")
+            logger.warning("Local model amount failed plausibility check, falling back to Gemini")
+            logger.debug("Rejected local actions: %s", actions)
         except Exception as e:
             logger.warning(f"[ai_service] classify_transaction: Ollama response didn't parse ({e}), falling back to Gemini")
 
@@ -295,7 +297,8 @@ async def classify_transaction(text: str):
         raise Exception("Failed to classify transaction")
 
     if not _amounts_plausible(actions, text):
-        logger.warning(f"Gemini amount also failed plausibility check, no further fallback: {actions}")
+        logger.warning("Gemini amount also failed plausibility check, no further fallback")
+        logger.debug("Rejected Gemini actions: %s", actions)
     return actions
 
 async def analyze_purchase(query: str, context: dict):
@@ -380,7 +383,8 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
             if expected_day >= now.day:
                 total_recurring += p['amount']
         except Exception as e:
-            logger.warning(f"Error processing recurring plan {p.get('name')}: {e}")
+            logger.warning("Error processing a recurring plan: %s", e)
+            logger.debug("Plan that failed: %s", p.get('name'))
             continue
 
     # 2. Future One-off Expenses (from transactions list)
@@ -575,7 +579,10 @@ async def coach_chat(message: str, mode: str, context: dict):
         payload["tools"] = [{"google_search": {}}]
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS)
+        # requests is blocking; run it off the event loop so one slow answer cannot stall every request.
+        response = await asyncio.to_thread(
+            requests.post, url, json=payload, headers=headers, timeout=GEMINI_REQUEST_TIMEOUT_SECONDS
+        )
         response.raise_for_status()
         result = response.json()
         
@@ -627,7 +634,7 @@ async def coach_chat(message: str, mode: str, context: dict):
     except requests.RequestException as e:
         logger.warning("Coach chat could not reach the AI service: %s", _redact(e))
         raise HTTPException(status_code=502, detail="Could not reach the AI service. Please try again.")
-    except (ValueError, KeyError, IndexError, TypeError) as e:
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError) as e:
         # e.g. an empty "candidates" list when the answer was blocked, or a non-JSON body.
         logger.warning("Coach chat got an unexpected AI response: %r", _redact(e))
         raise HTTPException(status_code=502, detail="The AI returned an unreadable answer. Please try again.")

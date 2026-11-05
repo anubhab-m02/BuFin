@@ -80,3 +80,18 @@ def test_blocked_or_malformed_answers_are_502s(monkeypatch):
     with pytest.raises(HTTPException) as err:
         run_coach()
     assert err.value.status_code == 502
+
+
+def test_malformed_candidate_shapes_are_502s_not_500s(monkeypatch):
+    body = {"candidates": [{"content": {"parts": [{"text": "hi"}]}, "groundingMetadata": "oops"}]}
+    monkeypatch.setattr(requests, "post", lambda *a, **k: FakeResponse(200, body))
+    with pytest.raises(HTTPException) as err:
+        run_coach()
+    assert err.value.status_code == 502
+
+
+def test_quota_error_has_the_user_facing_message(monkeypatch):
+    monkeypatch.setattr(requests, "post", lambda *a, **k: FakeResponse(429))
+    with pytest.raises(HTTPException) as err:
+        run_coach()
+    assert "Quota" in err.value.detail
