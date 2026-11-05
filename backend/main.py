@@ -1,13 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-from typing import List
-import models, schemas, auth_utils
-from database import SessionLocal, engine, get_db
-import uuid
-from datetime import timedelta
+import models
+from database import engine
 from routers import auth, goals, transactions, recurring, debts, ai, budgets, households, net_worth, chat
 
 models.Base.metadata.create_all(bind=engine)

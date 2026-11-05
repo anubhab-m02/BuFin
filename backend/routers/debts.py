@@ -16,7 +16,7 @@ def read_debts(db: Session = Depends(get_db), current_user: models.User = Depend
 @router.post("/debts", response_model=schemas.DebtWithTransaction)
 def create_debt(debt: schemas.DebtCreateRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
     # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
-    db_debt = models.Debt(**debt.dict(exclude={"id", "cash_in_date"}), user_id=current_user.id)
+    db_debt = models.Debt(**debt.model_dump(exclude={"id", "cash_in_date"}), user_id=current_user.id)
     if not db_debt.id:
         db_debt.id = str(uuid.uuid4())
     db.add(db_debt)
@@ -86,7 +86,7 @@ def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(ge
     if not db_debt:
         raise HTTPException(status_code=404, detail="Debt not found")
     
-    for key, value in debt.dict().items():
+    for key, value in debt.model_dump().items():
         if key != 'id':
             setattr(db_debt, key, value)
 

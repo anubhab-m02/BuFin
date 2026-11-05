@@ -1,6 +1,6 @@
 from datetime import date
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional
 
 
 def _iso_date(value: str) -> str:

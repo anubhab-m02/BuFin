@@ -91,7 +91,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db), current_user
         id=str(uuid.uuid4()),
         user_id=current_user.id,
         created_at=datetime.now(timezone.utc).isoformat(),
-        **asset.dict()
+        **asset.model_dump()
     )
     db.add(db_asset)
     db.commit()
@@ -105,7 +105,7 @@ def update_asset(asset_id: str, asset_update: AssetUpdate, db: Session = Depends
     if not db_asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    for key, value in asset_update.dict(exclude_unset=True).items():
+    for key, value in asset_update.model_dump(exclude_unset=True).items():
         setattr(db_asset, key, value)
 
     db.commit()
@@ -136,7 +136,7 @@ def create_liability(liability: LiabilityCreate, db: Session = Depends(get_db), 
         id=str(uuid.uuid4()),
         user_id=current_user.id,
         created_at=datetime.now(timezone.utc).isoformat(),
-        **liability.dict()
+        **liability.model_dump()
     )
     db.add(db_liability)
     db.commit()
@@ -150,7 +150,7 @@ def update_liability(liability_id: str, liability_update: LiabilityUpdate, db: S
     if not db_liability:
         raise HTTPException(status_code=404, detail="Liability not found")
 
-    for key, value in liability_update.dict(exclude_unset=True).items():
+    for key, value in liability_update.model_dump(exclude_unset=True).items():
         setattr(db_liability, key, value)
 
     db.commit()

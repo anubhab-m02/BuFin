@@ -110,7 +110,7 @@ def create_goal(goal: GoalCreate, db: Session = Depends(get_db), current_user: m
         id=str(uuid.uuid4()),
         user_id=current_user.id,
         household_id=active_household_id,
-        **goal.dict()
+        **goal.model_dump()
     )
     db.add(db_goal)
     db.commit()
@@ -123,7 +123,7 @@ def update_goal(goal_id: str, goal_update: GoalUpdate, db: Session = Depends(get
     if not db_goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    update_data = goal_update.dict(exclude_unset=True)
+    update_data = goal_update.model_dump(exclude_unset=True)
 
     # The frontend sends the NEW total (goal.currentAmount + delta), not the delta
     # itself, so the delta - and who made it - has to be derived here by diffing
