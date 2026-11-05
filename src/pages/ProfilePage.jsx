@@ -16,7 +16,7 @@ import StreakCounter from '../components/StreakCounter';
 
 const ProfilePage = () => {
     const { isPrivacyMode, togglePrivacyMode } = useFinancial();
-    const { user, logout, refreshUser } = useAuth();
+    const { user, logout, refreshUser, replaceToken } = useAuth();
     const { theme, setTheme } = useTheme();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -76,14 +76,15 @@ const ProfilePage = () => {
             setPasswordError("New passwords do not match");
             return;
         }
-        if (passwordData.newPassword.length < 6) {
-            setPasswordError("Password must be at least 6 characters");
+        if (passwordData.newPassword.length < 10) {
+            setPasswordError("Password must be at least 10 characters");
             return;
         }
 
         setLoading(true);
         try {
-            await api.changePassword(passwordData.oldPassword, passwordData.newPassword);
+            const { access_token } = await api.changePassword(passwordData.oldPassword, passwordData.newPassword);
+            replaceToken(access_token);
             setIsPasswordModalOpen(false);
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             alert("Password changed successfully");

@@ -22,6 +22,19 @@ const TRANSACTIONS_PAGE_SIZE = 500;
 // and logs out. Sign-in and sign-up legitimately answer 401 for bad credentials, so they are
 // excluded (a wrong old password on change-password is a 400 and is not affected).
 export const UNAUTHORIZED_EVENT = 'bufin:unauthorized';
+
+// The server's own explanation (a rejected password, "too many attempts"), or `fallback`.
+// Validation errors arrive as a list; the first message is the one worth showing.
+const readError = async (response, fallback) => {
+    try {
+        const { detail } = await response.json();
+        if (typeof detail === 'string') return detail;
+        if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg).replace(/^Value error, /, '');
+    } catch {
+        // not JSON: use the fallback
+    }
+    return fallback;
+};
 const CREDENTIAL_PATHS = ['/auth/login', '/auth/signup'];
 
 const apiFetch = async (url, options) => {
@@ -54,7 +67,7 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, full_name }),
         });
-        if (!response.ok) throw new Error('Signup failed');
+        if (!response.ok) throw new Error(await readError(response, 'Failed to create account. Email might be taken.'));
         return response.json();
     },
     login: async (email, password) => {
@@ -63,7 +76,7 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
         });
-        if (!response.ok) throw new Error('Login failed');
+        if (!response.ok) throw new Error(await readError(response, 'Invalid email or password'));
         return response.json();
     },
     getMe: async (token) => {
@@ -98,10 +111,8 @@ export const api = {
             },
             body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to change password');
-        }
+        if (!response.ok) throw new Error(await readError(response, 'Failed to change password'));
+        // { message, access_token }: the old token stops working, so callers must store the new one.
         return response.json();
     },
     deleteAccount: async () => {

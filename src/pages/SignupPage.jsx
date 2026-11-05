@@ -25,7 +25,7 @@ const SignupPage = () => {
             await signup(email, password, fullName);
             navigate('/onboarding'); // Redirect to onboarding after signup
         } catch (err) {
-            setError('Failed to create account. Email might be taken.');
+            setError(err.message || 'Failed to create account. Email might be taken.');
         } finally {
             setLoading(false);
         }
@@ -75,9 +75,10 @@ const SignupPage = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                minLength={6}
+                                minLength={10}
                                 disabled={loading}
                             />
+                            <p className="text-xs text-muted-foreground">At least 10 characters.</p>
                         </div>
                         <Button type="submit" className="w-full" disabled={loading}>
                             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign Up'}

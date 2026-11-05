@@ -82,6 +82,13 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Changing the password revokes every earlier token; the server hands back a fresh one so
+    // the session the user is in carries on.
+    const replaceToken = (newToken) => {
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+    };
+
     const logout = () => {
         localStorage.removeItem('token');
         setToken(null);
@@ -101,7 +108,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, isAuthenticated, login, signup, logout, loading, refreshUser }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated, login, signup, logout, loading, refreshUser, replaceToken }}>
             {children}
         </AuthContext.Provider>
     );
