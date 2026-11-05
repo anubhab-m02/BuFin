@@ -1,10 +1,33 @@
+import os
+import warnings
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 
+load_dotenv()
+
 # Configuration
-SECRET_KEY = "bufin_secret_key_change_this_in_production"
+MIN_SECRET_LENGTH = 32
+_DEV_SECRET = "bufin-dev-only-secret-do-not-use-in-production"
+
+
+def _load_secret_key() -> str:
+    secret = os.getenv("JWT_SECRET_KEY")
+    if os.getenv("BUFIN_ENV", "development").lower() == "production":
+        if not secret or len(secret) < MIN_SECRET_LENGTH:
+            raise RuntimeError(
+                f"JWT_SECRET_KEY must be set to at least {MIN_SECRET_LENGTH} characters when BUFIN_ENV=production"
+            )
+        return secret
+    if not secret:
+        warnings.warn("JWT_SECRET_KEY is not set; using an insecure development secret", stacklevel=2)
+        return _DEV_SECRET
+    return secret
+
+
+SECRET_KEY = _load_secret_key()
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hours
 
