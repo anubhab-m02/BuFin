@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 import models
 from database import get_db
-from routers import auth, budgets, debts, goals, recurring, transactions
+from routers import auth, budgets, debts, goals, households, recurring, transactions
 from routers.auth import get_active_household_id, get_current_user
 
 TABLES_OWNED_BY_A = [
@@ -91,7 +91,7 @@ def env():
 
     app = FastAPI()
     app.include_router(auth.router, prefix="/api/auth")
-    for r in (transactions, budgets, debts, recurring, goals):
+    for r in (transactions, budgets, debts, recurring, goals, households):
         app.include_router(r.router, prefix="/api")
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_current_user] = override_user
@@ -177,3 +177,38 @@ def test_linked_debt_must_belong_to_the_caller(env):
     tx_id = created.json()["id"]
     assert client.put(f"/api/transactions/{tx_id}", json={**row, "linked_debt_id": "debt-a"}).status_code == 404
     assert client.put(f"/api/transactions/{tx_id}", json={**row, "linked_debt_id": "debt-b"}).status_code == 200
+
+
+def test_remaining_members_can_still_list_households_after_the_creator_deletes_their_account(env):
+    client, _, state = env
+    assert client.delete("/api/auth/me").status_code == 200
+    state["user"] = "b"
+    response = client.get("/api/households")
+    assert response.status_code == 200
+    assert response.json()[0]["created_by"] is None
+
+
+def test_other_users_links_to_the_leavers_debts_and_plans_do_not_block_deletion(env):
+    client, Session, _ = env
+    with Session() as db:  # legacy data: the API no longer allows linking someone else's debt
+        db.add(models.Transaction(id="t-linked", user_id="b", amount=1.0, type="expense", necessity="variable",
+                                  category="c", description="d", merchant="m", date="2025-01-01",
+                                  linked_debt_id="debt-a", recurring_plan_id="plan-a"))
+        db.commit()
+    assert client.delete("/api/auth/me").status_code == 200
+    with Session() as db:
+        row = db.get(models.Transaction, "t-linked")
+        assert row.user_id == "b" and row.linked_debt_id is None and row.recurring_plan_id is None
+
+
+def test_a_solo_household_deletion_does_not_destroy_past_members_rows(env):
+    client, Session, _ = env
+    with Session() as db:  # b once belonged to h2, left, and their row stayed behind
+        db.add(models.Transaction(id="t-b-in-h2", user_id="b", household_id="h2", amount=1.0, type="expense",
+                                  necessity="variable", category="c", description="d", merchant="m", date="2025-01-01"))
+        db.commit()
+    assert client.delete("/api/auth/me").status_code == 200
+    with Session() as db:
+        row = db.get(models.Transaction, "t-b-in-h2")
+        assert row is not None and row.household_id is None and row.user_id == "b"
+        assert db.get(models.Transaction, "t-solo") is None
