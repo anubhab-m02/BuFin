@@ -1,11 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import models
-from database import engine
 from routers import auth, goals, transactions, recurring, debts, ai, budgets, households, net_worth, chat
-
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BuFin API", version="2.0.0")
 

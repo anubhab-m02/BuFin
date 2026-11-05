@@ -1,0 +1,26 @@
+# Local development database. BuFin runs on PostgreSQL only (docs/architecture/DECISIONS.md, ADR-6).
+# Start it:   docker compose up -d postgres
+# Create the schema (once; temporary until the Alembic baseline):   cd backend && python scripts/create_schema.py
+# The password below is for local development only; it is bound to 127.0.0.1 and never reachable
+# from other machines. Production credentials come from the environment, not from this file.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bufin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bufin_dev_password}
+      POSTGRES_DB: bufin
+    ports:
+      # 5433 on the host so it cannot collide with a Postgres you already run on 5432.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - bufin_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bufin -d bufin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  bufin_pgdata:
