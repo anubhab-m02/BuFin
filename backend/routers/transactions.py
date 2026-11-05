@@ -19,6 +19,15 @@ def _scope_filter(current_user: models.User, household_id: Optional[str]):
         return models.Transaction.household_id == household_id
     return and_(models.Transaction.user_id == current_user.id, models.Transaction.household_id.is_(None))
 
+def _check_linked_debt(db: Session, current_user: models.User, debt_id: Optional[str]):
+    # A repayment may only link to the caller's own debt; otherwise deleting the transaction
+    # would flip someone else's debt back to active.
+    if debt_id is None:
+        return
+    owned = db.query(models.Debt.id).filter(models.Debt.id == debt_id, models.Debt.user_id == current_user.id).first()
+    if not owned:
+        raise HTTPException(status_code=404, detail="Debt not found")
+
 @router.get("/transactions", response_model=List[schemas.Transaction])
 def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=MAX_PAGE_SIZE), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
     # Newest first, with id as a tiebreaker: an unordered LIMIT/OFFSET returns an arbitrary
@@ -35,9 +44,9 @@ def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, 
 
 @router.post("/transactions", response_model=schemas.Transaction)
 def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
-    db_transaction = models.Transaction(**transaction.dict(), user_id=current_user.id, household_id=active_household_id)
-    if not db_transaction.id:
-        db_transaction.id = str(uuid.uuid4())
+    _check_linked_debt(db, current_user, transaction.linked_debt_id)
+    # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
+    db_transaction = models.Transaction(**transaction.dict(exclude={"id"}), id=str(uuid.uuid4()), user_id=current_user.id, household_id=active_household_id)
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
@@ -58,9 +67,9 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
     if not db_transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    for key, value in transaction.dict().items():
-        if key != 'id': # Don't update ID
-            setattr(db_transaction, key, value)
+    _check_linked_debt(db, current_user, transaction.linked_debt_id)
+    for key, value in transaction.dict(exclude={"id"}).items(): # Don't update ID
+        setattr(db_transaction, key, value)
 
     db.commit()
     db.refresh(db_transaction)

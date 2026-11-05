@@ -31,7 +31,7 @@ class GoalUpdate(BaseModel):
     targetAmount: Optional[float] = None
 
 class GoalContributionResponse(BaseModel):
-    user_id: str
+    user_id: Optional[str] = None  # NULL once the member who made it deleted their account
     amount: float
     created_at: str
 
@@ -39,7 +39,7 @@ class GoalContributionResponse(BaseModel):
 
 class GoalResponse(GoalBase):
     id: str
-    user_id: str
+    user_id: Optional[str] = None  # NULL once the member who created it deleted their account
     household_id: Optional[str] = None
     currentAmount: float
     contributions: List[GoalContributionResponse] = []
