@@ -59,7 +59,7 @@ def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, 
 def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
     _check_linked_debt(db, current_user, transaction.linked_debt_id)
     # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
-    db_transaction = models.Transaction(**transaction.dict(exclude={"id"}), id=str(uuid.uuid4()), user_id=current_user.id, household_id=active_household_id)
+    db_transaction = models.Transaction(**transaction.model_dump(exclude={"id"}), id=str(uuid.uuid4()), user_id=current_user.id, household_id=active_household_id)
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
@@ -93,7 +93,7 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     _check_linked_debt(db, current_user, transaction.linked_debt_id)
-    for key, value in transaction.dict(exclude={"id"}).items(): # Don't update ID
+    for key, value in transaction.model_dump(exclude={"id"}).items(): # Don't update ID
         setattr(db_transaction, key, value)
 
     db.commit()

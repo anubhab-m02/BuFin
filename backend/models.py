@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from database import Base
 
 class Transaction(Base):

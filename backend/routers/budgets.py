@@ -22,7 +22,7 @@ def create_budget(budget: schemas.BudgetCreate, db: Session = Depends(get_db), c
         raise HTTPException(status_code=400, detail="A budget for this category already exists")
 
     # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
-    db_budget = models.Budget(**budget.dict(exclude={"id"}), user_id=current_user.id)
+    db_budget = models.Budget(**budget.model_dump(exclude={"id"}), user_id=current_user.id)
     if not db_budget.id:
         db_budget.id = str(uuid.uuid4())
     db.add(db_budget)
@@ -36,7 +36,7 @@ def update_budget(budget_id: str, budget: schemas.BudgetCreate, db: Session = De
     if not db_budget:
         raise HTTPException(status_code=404, detail="Budget not found")
 
-    for key, value in budget.dict().items():
+    for key, value in budget.model_dump().items():
         if key != 'id':
             setattr(db_budget, key, value)
 
