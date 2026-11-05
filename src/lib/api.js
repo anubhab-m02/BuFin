@@ -646,17 +646,3 @@ export const api = {
         return response.json();
     }
 };
-
-// Helper to handle 401s globally (optional improvement)
-const handleResponse = async (response) => {
-    if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        throw new Error('Session expired. Please login again.');
-    }
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || 'API request failed');
-    }
-    return response.json();
-};
