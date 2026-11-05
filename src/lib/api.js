@@ -13,6 +13,15 @@ const getScopeHeaders = (extra = {}) => {
     };
 };
 
+// The AI routes spend the shared Gemini quota, so the backend requires a logged-in user.
+const getAiHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+};
+
 export const api = {
     // Auth
     signup: async (email, password, full_name) => {
@@ -540,7 +549,7 @@ export const api = {
     classifyTransaction: async (text) => {
         const response = await fetch(`${API_URL}/ai/classify`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAiHeaders(),
             body: JSON.stringify({ text }),
         });
         if (!response.ok) throw new Error('AI classification failed');
@@ -549,7 +558,7 @@ export const api = {
     analyzePurchase: async (query, context) => {
         const response = await fetch(`${API_URL}/ai/analyze`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAiHeaders(),
             body: JSON.stringify({ query, context }),
         });
         if (!response.ok) throw new Error('AI analysis failed');
@@ -558,7 +567,7 @@ export const api = {
     generateSpendingAlert: async (transactions, balance, recurringPlans, today) => {
         const response = await fetch(`${API_URL}/ai/alert`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAiHeaders(),
             body: JSON.stringify({ transactions, balance, recurringPlans, today }),
         });
         if (!response.ok) return null;
@@ -567,7 +576,7 @@ export const api = {
     generateFinancialTips: async (transactions, balance) => {
         const response = await fetch(`${API_URL}/ai/tips`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAiHeaders(),
             body: JSON.stringify({ transactions, balance }),
         });
         if (!response.ok) throw new Error('AI tips generation failed');
@@ -576,7 +585,7 @@ export const api = {
     coachChat: async (message, mode, context) => {
         const response = await fetch(`${API_URL}/coach/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAiHeaders(),
             body: JSON.stringify({ message, mode, context }),
         });
         if (!response.ok) throw new Error('Coach chat failed');
@@ -636,18 +645,4 @@ export const api = {
         if (!response.ok) throw new Error('Failed to delete chat session');
         return response.json();
     }
-};
-
-// Helper to handle 401s globally (optional improvement)
-const handleResponse = async (response) => {
-    if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        throw new Error('Session expired. Please login again.');
-    }
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || 'API request failed');
-    }
-    return response.json();
 };
