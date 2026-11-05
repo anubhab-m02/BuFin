@@ -11,6 +11,7 @@ Thanks for your interest in contributing.
 
 ## Local setup
 
+- Database: `docker compose up -d postgres`, then `cd backend && python scripts/create_schema.py` (temporary until the Alembic baseline lands; PostgreSQL only; `DATABASE_URL` from `.env.example`)
 - Backend: `cd backend && uvicorn main:app --reload` (port 8000)
 - Frontend: `npm run dev` (port 5173)
 - Schema changes go through Alembic: `cd backend && alembic revision --autogenerate -m "..."` then `alembic upgrade head`

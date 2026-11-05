@@ -18,7 +18,8 @@ import models  # noqa: F401 - ensures all models are registered on Base.metadata
 config = context.config
 
 # Single source of truth for the DB URL: database.py, not a hardcoded ini value.
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+# "%" is the ConfigParser interpolation character; passwords may contain it.
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -52,6 +53,7 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
+        compare_type=True,
         dialect_opts={"paramstyle": "named"},
     )
 
@@ -74,7 +76,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata, compare_type=True
         )
 
         with context.begin_transaction():

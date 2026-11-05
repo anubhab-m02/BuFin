@@ -14,7 +14,7 @@ Today it is a single-process, single-database app used by a handful of people. T
 flowchart LR
     U[User browser or phone] -->|HTTPS, JWT| SPA[React SPA - Vite build]
     SPA -->|REST /api, JSON| API[FastAPI app - uvicorn]
-    API -->|SQLAlchemy| DB[(SQLite file bufin.db)]
+    API -->|SQLAlchemy| DB[(PostgreSQL 16)]
     API -->|HTTPS, API key| GEM[Gemini API]
     API -->|HTTP localhost:11434| OLL[Ollama - phi4-mini, optional]
     API -.->|planned| PG[(PostgreSQL)]

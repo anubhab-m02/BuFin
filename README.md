@@ -57,7 +57,7 @@
 ### Backend
 - **FastAPI** - Modern Python web framework
 - **SQLAlchemy** - SQL toolkit and ORM
-- **SQLite** - Lightweight database
+- **PostgreSQL 16** - Database (runs locally in Docker; `psycopg` 3 driver, Alembic migrations)
 - **Pydantic** - Data validation
 
 ### AI Integration
@@ -92,8 +92,16 @@ pip install -r requirements.txt
 ```bash
 # In the backend directory
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
+# Edit .env and add your GEMINI_API_KEY; DATABASE_URL already matches docker-compose.yml
 ```
+
+   **Start the database and create the schema** (needs Docker running):
+```bash
+# From the project root
+docker compose up -d postgres
+cd backend && python scripts/create_schema.py
+```
+   BuFin supports PostgreSQL only; `DATABASE_URL` is required and the app will not start without it. The app no longer creates tables itself. `create_schema.py` is temporary: the schema milestone (#164) replaces it with an Alembic baseline, after which you recreate the database with `docker compose down -v`.
 
 4. **Set up the frontend**
 ```bash
@@ -187,7 +195,7 @@ An interactive planning tool that shows:
 
 ## 🔐 Security & Privacy
 
-- **Local storage**: your transaction/goal/budget data is stored in a local SQLite database, not a third-party cloud database
+- **Local storage**: your transaction/goal/budget data is stored in a PostgreSQL database that you run yourself (locally via Docker), not a third-party cloud database
 - **AI routing is local-first, not local-only**: narrow tasks (transaction classification, tips, alerts, statement parsing) try a local Ollama model first; when Ollama is unavailable or disabled, they fall back to Google Gemini, and reasoning-heavy features (purchase analysis, the AI coach) always use Gemini directly. Any financial context sent to Gemini leaves your machine — this is not a fully offline app
 - **PII redaction before AI, not after**: bank statement and receipt text is scrubbed of account numbers, card numbers, PAN, phone numbers, and emails (`backend/statement_parser.py`'s `redact_pii()`) *before* it's sent to any AI model, local or cloud — not as an afterthought on stored data
 - **Privacy Mode**: quick in-app toggle to hide amounts on-screen
