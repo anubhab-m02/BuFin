@@ -23,9 +23,14 @@ export const UNAUTHORIZED_EVENT = 'bufin:unauthorized';
 const CREDENTIAL_PATHS = ['/auth/login', '/auth/signup'];
 
 const apiFetch = async (url, options) => {
+    const sentAuthorization = options?.headers?.Authorization;
     const response = await fetch(url, options);
-    if (response.status === 401 && !CREDENTIAL_PATHS.some((path) => url.includes(path))) {
-        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    const path = new URL(url, window.location.origin).pathname;
+    if (response.status === 401 && !CREDENTIAL_PATHS.some((credentialPath) => path.endsWith(credentialPath))) {
+        // A slow request from a previous session can come back 401 after a new login; only end
+        // the session if the token that request carried is still the current one.
+        const stale = sentAuthorization && sentAuthorization !== `Bearer ${localStorage.getItem('token')}`;
+        if (!stale) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     }
     return response;
 };
