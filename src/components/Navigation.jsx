@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import useModalA11y from '../hooks/useModalA11y';
 
 const ALL_ITEMS = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -30,6 +31,7 @@ const MOBILE_MORE = ALL_ITEMS.filter((item) => !MOBILE_PRIMARY.includes(item.pat
 // new dropdown/popover primitive, since none exists in ui/.
 const PersonaSwitcherPanel = ({ isOpen, onClose, households, activeHouseholdId, onSwitch, user, getInitials }) => {
     const navigate = useNavigate();
+    const panelRef = useModalA11y(isOpen, onClose);
 
     if (!isOpen) return null;
 
@@ -44,13 +46,18 @@ const PersonaSwitcherPanel = ({ isOpen, onClose, households, activeHouseholdId, 
             onClick={onClose}
         >
             <div
-                className="absolute top-4 left-4 w-72 bg-card rounded-lg border border-border shadow-lg p-2 animate-in fade-in slide-in-from-top-2 duration-normal md:top-20"
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="persona-switcher-title"
+                tabIndex={-1}
+                className="absolute top-4 left-4 w-72 bg-card rounded-lg border border-border shadow-lg p-2 outline-none animate-in fade-in slide-in-from-top-2 duration-normal md:top-20"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-2 py-1.5">
-                    <h2 className="text-sm font-medium text-muted-foreground">Switch View</h2>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
-                        <X className="h-3.5 w-3.5" />
+                    <h2 id="persona-switcher-title" className="text-sm font-medium text-muted-foreground">Switch View</h2>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} aria-label="Close">
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
                 </div>
 
@@ -106,6 +113,7 @@ const Navigation = () => {
     const navigate = useNavigate();
     const [isMoreOpen, setIsMoreOpen] = useState(false);
     const [isPersonaOpen, setIsPersonaOpen] = useState(false);
+    const moreRef = useModalA11y(isMoreOpen, () => setIsMoreOpen(false));
 
     const bottomItems = [{ name: 'Profile', path: '/profile', icon: User }];
 
@@ -121,7 +129,7 @@ const Navigation = () => {
     return (
         <>
             {/* Desktop sidebar: flat, on a 1px edge */}
-            <nav className="hidden md:flex md:w-60 md:shrink-0 md:sticky md:top-0 md:h-dvh bg-card border-r border-border p-4 flex-col justify-between">
+            <nav aria-label="Main" className="hidden md:flex md:w-60 md:shrink-0 md:sticky md:top-0 md:h-dvh bg-card border-r border-border p-4 flex-col justify-between">
                 <div className="flex flex-col gap-1 w-full">
                     <div className="flex items-center gap-2 mb-5 px-2">
                         <BrandMark className="h-6 w-6 text-foreground" />
@@ -203,7 +211,7 @@ const Navigation = () => {
             </nav>
 
             {/* Mobile Bottom Bar - 5 slots max: 4 nav items + a raised center Add FAB */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border px-2 pb-[env(safe-area-inset-bottom)]">
+            <nav aria-label="Main (mobile)" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border px-2 pb-[env(safe-area-inset-bottom)]">
                 <div className="grid grid-cols-5 items-end h-16">
                     {mobilePrimaryItems.slice(0, 2).map((item) => (
                         <NavLink
@@ -263,13 +271,18 @@ const Navigation = () => {
                     onClick={() => setIsMoreOpen(false)}
                 >
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-in slide-in-from-bottom duration-normal"
+                        ref={moreRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="more-menu-title"
+                        tabIndex={-1}
+                        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] outline-none animate-in slide-in-from-bottom duration-normal"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-base font-semibold">More</h2>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMoreOpen(false)}>
-                                <X className="h-4 w-4" />
+                            <h2 id="more-menu-title" className="text-base font-semibold">More</h2>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMoreOpen(false)} aria-label="Close">
+                                <X className="h-4 w-4" aria-hidden="true" />
                             </Button>
                         </div>
                         <div className="grid grid-cols-4 gap-3">

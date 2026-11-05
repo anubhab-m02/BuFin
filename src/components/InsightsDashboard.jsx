@@ -121,13 +121,14 @@ const InsightsDashboard = () => {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="font-bold">{fmt(sub.amount, { precise: true })}</div>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-7 w-7 text-muted-foreground hover:text-primary"
                                                     onClick={() => handleEditActiveSubscription(sub)}
                                                     title="Edit"
+                                                    aria-label={`Edit ${sub.name}`}
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
@@ -137,6 +138,7 @@ const InsightsDashboard = () => {
                                                     className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                     onClick={() => handleDeleteActiveSubscription(sub.id)}
                                                     title="Delete"
+                                                    aria-label={`Delete ${sub.name}`}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
@@ -161,13 +163,14 @@ const InsightsDashboard = () => {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <div className="font-bold text-warning tabular-nums">{fmt(sub.amount, { precise: true })}</div>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-7 w-7 text-success hover:bg-success/10"
                                                         onClick={() => handleAddSubscription(sub)}
                                                         title="Add to Planner"
+                                                        aria-label={`Add ${sub.name} to Planner`}
                                                     >
                                                         <Plus className="h-4 w-4" />
                                                     </Button>
@@ -177,6 +180,7 @@ const InsightsDashboard = () => {
                                                         className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                         onClick={() => ignoreMerchant(sub.name)}
                                                         title="Ignore"
+                                                        aria-label={`Ignore ${sub.name}`}
                                                     >
                                                         <X className="h-4 w-4" />
                                                     </Button>

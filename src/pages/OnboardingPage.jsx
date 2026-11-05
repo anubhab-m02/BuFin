@@ -13,7 +13,7 @@ import SafeToSpendGauge from '../components/SafeToSpendGauge';
 import { formatMoney } from '../lib/money';
 
 const OnboardingPage = () => {
-    const { user, login, refreshUser } = useAuth(); // We might need to refresh user data
+    const { refreshUser } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -110,8 +110,8 @@ const OnboardingPage = () => {
                     {step === 1 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
-                                <Label>Preferred Currency</Label>
-                                <Select value={formData.currency} onValueChange={(v) => handleChange('currency', v)}>
+                                <Label htmlFor="onb-preferred-currency">Preferred Currency</Label>
+                                <Select id="onb-preferred-currency" value={formData.currency} onValueChange={(v) => handleChange('currency', v)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select currency" />
                                     </SelectTrigger>
@@ -124,8 +124,8 @@ const OnboardingPage = () => {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Current Total Balance</Label>
-                                <Input
+                                <Label htmlFor="onb-current-total-balance">Current Total Balance</Label>
+                                <Input id="onb-current-total-balance"
                                     type="number"
                                     placeholder="e.g. 50000"
                                     value={formData.current_balance}
@@ -134,8 +134,8 @@ const OnboardingPage = () => {
                                 <p className="text-xs text-muted-foreground">Cash + Bank Accounts</p>
                             </div>
                             <div className="space-y-2">
-                                <Label>Monthly Income (Post-Tax)</Label>
-                                <Input
+                                <Label htmlFor="onb-monthly-income">Monthly Income (Post-Tax)</Label>
+                                <Input id="onb-monthly-income"
                                     type="number"
                                     placeholder="e.g. 80000"
                                     value={formData.monthly_income}
@@ -148,8 +148,8 @@ const OnboardingPage = () => {
                     {step === 2 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
-                                <Label>Monthly Savings Goal</Label>
-                                <Input
+                                <Label htmlFor="onb-monthly-savings-goal">Monthly Savings Goal</Label>
+                                <Input id="onb-monthly-savings-goal"
                                     type="number"
                                     placeholder="e.g. 20000"
                                     value={formData.savings_goal}
@@ -163,31 +163,35 @@ const OnboardingPage = () => {
                     {step === 3 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-3">
-                                <Label>Financial Literacy Level</Label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <Label id="onb-literacy-label">Financial Literacy Level</Label>
+                                <div role="group" aria-labelledby="onb-literacy-label" className="grid grid-cols-3 gap-2">
                                     {['beginner', 'intermediate', 'advanced'].map((level) => (
-                                        <div
+                                        <button
                                             key={level}
+                                            type="button"
+                                            aria-pressed={formData.financial_literacy === level}
                                             className={`cursor-pointer border rounded-lg p-3 text-center text-sm capitalize transition-all ${formData.financial_literacy === level ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-primary/50'}`}
                                             onClick={() => handleChange('financial_literacy', level)}
                                         >
                                             {level}
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
 
                             <div className="space-y-3">
-                                <Label>Risk Tolerance</Label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <Label id="onb-risk-label">Risk Tolerance</Label>
+                                <div role="group" aria-labelledby="onb-risk-label" className="grid grid-cols-3 gap-2">
                                     {['low', 'moderate', 'high'].map((risk) => (
-                                        <div
+                                        <button
                                             key={risk}
+                                            type="button"
+                                            aria-pressed={formData.risk_tolerance === risk}
                                             className={`cursor-pointer border rounded-lg p-3 text-center text-sm capitalize transition-all ${formData.risk_tolerance === risk ? 'border-primary bg-primary/5 text-primary font-medium' : 'border-border hover:border-primary/50'}`}
                                             onClick={() => handleChange('risk_tolerance', risk)}
                                         >
                                             {risk}
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </div>

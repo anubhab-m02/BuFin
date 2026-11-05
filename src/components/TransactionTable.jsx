@@ -166,6 +166,7 @@ className="inline-flex items-center gap-1 text-xs font-normal text-muted-foregro
                                                             className="h-9 w-9 text-muted-foreground hover:text-primary"
                                                             onClick={() => setEditingTransaction(t)}
                                                             title="Edit"
+                                                            aria-label={`Edit ${t.merchant || t.description || t.category}`}
                                                         >
                                                             <Edit2 className="h-4 w-4" />
                                                         </Button>
@@ -176,6 +177,7 @@ className="inline-flex items-center gap-1 text-xs font-normal text-muted-foregro
                                                                 className="h-9 w-9 text-muted-foreground hover:text-primary hidden sm:inline-flex"
                                                                 onClick={() => setSplitTransaction(t)}
                                                                 title="Split Bill"
+                                                                aria-label={`Split ${t.merchant || t.description || t.category}`}
                                                             >
                                                                 <UserPlus className="h-4 w-4" />
                                                             </Button>
@@ -187,6 +189,7 @@ className="inline-flex items-center gap-1 text-xs font-normal text-muted-foregro
                                                             className="h-9 w-9 text-muted-foreground hover:text-destructive"
                                                             onClick={() => deleteTransaction(t.id)}
                                                             title="Delete"
+                                                            aria-label={`Delete ${t.merchant || t.description || t.category}`}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

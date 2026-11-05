@@ -27,7 +27,7 @@ const FeedItem = ({ title, subtitle, amount, type, onDelete }) => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-fast hover:text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 transition-opacity duration-fast hover:text-destructive hover:bg-destructive/10"
                         onClick={onDelete}
                         aria-label="Delete"
                     >

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardDescription } from '../components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
@@ -42,14 +43,17 @@ const LoginPage = () => {
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
-                            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" />
+                            <div role="alert" className="bg-destructive/15 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                                 {error}
                             </div>
                         )}
                         <div className="space-y-2">
+                            <Label htmlFor="login-email">Email</Label>
                             <Input
+                                id="login-email"
                                 type="email"
+                                autoComplete="email"
                                 placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -58,8 +62,11 @@ const LoginPage = () => {
                             />
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="login-password">Password</Label>
                             <Input
+                                id="login-password"
                                 type="password"
+                                autoComplete="current-password"
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -67,8 +74,8 @@ const LoginPage = () => {
                                 disabled={loading}
                             />
                         </div>
-                        <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+                        <Button type="submit" className="w-full" disabled={loading} aria-label={loading ? "Please wait" : undefined}>
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Sign In'}
                         </Button>
 
                         <div className="text-center text-sm text-muted-foreground mt-4">

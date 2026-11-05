@@ -224,7 +224,11 @@ export const ExpenseBreakdown = () => {
                         </div>
 
                         {trendData.some((item) => item.amount > 0) ? (
-                            <div className="flex-1 min-h-0">
+                            <div
+                                className="flex-1 min-h-0"
+                                role="img"
+                                aria-label={`Spending trend over ${trendData.length} months, ${formatCurrency(selectedCategoryTotal)} in total`}
+                            >
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={trendData} margin={{ top: 10, right: 20, left: 5, bottom: 5 }}>
                                         <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />

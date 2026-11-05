@@ -256,6 +256,11 @@ const NetWorthPage = () => {
                             description="Add or edit an asset or liability to start building a trend line."
                         />
                     ) : (
+                        <div
+                            className="h-full w-full"
+                            role="img"
+                            aria-label={`Net worth trend across ${chartData.length} snapshots, latest ${formatCurrency(chartData[chartData.length - 1].netWorth)}`}
+                        >
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                                 <defs>
@@ -288,6 +293,7 @@ const NetWorthPage = () => {
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
+                        </div>
                     )}
                 </CardContent>
             </Card>

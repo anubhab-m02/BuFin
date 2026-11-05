@@ -43,10 +43,11 @@ const CategoryManager = () => {
                             Actually, context has protection for DEFAULT_CATEGORIES. */}
                         <button
                             onClick={() => deleteCategory(category)}
-                            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
                             title="Delete Category"
+                            aria-label={`Delete category ${category}`}
                         >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                         </button>
                     </div>
                 ))}
