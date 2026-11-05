@@ -33,6 +33,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hours
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Verified against when a sign-in names an unknown email, so that case costs the same bcrypt
+# work as a real account and response time does not reveal which emails are registered.
+DUMMY_PASSWORD_HASH = pwd_context.hash("not-a-real-password")
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
