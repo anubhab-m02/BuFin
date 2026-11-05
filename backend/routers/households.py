@@ -22,7 +22,7 @@ class HouseholdCreate(BaseModel):
 class HouseholdResponse(BaseModel):
     id: str
     name: str
-    created_by: str
+    created_by: Optional[str] = None  # NULL once the creator deleted their account
     created_at: str
     role: str  # the calling user's role in this household
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Optional
@@ -151,15 +152,70 @@ def delete_account(db: Session = Depends(get_db), current_user: models.User = De
         # fully orphaned by this deletion, so it gets deleted outright below instead.
         solo_households_to_delete.append(m.household_id)
 
-    # Manually delete related data since we don't have cascade set up in models (safer for now)
-    db.query(models.Transaction).filter(models.Transaction.user_id == current_user.id).delete()
-    db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == current_user.id).delete()
-    db.query(models.Debt).filter(models.Debt.user_id == current_user.id).delete()
-    db.query(models.WishlistItem).filter(models.WishlistItem.user_id == current_user.id).delete()
-    db.query(models.HouseholdMember).filter(models.HouseholdMember.user_id == current_user.id).delete()
+    uid = current_user.id
 
+    # A household the leaver is alone in goes away entirely, including its rows: nobody else
+    # can be relying on them. Done first so those rows are not mistaken for shared ones below.
     for household_id in solo_households_to_delete:
+        # Only the leaver's rows (and rows already anonymized by an earlier deletion) go. Rows
+        # from members who left earlier still belong to them: _delete_household reverts those
+        # to personal instead of deleting them.
+        goal_ids = [
+            g.id for g in db.query(models.Goal.id).filter(
+                models.Goal.household_id == household_id,
+                or_(models.Goal.user_id == uid, models.Goal.user_id.is_(None)),
+            )
+        ]
+        if goal_ids:
+            db.query(models.GoalContribution).filter(models.GoalContribution.goal_id.in_(goal_ids)).delete(synchronize_session=False)
+            db.query(models.Goal).filter(models.Goal.id.in_(goal_ids)).delete(synchronize_session=False)
+        db.query(models.Transaction).filter(
+            models.Transaction.household_id == household_id,
+            or_(models.Transaction.user_id == uid, models.Transaction.user_id.is_(None)),
+        ).delete(synchronize_session=False)
         _delete_household(db, household_id)
+
+    # Household rows that other members still use stay, anonymized (user_id NULL): the shared
+    # ledger and balances must not change because one member left. recurring_plan_id and
+    # linked_debt_id point at the leaver's own plans/debts, which are deleted below.
+    db.query(models.Transaction).filter(
+        models.Transaction.user_id == uid, models.Transaction.household_id.isnot(None)
+    ).update({"user_id": None, "recurring_plan_id": None, "linked_debt_id": None}, synchronize_session=False)
+    db.query(models.Goal).filter(
+        models.Goal.user_id == uid, models.Goal.household_id.isnot(None)
+    ).update({"user_id": None}, synchronize_session=False)
+
+    # Other users' rows may still point at the leaver's debts/plans (older data could link any debt);
+    # clear those pointers or the deletes below violate foreign keys.
+    leaver_debt_ids = [d.id for d in db.query(models.Debt.id).filter(models.Debt.user_id == uid)]
+    if leaver_debt_ids:
+        db.query(models.Transaction).filter(models.Transaction.linked_debt_id.in_(leaver_debt_ids)).update({"linked_debt_id": None}, synchronize_session=False)
+    leaver_plan_ids = [p.id for p in db.query(models.RecurringPlan.id).filter(models.RecurringPlan.user_id == uid)]
+    if leaver_plan_ids:
+        db.query(models.Transaction).filter(models.Transaction.recurring_plan_id.in_(leaver_plan_ids)).update({"recurring_plan_id": None}, synchronize_session=False)
+
+    # Everything else is purely personal and is deleted (no cascade is configured in the models).
+    personal_goal_ids = [g.id for g in db.query(models.Goal.id).filter(models.Goal.user_id == uid)]
+    if personal_goal_ids:
+        db.query(models.GoalContribution).filter(models.GoalContribution.goal_id.in_(personal_goal_ids)).delete(synchronize_session=False)
+    db.query(models.GoalContribution).filter(models.GoalContribution.user_id == uid).update({"user_id": None}, synchronize_session=False)
+    db.query(models.Goal).filter(models.Goal.user_id == uid).delete(synchronize_session=False)
+    # Transactions before the plans/debts they reference.
+    db.query(models.Transaction).filter(models.Transaction.user_id == uid).delete(synchronize_session=False)
+    db.query(models.RecurringPlan).filter(models.RecurringPlan.user_id == uid).delete(synchronize_session=False)
+    db.query(models.Debt).filter(models.Debt.user_id == uid).delete(synchronize_session=False)
+    for model in (models.WishlistItem, models.Budget, models.Asset, models.Liability, models.NetWorthSnapshot):
+        db.query(model).filter(model.user_id == uid).delete(synchronize_session=False)
+    session_ids = [s.id for s in db.query(models.ChatSession.id).filter(models.ChatSession.user_id == uid)]
+    if session_ids:
+        db.query(models.ChatMessage).filter(models.ChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+    db.query(models.ChatSession).filter(models.ChatSession.user_id == uid).delete(synchronize_session=False)
+
+    # Invites the leaver issued go; invites they used keep existing, just without a user.
+    db.query(models.HouseholdInvite).filter(models.HouseholdInvite.created_by == uid).delete(synchronize_session=False)
+    db.query(models.HouseholdInvite).filter(models.HouseholdInvite.used_by == uid).update({"used_by": None}, synchronize_session=False)
+    db.query(models.Household).filter(models.Household.created_by == uid).update({"created_by": None}, synchronize_session=False)
+    db.query(models.HouseholdMember).filter(models.HouseholdMember.user_id == uid).delete(synchronize_session=False)
 
     # Delete user
     db.delete(current_user)

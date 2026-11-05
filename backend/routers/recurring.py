@@ -127,7 +127,8 @@ def read_recurring_plans(db: Session = Depends(get_db), current_user: models.Use
 
 @router.post("/recurring_plans", response_model=schemas.RecurringPlan)
 def create_recurring_plan(plan: schemas.RecurringPlanCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    db_plan = models.RecurringPlan(**plan.dict(), user_id=current_user.id)
+    # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
+    db_plan = models.RecurringPlan(**plan.dict(exclude={"id"}), user_id=current_user.id)
     if not db_plan.id:
         db_plan.id = str(uuid.uuid4())
     db.add(db_plan)

@@ -14,7 +14,8 @@ def read_debts(db: Session = Depends(get_db), current_user: models.User = Depend
 
 @router.post("/debts", response_model=schemas.Debt)
 def create_debt(debt: schemas.DebtCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    db_debt = models.Debt(**debt.dict(), user_id=current_user.id)
+    # Ids are generated here; a client-sent id could collide with (and 500 on) another user's row.
+    db_debt = models.Debt(**debt.dict(exclude={"id"}), user_id=current_user.id)
     if not db_debt.id:
         db_debt.id = str(uuid.uuid4())
     db.add(db_debt)
