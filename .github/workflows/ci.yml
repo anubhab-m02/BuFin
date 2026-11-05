@@ -5,9 +5,19 @@ on:
   push:
     branches: [main]
 
+# CI only reads the repository; nothing here needs a token with write access.
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR supersedes the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,12 +32,34 @@ jobs:
       # frontend files this PR touched. Switch to `npm run lint` once #91 is closed.
       - name: Lint changed files
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          files=$(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" -- 'src/*.js' 'src/*.jsx' 'src/**/*.js' 'src/**/*.jsx')
+          files=$(git diff --name-only --diff-filter=ACMR "origin/$BASE_REF...HEAD" -- 'src/*.js' 'src/*.jsx' 'src/**/*.js' 'src/**/*.jsx')
           if [ -n "$files" ]; then npx eslint $files; else echo "no frontend source changes"; fi
 
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A throwaway PostgreSQL 16 for the migrations and the tests (BuFin is Postgres-only, ADR-6).
+    # The password only protects this job's own container.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bufin
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: bufin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bufin -d bufin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://bufin:ci_password@localhost:5432/bufin
+      TEST_DATABASE_URL: postgresql+psycopg://bufin:ci_password@localhost:5432/bufin_test
     defaults:
       run:
         working-directory: backend
@@ -37,12 +69,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - run: pip install -r requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
       - name: App imports cleanly
-        # database.py requires DATABASE_URL at import; the engine is lazy, so no server is needed.
-        env:
-          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/ci
         run: python -c "import main"
       - name: Alembic has a single head
         run: python scripts/check_alembic_heads.py
+      - name: Migrations build the schema from nothing and match the models
+        run: |
+          alembic upgrade head
+          alembic check
+      - name: Migrations can be undone and redone
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+      - name: Tests
+        # conftest.py builds bufin_test from the migrations and truncates it between tests.
+        run: python -m pytest -q

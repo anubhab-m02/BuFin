@@ -42,7 +42,7 @@ def pg_engine():
     name = url.database
     assert name and name.endswith("_test"), f"refusing to run tests against {name!r}: the database name must end in _test"
     # The fixture drops the whole public schema, so it also refuses any non-local server unless told otherwise.
-    assert url.host in (None, "localhost", "127.0.0.1", "::1") or os.environ.get("BUFIN_TEST_ALLOW_REMOTE") == "1", (
+    assert url.host in ("localhost", "127.0.0.1", "::1") or os.environ.get("BUFIN_TEST_ALLOW_REMOTE") == "1", (
         f"refusing to run tests against remote host {url.host!r} (set BUFIN_TEST_ALLOW_REMOTE=1 to override)"
     )
     try:

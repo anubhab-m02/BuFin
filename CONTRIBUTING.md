@@ -13,6 +13,7 @@ Thanks for your interest in contributing.
 
 - Database: `docker compose up -d postgres`, then `cd backend && alembic upgrade head` (PostgreSQL only; `DATABASE_URL` from `.env.example`). Tests need that Postgres too: they build a throwaway `bufin_test` database from the migrations
 - Backend: `cd backend && uvicorn main:app --reload` (port 8000)
+- Backend tests: `cd backend && python -m pytest` (needs the compose Postgres running; CI runs the same tests against a Postgres service container)
 - Frontend: `npm run dev` (port 5173)
 - Schema changes go through Alembic: `cd backend && alembic revision --autogenerate -m "..."` then `alembic upgrade head`
 
