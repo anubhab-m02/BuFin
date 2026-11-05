@@ -20,6 +20,8 @@ bufin.db
 # Database
 *.db
 backend/*.db
+# Backups of the local database (e.g. bufin.db.backup-<timestamp>) hold real personal data
+*.db.backup*
 .env.*.local
 
 # Mac
