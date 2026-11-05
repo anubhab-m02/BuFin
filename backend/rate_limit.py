@@ -49,6 +49,36 @@ class SlidingWindowLimiter:
                     headers={"Retry-After": str(retry_after)},
                 )
 
+    def hit(self, key: str) -> None:
+        """Atomically refuse or count one attempt: raise 429 if `key` is out of allowance,
+        otherwise record it, under a single lock. Use this up front, before the slow work
+        (a bcrypt check), so a burst of parallel guesses cannot all pass a separate check()
+        before any of them is recorded. Hand the attempt back with release() on success."""
+        with self._lock:
+            hits = self._prune(key)
+            if len(hits) >= self.limit:
+                retry_after = max(1, math.ceil(hits[0] + self.window - self._clock()))
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many attempts. Please wait before trying again.",
+                    headers={"Retry-After": str(retry_after)},
+                )
+            if not hits:
+                self._hits[key] = hits = deque()
+            hits.append(self._clock())
+            self._hits.move_to_end(key)
+            while len(self._hits) > self._max_keys:
+                self._hits.popitem(last=False)
+
+    def release(self, key: str) -> None:
+        """Give back the most recent attempt (the guess turned out to be a legitimate success)."""
+        with self._lock:
+            hits = self._hits.get(key)
+            if hits:
+                hits.pop()
+                if not hits:
+                    del self._hits[key]
+
     def record(self, key: str) -> None:
         with self._lock:
             hits = self._prune(key)

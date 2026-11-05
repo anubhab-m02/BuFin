@@ -176,3 +176,81 @@ def test_the_window_expires_and_memory_is_bounded():
     for i in range(500):
         limiter.record(f"key{i}")
     assert limiter.size() <= 50
+
+
+# --- review follow-ups -----------------------------------------------------------------------
+
+def test_a_burst_of_parallel_guesses_cannot_exceed_the_limit():
+    import threading
+
+    limiter = rate_limit.SlidingWindowLimiter(limit=5, window_seconds=60)
+    allowed, refused, gate = [], [], threading.Barrier(50)
+
+    def attempt():
+        gate.wait()
+        try:
+            limiter.hit("victim")
+            allowed.append(1)
+        except Exception:
+            refused.append(1)
+
+    threads = [threading.Thread(target=attempt) for _ in range(50)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(allowed) == 5 and len(refused) == 45
+
+
+def test_release_gives_an_attempt_back():
+    limiter = rate_limit.SlidingWindowLimiter(limit=1, window_seconds=60)
+    limiter.hit("k")
+    limiter.release("k")
+    limiter.hit("k")  # would raise if the first hit were still counted
+
+
+def test_email_case_and_whitespace_variants_share_one_lockout(env):
+    client, _ = env
+    signup(client)
+    for variant in ("a@example.com", "A@Example.com", " a@example.com ", "A@EXAMPLE.COM", "a@example.com"):
+        client.post("/api/auth/login", json={"email": variant, "password": "wrong-password"})
+    assert client.post("/api/auth/login", json={"email": "a@EXAMPLE.com", "password": GOOD}).status_code == 429
+
+
+def test_guessing_across_many_accounts_from_one_client_is_capped(env):
+    client, _ = env
+    statuses = [client.post("/api/auth/login", json={"email": f"nobody{i}@example.com", "password": "wrong-password"}).status_code
+                for i in range(32)]
+    assert statuses[:30] == [401] * 30 and statuses[30] == 429
+
+
+def test_an_unknown_email_gets_the_same_answer_as_a_wrong_password(env):
+    client, _ = env
+    signup(client)
+    unknown = client.post("/api/auth/login", json={"email": "ghost@example.com", "password": "wrong-password"})
+    wrong = client.post("/api/auth/login", json={"email": "a@example.com", "password": "wrong-password"})
+    assert unknown.status_code == wrong.status_code == 401 and unknown.json() == wrong.json()
+
+
+def test_an_overlong_sign_in_password_is_rejected_not_a_server_error(env):
+    client, _ = env
+    signup(client)
+    assert client.post("/api/auth/login", json={"email": "a@example.com", "password": "x" * 5000}).status_code == 422
+
+
+def test_the_new_password_must_differ_from_the_old_one(env):
+    client, _ = env
+    token = signup(client).json()["access_token"]
+    response = client.post("/api/auth/change-password", headers=bearer(token), json={"old_password": GOOD, "new_password": GOOD})
+    assert response.status_code == 400
+    assert client.get("/api/auth/me", headers=bearer(token)).status_code == 200  # nothing was revoked
+
+
+def test_a_signup_that_loses_a_race_for_the_email_is_a_400_not_a_500(env, monkeypatch):
+    client, Session = env
+    signup(client, "taken@example.com")
+    real_first = auth.func.lower  # the existence check is bypassed so the INSERT itself collides
+
+    class Blind:
+        def __call__(self, column):
+            return real_first("nothing-matches-this")
+    monkeypatch.setattr(auth.func, "lower", Blind())
+    assert signup(client, "taken@example.com").status_code == 400

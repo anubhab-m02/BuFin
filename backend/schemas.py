@@ -52,7 +52,8 @@ class UserUpdate(BaseModel):
 
 class UserLogin(BaseModel):
     email: str
-    password: str
+    # Capped at the longest password the policy allows: an unbounded string would be hashed as-is.
+    password: str = Field(max_length=128)
 
 class UserChangePassword(BaseModel):
     old_password: str

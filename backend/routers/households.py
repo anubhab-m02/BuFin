@@ -153,11 +153,11 @@ def create_invite(household_id: str, db: Session = Depends(get_db), current_user
 @router.post("/households/join", response_model=HouseholdResponse)
 def join_household(join: JoinRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # A valid code grants access to a household's finances, so wrong guesses are limited per user.
-    rate_limit.invite_failures.check(current_user.id)
+    rate_limit.invite_failures.hit(current_user.id)
     invite = db.query(models.HouseholdInvite).filter(models.HouseholdInvite.code == join.code.strip().upper()).first()
     if not invite:
-        rate_limit.invite_failures.record(current_user.id)
         raise HTTPException(status_code=404, detail="Invalid invite code")
+    rate_limit.invite_failures.release(current_user.id)  # a real code is not a failed guess
     if invite.used_by:
         raise HTTPException(status_code=400, detail="This invite has already been used")
     if datetime.fromisoformat(invite.expires_at) < datetime.now(timezone.utc):

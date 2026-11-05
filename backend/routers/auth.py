@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import Optional
@@ -58,8 +59,7 @@ def get_active_household_id(
 @router.post("/signup", response_model=schemas.Token)
 def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     client = rate_limit.client_key(request)
-    rate_limit.signups_by_client.check(client)
-    rate_limit.signups_by_client.record(client)
+    rate_limit.signups_by_client.hit(client)
 
     # Emails are case-insensitive: stored lowercase, and looked up that way, so "A@x.com" and
     # "a@x.com" cannot be two accounts.
@@ -76,7 +76,12 @@ def signup(request: Request, user: schemas.UserCreate, db: Session = Depends(get
         full_name=user.full_name
     )
     db.add(db_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two sign-ups for the same email raced past the check above; the unique index decided.
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email already registered")
     db.refresh(db_user)
     
     access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -93,8 +98,8 @@ def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_d
     # (even the right password is refused meanwhile); a separate, looser cap stops one client
     # from guessing across many accounts.
     pair = f"{client}|{email}"
-    rate_limit.login_failures.check(pair)
-    rate_limit.login_failures_by_client.check(client)
+    rate_limit.login_failures.hit(pair)
+    rate_limit.login_failures_by_client.hit(client)
 
     db_user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
     # An unknown email still pays for one bcrypt check, so response time does not reveal which
@@ -102,14 +107,13 @@ def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_d
     stored_hash = db_user.hashed_password if db_user else auth_utils.DUMMY_PASSWORD_HASH
     password_ok = auth_utils.verify_password(user.password, stored_hash)
     if not db_user or not password_ok:
-        rate_limit.login_failures.record(pair)
-        rate_limit.login_failures_by_client.record(client)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     rate_limit.login_failures.reset(pair)
+    rate_limit.login_failures_by_client.release(client)  # only failures count against the client-wide cap
 
     access_token_expires = timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth_utils.create_access_token(
@@ -146,11 +150,12 @@ def update_user_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db
 @router.post("/change-password")
 def change_password(passwords: schemas.UserChangePassword, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     # A stolen session must not be able to guess the current password at full speed.
-    rate_limit.password_change_failures.check(current_user.id)
+    rate_limit.password_change_failures.hit(current_user.id)
     if not auth_utils.verify_password(passwords.old_password, current_user.hashed_password):
-        rate_limit.password_change_failures.record(current_user.id)
         raise HTTPException(status_code=400, detail="Incorrect old password")
     rate_limit.password_change_failures.reset(current_user.id)
+    if passwords.new_password == passwords.old_password:
+        raise HTTPException(status_code=400, detail="The new password must be different from the current one")
 
     current_user.hashed_password = auth_utils.get_password_hash(passwords.new_password)
     # Revoke every token issued so far (a stolen one included). This request's own session
