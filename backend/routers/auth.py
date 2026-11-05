@@ -28,7 +28,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except auth_utils.JWTError:
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.email == token_data.email).first()
+    user = db.query(models.User).filter(func.lower(models.User.email) == token_data.email.lower()).first()
     if user is None:
         raise credentials_exception
     # A token is only valid for the version it was issued under; changing the password bumps the

@@ -5,7 +5,7 @@ Describes `main` as of November 2026. Pair with `HLD.md`.
 ## 1. Backend
 
 ### 1.1 Request lifecycle
-`main.py` creates the FastAPI app, adds `CORSMiddleware`, mounts ten routers under `/api`, and no longer creates tables at startup: PostgreSQL is the only database (`DATABASE_URL` is required) and the schema comes from migrations (a temporary `scripts/create_schema.py` until the baseline in #164 lands).
+`main.py` creates the FastAPI app, adds `CORSMiddleware`, mounts ten routers under `/api`, and no longer creates tables at startup: PostgreSQL is the only database (`DATABASE_URL` is required) and the schema comes only from Alembic migrations (`alembic upgrade head`).
 
 Dependencies injected into handlers:
 
@@ -84,7 +84,7 @@ Idempotent because the anchor always moves forward from the last tagged row. Kno
 **Goal contribution diff** (`goals.py`): the client sends the new total; the server computes `delta = new - old` and stores a signed contribution tagged to the caller.
 
 ### 1.5 Migrations
-Alembic, linear chain, single head expected. Two earlier collisions came from parallel branches with the same `down_revision`. The old baseline assumed tables created by `create_all`, so `alembic upgrade head` does not work on an empty database; #164 replaces the chain with a Postgres baseline.
+Alembic, linear chain, single head expected. Two earlier collisions came from parallel branches with the same `down_revision`. The chain starts at `b164baseline0`, one Postgres baseline that builds the whole schema, so `alembic upgrade head` works on an empty database (the SQLite-era chain was removed in #164). `tests/test_schema.py` fails if the models and the migration drift apart. Database rules: money is `NUMERIC(15,2)` (floats in Python, rounded to cents at the API), days are `DATE` (API: `YYYY-MM-DD`), timestamps are `timestamptz`, fixed-value columns have `CHECK` constraints, foreign keys carry `ondelete` rules that mirror `delete_account` and the household logic, and emails are unique on `lower(email)`.
 
 ### 1.6 Error handling
 Handlers raise `HTTPException`. There is no global exception layer other than one handler mapping Gemini quota errors to 429. No structured logging or request ids.

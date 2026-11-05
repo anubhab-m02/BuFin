@@ -99,9 +99,9 @@ cp .env.example .env
 ```bash
 # From the project root
 docker compose up -d postgres
-cd backend && python scripts/create_schema.py
+cd backend && alembic upgrade head
 ```
-   BuFin supports PostgreSQL only; `DATABASE_URL` is required and the app will not start without it. The app no longer creates tables itself. `create_schema.py` is temporary: the schema milestone (#164) replaces it with an Alembic baseline, after which you recreate the database with `docker compose down -v`.
+   BuFin supports PostgreSQL only; `DATABASE_URL` is required and the app will not start without it. The app never creates tables itself; the schema comes only from Alembic migrations, so run `alembic upgrade head` again after pulling new ones. If you set up the database from the temporary `create_schema.py` script, recreate it once with `docker compose down -v`.
 
 4. **Set up the frontend**
 ```bash

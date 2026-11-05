@@ -3,9 +3,6 @@ import datetime
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 import auth_utils
 import models
@@ -18,11 +15,8 @@ GOOD = "correct-horse-1"
 
 
 @pytest.fixture
-def env():
-    # Throwaway in-memory database. Never touches bufin.db.
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    models.Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
+def env(session_factory):
+    Session = session_factory
 
     def override_db():
         with Session() as db:
@@ -151,7 +145,8 @@ def test_new_invite_codes_are_longer_and_old_short_ones_still_work(env):
     with Session() as db:  # a code issued before this change
         db.add(models.HouseholdInvite(id="old", household_id=household["id"], code="ABCD1234",
                                       created_by=db.query(models.User).filter_by(email="owner@example.com").one().id,
-                                      expires_at=(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).isoformat()))
+                                      expires_at=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1),
+                                      created_at=datetime.datetime.now(datetime.timezone.utc)))
         db.commit()
     assert client.post("/api/households/join", headers=bearer(joiner), json={"code": "abcd1234"}).status_code == 200
 

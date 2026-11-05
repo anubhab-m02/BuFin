@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Annotated, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from database import get_db
 import models, schemas
@@ -16,30 +16,34 @@ router = APIRouter()
 
 class GoalBase(BaseModel):
     name: str
-    targetAmount: float
-    targetDate: Optional[str] = None
+    targetAmount: schemas.Money
+    targetDate: schemas.OptionalIsoDate = None
     icon: Optional[str] = "PiggyBank"
     fundingSource: Optional[str] = "manual"
-    type: Optional[str] = "savings"
-    projectedReturnRate: Optional[float] = 0.0
+    type: Literal['savings', 'investment'] = "savings"
+    projectedReturnRate: Optional[Annotated[float, Field(ge=0, le=999.9999, allow_inf_nan=False)]] = 0.0  # NUMERIC(7,4)
 
 class GoalCreate(GoalBase):
     pass
 
 class GoalUpdate(BaseModel):
-    currentAmount: Optional[float] = None
+    currentAmount: Optional[schemas.NonNegMoney] = None
     name: Optional[str] = None
-    targetAmount: Optional[float] = None
+    targetAmount: Optional[schemas.Money] = None
 
 class GoalContributionResponse(BaseModel):
     user_id: Optional[str] = None  # NULL once the member who made it deleted their account
     amount: float
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 class GoalResponse(GoalBase):
     id: str
+    targetAmount: float
+    targetDate: Optional[schemas.Day] = None
+    type: str
+    projectedReturnRate: Optional[float] = 0.0
     user_id: Optional[str] = None  # NULL once the member who created it deleted their account
     household_id: Optional[str] = None
     currentAmount: float
@@ -49,15 +53,16 @@ class GoalResponse(GoalBase):
 
 class WishlistItemBase(BaseModel):
     name: str
-    cost: float
+    cost: schemas.NonNegMoney
 
 class WishlistItemCreate(WishlistItemBase):
     pass
 
 class WishlistItemResponse(WishlistItemBase):
     id: str
+    cost: float
     user_id: str
-    addedAt: str
+    addedAt: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,20 +128,21 @@ def update_goal(goal_id: str, goal_update: GoalUpdate, db: Session = Depends(get
     if not db_goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    update_data = goal_update.model_dump(exclude_unset=True)
+    # An explicit null would write NULL into a NOT NULL column; for an update it just means "unchanged".
+    update_data = {k: v for k, v in goal_update.model_dump(exclude_unset=True).items() if v is not None}
 
     # The frontend sends the NEW total (goal.currentAmount + delta), not the delta
     # itself, so the delta - and who made it - has to be derived here by diffing
     # against the pre-update value, before it gets overwritten below.
     if 'currentAmount' in update_data:
-        delta = update_data['currentAmount'] - db_goal.currentAmount
+        delta = round(update_data['currentAmount'] - db_goal.currentAmount, 2)
         if delta != 0:
             db.add(models.GoalContribution(
                 id=str(uuid.uuid4()),
                 goal_id=goal_id,
                 user_id=current_user.id,
                 amount=delta,
-                created_at=datetime.now(timezone.utc).isoformat()
+                created_at=datetime.now(timezone.utc)
             ))
 
     for key, value in update_data.items():
@@ -158,7 +164,7 @@ def delete_goal(goal_id: str, db: Session = Depends(get_db), current_user: model
     return {"message": "Goal deleted"}
 
 class ContributeRequest(BaseModel):
-    amount: float = Field(allow_inf_nan=False, ge=-1e12, le=1e12)  # positive = deposit, negative = withdrawal
+    amount: schemas.SignedMoney  # positive = deposit, negative = withdrawal
     date: schemas.IsoDate
 
     @field_validator("amount")
@@ -188,14 +194,17 @@ def contribute_to_goal(goal_id: str, body: ContributeRequest, db: Session = Depe
     # 0.1 is not exactly 0.3), so "withdraw everything" is not refused by a rounding error.
     saved = func.coalesce(models.Goal.currentAmount, 0)
     changed = db.query(models.Goal).filter(
-        models.Goal.id == goal_id, saved + body.amount >= -1e-9
+        models.Goal.id == goal_id, saved + body.amount >= -1e-9, saved + body.amount <= schemas.MAX_MONEY
     ).update({models.Goal.currentAmount: saved + body.amount}, synchronize_session=False)
     if not changed:
-        raise HTTPException(status_code=400, detail="You cannot withdraw more than is saved in this goal")
+        raise HTTPException(
+            status_code=400,
+            detail="This goal cannot hold that much" if body.amount > 0 else "You cannot withdraw more than is saved in this goal",
+        )
 
     db.add(models.GoalContribution(
         id=str(uuid.uuid4()), goal_id=goal_id, user_id=current_user.id, amount=body.amount,
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=datetime.now(timezone.utc),
     ))
     if body.amount > 0:
         transfer = new_transaction(
@@ -230,7 +239,7 @@ def create_wishlist_item(item: WishlistItemCreate, db: Session = Depends(get_db)
         # Include the UTC offset.  An offset-less ISO timestamp is interpreted as
         # local time by browsers, which made the client-side 48-hour cooldown
         # start several hours early for wishlist items created by this endpoint.
-        addedAt=datetime.now(timezone.utc).isoformat()
+        addedAt=datetime.now(timezone.utc)
     )
     db.add(db_item)
     db.commit()

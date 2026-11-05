@@ -86,7 +86,7 @@ def update_debt(debt_id: str, debt: schemas.DebtCreate, db: Session = Depends(ge
     if not db_debt:
         raise HTTPException(status_code=404, detail="Debt not found")
     
-    for key, value in debt.model_dump().items():
+    for key, value in debt.model_dump(exclude_unset=True).items():
         if key != 'id':
             setattr(db_debt, key, value)
 

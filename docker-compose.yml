@@ -1,6 +1,6 @@
 # Local development database. BuFin runs on PostgreSQL only (docs/architecture/DECISIONS.md, ADR-6).
 # Start it:   docker compose up -d postgres
-# Create the schema (once; temporary until the Alembic baseline):   cd backend && python scripts/create_schema.py
+# Create the schema (once, and after pulling new migrations):   cd backend && alembic upgrade head
 # Fixed development credentials, matching DATABASE_URL in .env.example; the port is bound to
 # 127.0.0.1 only. Production credentials come from the environment, never from this file.
 # Postgres applies the password only when the volume is first created: after changing it, run

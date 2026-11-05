@@ -1,9 +1,6 @@
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 import models
 from database import get_db
@@ -17,16 +14,9 @@ TABLES_OWNED_BY_A = [
 
 
 @pytest.fixture
-def env():
-    # Throwaway in-memory database with foreign keys enforced, like Postgres. Never touches bufin.db.
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+def env(session_factory):
 
-    @event.listens_for(engine, "connect")
-    def _fk_on(conn, _):
-        conn.execute("PRAGMA foreign_keys=ON")
-
-    models.Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
+    Session = session_factory
 
     with Session() as db:
         db.add_all([
@@ -45,8 +35,8 @@ def env():
             models.HouseholdMember(id="m3", household_id="h2", user_id="a", role="owner", joined_at="2025-01-01"),
             models.RecurringPlan(id="plan-a", user_id="a", name="Rent", amount=1.0, type="expense",
                                  frequency="monthly", expectedDate="1"),
-            models.Debt(id="debt-a", user_id="a", personName="Raj", amount=5.0, direction="owed", status="active"),
-            models.Debt(id="debt-b", user_id="b", personName="Sam", amount=5.0, direction="owed", status="active"),
+            models.Debt(id="debt-a", user_id="a", personName="Raj", amount=5.0, direction="payable", status="active"),
+            models.Debt(id="debt-b", user_id="b", personName="Sam", amount=5.0, direction="payable", status="active"),
         ])
         db.flush()
 
@@ -67,13 +57,13 @@ def env():
             models.Asset(id="as", user_id="a", name="Cash", category="cash", current_value=1.0, created_at="2025-01-01"),
             models.Liability(id="li", user_id="a", name="Loan", category="loan", current_balance=1.0, created_at="2025-01-01"),
             models.NetWorthSnapshot(id="nw", user_id="a", total_assets=1.0, total_liabilities=0.0, recorded_at="2025-01-01"),
-            models.ChatSession(id="cs", user_id="a", mode="coach", title="t", created_at="2025-01-01", updated_at="2025-01-01"),
-            models.HouseholdInvite(id="inv-a", household_id="h1", code="AAAA", created_by="a", expires_at="2030-01-01"),
-            models.HouseholdInvite(id="inv-b", household_id="h1", code="BBBB", created_by="b", expires_at="2030-01-01", used_by="a"),
+            models.ChatSession(id="cs", user_id="a", mode="analyst", title="t", created_at="2025-01-01", updated_at="2025-01-01"),
+            models.HouseholdInvite(id="inv-a", household_id="h1", code="AAAA", created_by="a", expires_at="2030-01-01", created_at="2025-01-01"),
+            models.HouseholdInvite(id="inv-b", household_id="h1", code="BBBB", created_by="b", expires_at="2030-01-01", used_by="a", created_at="2025-01-01"),
         ])
         db.flush()
         db.add_all([
-            models.ChatMessage(id="cm", session_id="cs", role="user", content="hi"),
+            models.ChatMessage(id="cm", session_id="cs", role="user", content="hi", created_at="2025-01-01"),
             models.GoalContribution(id="gc-p", goal_id="g-personal", user_id="a", amount=1.0, created_at="2025-01-01"),
             models.GoalContribution(id="gc-a", goal_id="g-shared", user_id="a", amount=1.0, created_at="2025-01-01"),
             models.GoalContribution(id="gc-b", goal_id="g-shared", user_id="b", amount=1.0, created_at="2025-01-02"),
@@ -154,7 +144,7 @@ def test_anonymized_household_goals_still_serialize_and_stay_editable(env):
 @pytest.mark.parametrize("path,body", [
     ("/api/transactions", {"amount": 1, "category": "c", "description": "d", "type": "expense", "date": "2025-01-01"}),
     ("/api/budgets", {"category": "Rent", "monthlyLimit": 1}),
-    ("/api/debts", {"personName": "p", "amount": 1, "direction": "owed"}),
+    ("/api/debts", {"personName": "p", "amount": 1, "direction": "payable"}),
     ("/api/recurring_plans", {"name": "n", "amount": 1, "type": "expense", "frequency": "monthly", "expectedDate": "1"}),
 ])
 def test_client_supplied_ids_are_ignored_on_create(env, path, body):
@@ -192,7 +182,7 @@ def test_other_users_links_to_the_leavers_debts_and_plans_do_not_block_deletion(
     client, Session, _ = env
     with Session() as db:  # legacy data: the API no longer allows linking someone else's debt
         db.add(models.Transaction(id="t-linked", user_id="b", amount=1.0, type="expense", necessity="variable",
-                                  category="c", description="d", merchant="m", date="2025-01-01",
+                                  category="c", description="d", merchant="m", date="2025-01-02",
                                   linked_debt_id="debt-a", recurring_plan_id="plan-a"))
         db.commit()
     assert client.delete("/api/auth/me").status_code == 200

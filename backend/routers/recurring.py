@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import models, schemas
@@ -57,26 +58,18 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
     plans = db.query(models.RecurringPlan).filter(
         models.RecurringPlan.user_id == current_user.id,
         models.RecurringPlan.frequency == 'monthly'
-    ).all()
+    ).order_by(models.RecurringPlan.id).all()
 
     for plan in plans:
-        end_date = None
-        if plan.endDate:
-            try:
-                end_date = date.fromisoformat(plan.endDate[:10])
-            except ValueError:
-                end_date = None
+        end_date = plan.endDate  # a date or None (DATE column)
+        new_rows = []
 
         last_tx = db.query(models.Transaction).filter(
             models.Transaction.recurring_plan_id == plan.id
         ).order_by(models.Transaction.date.desc()).first()
 
         if last_tx:
-            try:
-                last_date = date.fromisoformat(last_tx.date[:10])
-            except ValueError:
-                continue
-            year, month = _add_month(last_date.year, last_date.month)
+            year, month = _add_month(last_tx.date.year, last_tx.date.month)
         else:
             # No materialized history yet, and RecurringPlan has no created_at field to
             # know how far back this plan "should" go - only ever consider the current
@@ -100,10 +93,10 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
             # the whole month has already elapsed by construction)
 
             if is_due:
-                db.add(models.Transaction(
+                new_rows.append(models.Transaction(
                     id=str(uuid.uuid4()),
                     user_id=current_user.id,
-                    date=occurrence_date.isoformat(),
+                    date=occurrence_date,
                     amount=plan.amount,
                     category='Income' if plan.type == 'income' else 'Bills',
                     description=plan.name,
@@ -115,6 +108,15 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
                 ))
 
             year, month = _add_month(year, month)
+
+        # One savepoint per plan: if a concurrent request already materialized one of these
+        # occurrences (unique plan+date index), only this plan's rows are dropped - theirs are the
+        # rows we wanted - and the other plans' new rows still commit.
+        try:
+            with db.begin_nested():
+                db.add_all(new_rows)
+        except IntegrityError:
+            pass
 
     db.commit()
 

@@ -1,9 +1,6 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 import models
 from database import get_db
@@ -13,16 +10,9 @@ from routers.auth import get_active_household_id, get_current_user
 
 
 @pytest.fixture
-def env():
-    # Throwaway in-memory database with foreign keys enforced. Never touches bufin.db.
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+def env(session_factory):
 
-    @event.listens_for(engine, "connect")
-    def _fk_on(conn, _):
-        conn.execute("PRAGMA foreign_keys=ON")
-
-    models.Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
+    Session = session_factory
 
     with Session() as db:
         db.add_all([

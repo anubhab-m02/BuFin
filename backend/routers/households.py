@@ -24,14 +24,14 @@ class HouseholdResponse(BaseModel):
     id: str
     name: str
     created_by: Optional[str] = None  # NULL once the creator deleted their account
-    created_at: str
+    created_at: datetime
     role: str  # the calling user's role in this household
 
     model_config = ConfigDict(from_attributes=True)
 
 class InviteResponse(BaseModel):
     code: str
-    expires_at: str
+    expires_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,7 +43,7 @@ class MemberResponse(BaseModel):
     full_name: str
     email: str
     role: str
-    joined_at: str
+    joined_at: datetime
 
 class RoleUpdate(BaseModel):
     role: str  # only 'owner' is meaningful today (promotion) - see update_member_role
@@ -79,6 +79,16 @@ def _delete_household(db: Session, household_id: str):
     # Revert shared transactions/goals to personal rather than deleting them - a
     # household disappearing shouldn't take anyone's logged financial data with it.
     # (Each row's own user_id already tells you whose personal view it lands back in.)
+    # Rows whose owner already deleted their account have no personal view to land in (user_id is
+    # NULL), so they would become unreachable orphans; they go with the household, as in delete_account.
+    orphan_goal_ids = [g.id for g in db.query(models.Goal.id).filter(
+        models.Goal.household_id == household_id, models.Goal.user_id.is_(None))]
+    if orphan_goal_ids:
+        db.query(models.GoalContribution).filter(models.GoalContribution.goal_id.in_(orphan_goal_ids)).delete(synchronize_session=False)
+        db.query(models.Goal).filter(models.Goal.id.in_(orphan_goal_ids)).delete(synchronize_session=False)
+    db.query(models.Transaction).filter(
+        models.Transaction.household_id == household_id, models.Transaction.user_id.is_(None)
+    ).delete(synchronize_session=False)
     db.query(models.Transaction).filter(models.Transaction.household_id == household_id).update(
         {models.Transaction.household_id: None}, synchronize_session=False
     )
@@ -93,7 +103,7 @@ def _delete_household(db: Session, household_id: str):
 
 @router.post("/households", response_model=HouseholdResponse)
 def create_household(household: HouseholdCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     db_household = models.Household(
         id=str(uuid.uuid4()),
         name=household.name,
@@ -126,7 +136,7 @@ def get_households(db: Session = Depends(get_db), current_user: models.User = De
 def create_invite(household_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     _require_owner(db, household_id, current_user.id)
 
-    expires_at = (datetime.now(timezone.utc) + timedelta(days=INVITE_EXPIRY_DAYS)).isoformat()
+    expires_at = datetime.now(timezone.utc) + timedelta(days=INVITE_EXPIRY_DAYS)
     # 16 hex characters = 64 bits (codes were 8 characters / 32 bits, which a determined guesser
     # could brute-force). Hex keeps the existing case-insensitive join working, and codes issued
     # before this change stay valid. A collision is still vanishingly unlikely, but retry a few
@@ -140,7 +150,7 @@ def create_invite(household_id: str, db: Session = Depends(get_db), current_user
             created_by=current_user.id,
             expires_at=expires_at,
             used_by=None,
-            created_at=datetime.now(timezone.utc).isoformat()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(invite)
         try:
@@ -160,7 +170,7 @@ def join_household(join: JoinRequest, db: Session = Depends(get_db), current_use
     rate_limit.invite_failures.release(current_user.id)  # a real code is not a failed guess
     if invite.used_by:
         raise HTTPException(status_code=400, detail="This invite has already been used")
-    if datetime.fromisoformat(invite.expires_at) < datetime.now(timezone.utc):
+    if invite.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="This invite has expired")
 
     if _get_membership(db, invite.household_id, current_user.id):
@@ -171,7 +181,7 @@ def join_household(join: JoinRequest, db: Session = Depends(get_db), current_use
         household_id=invite.household_id,
         user_id=current_user.id,
         role="member",
-        joined_at=datetime.now(timezone.utc).isoformat()
+        joined_at=datetime.now(timezone.utc)
     ))
     invite.used_by = current_user.id
     db.commit()

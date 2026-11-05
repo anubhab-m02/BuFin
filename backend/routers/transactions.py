@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_, func
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import models, schemas
 from database import get_db
 from .auth import get_current_user, get_active_household_id
 import uuid
+from datetime import date as date_type
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ def _scope_filter(current_user: models.User, household_id: Optional[str]):
     return and_(models.Transaction.user_id == current_user.id, models.Transaction.household_id.is_(None))
 
 def new_transaction(current_user: models.User, household_id: Optional[str], *, amount: float,
-                    category: str, description: str, type: str, necessity: str, date: str,
+                    category: str, description: str, type: str, necessity: str, date: date_type,
                     linked_debt_id: Optional[str] = None) -> models.Transaction:
     """Build (not add) a transaction owned by the caller, for the multi-step money operations
     (repay a debt, borrow, move money to a goal) that record it in the same commit as the
@@ -48,7 +49,7 @@ def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, 
     transactions = (
         db.query(models.Transaction)
         .filter(_scope_filter(current_user, active_household_id))
-        .order_by(func.substr(models.Transaction.date, 1, 10).desc(), models.Transaction.date.desc(), models.Transaction.id.desc())
+        .order_by(models.Transaction.date.desc(), models.Transaction.id.desc())
         .offset(skip)
         .limit(limit)
         .all()
@@ -93,7 +94,7 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     _check_linked_debt(db, current_user, transaction.linked_debt_id)
-    for key, value in transaction.model_dump(exclude={"id"}).items(): # Don't update ID
+    for key, value in transaction.model_dump(exclude={"id"}, exclude_unset=True).items(): # Don't update ID; keep fields the client left out
         setattr(db_transaction, key, value)
 
     db.commit()

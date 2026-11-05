@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict
 from database import get_db
 import models
@@ -16,8 +16,8 @@ class ChatSessionResponse(BaseModel):
     id: str
     mode: str
     title: Optional[str] = None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,7 +26,7 @@ class ChatMessageResponse(BaseModel):
     session_id: str
     role: str
     content: str
-    created_at: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,10 +34,10 @@ class ChatSessionDetailResponse(ChatSessionResponse):
     messages: List[ChatMessageResponse] = []
 
 class ChatSessionCreate(BaseModel):
-    mode: str
+    mode: Literal['analyst', 'strategist', 'educator']
 
 class ChatMessageCreate(BaseModel):
-    role: str
+    role: Literal['user', 'assistant']
     content: str
 
 # --- Helpers ---
@@ -94,7 +94,7 @@ def get_session(session_id: str, db: Session = Depends(get_db), current_user: mo
 
 @router.post("/chat/sessions", response_model=ChatSessionResponse)
 def create_session(payload: ChatSessionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     session = models.ChatSession(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
@@ -117,7 +117,7 @@ def create_message(session_id: str, payload: ChatMessageCreate, db: Session = De
         session_id=session_id,
         role=payload.role,
         content=payload.content,
-        created_at=datetime.now(timezone.utc).isoformat()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(message)
 
