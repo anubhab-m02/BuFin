@@ -330,24 +330,24 @@ const ProfilePage = () => {
             >
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                        <Label>Full Name</Label>
-                        <Input
+                        <Label htmlFor="prof-full-name">Full Name</Label>
+                        <Input id="prof-full-name"
                             value={formData.full_name}
                             onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Monthly Income</Label>
-                            <Input
+                            <Label htmlFor="prof-monthly-income">Monthly Income</Label>
+                            <Input id="prof-monthly-income"
                                 type="number"
                                 value={formData.monthly_income}
                                 onChange={(e) => setFormData({ ...formData, monthly_income: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Currency</Label>
-                            <Select
+                            <Label htmlFor="prof-currency">Currency</Label>
+                            <Select id="prof-currency"
                                 value={formData.currency}
                                 onValueChange={(val) => setFormData({ ...formData, currency: val })}
                             >
@@ -359,8 +359,8 @@ const ProfilePage = () => {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Savings Goal</Label>
-                        <Input
+                        <Label htmlFor="prof-savings-goal">Savings Goal</Label>
+                        <Input id="prof-savings-goal"
                             type="number"
                             value={formData.savings_goal}
                             onChange={(e) => setFormData({ ...formData, savings_goal: e.target.value })}
@@ -368,8 +368,8 @@ const ProfilePage = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Financial Literacy</Label>
-                            <Select
+                            <Label htmlFor="prof-financial-literacy">Financial Literacy</Label>
+                            <Select id="prof-financial-literacy"
                                 value={formData.financial_literacy}
                                 onValueChange={(val) => setFormData({ ...formData, financial_literacy: val })}
                             >
@@ -379,8 +379,8 @@ const ProfilePage = () => {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Risk Tolerance</Label>
-                            <Select
+                            <Label htmlFor="prof-risk-tolerance">Risk Tolerance</Label>
+                            <Select id="prof-risk-tolerance"
                                 value={formData.risk_tolerance}
                                 onValueChange={(val) => setFormData({ ...formData, risk_tolerance: val })}
                             >
@@ -407,30 +407,30 @@ const ProfilePage = () => {
             >
                 <div className="space-y-4 py-2">
                     {passwordError && (
-                        <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-center gap-2">
+                        <div role="alert" className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4" />
                             {passwordError}
                         </div>
                     )}
                     <div className="space-y-2">
-                        <Label>Current Password</Label>
-                        <Input
+                        <Label htmlFor="prof-current-password">Current Password</Label>
+                        <Input id="prof-current-password"
                             type="password"
                             value={passwordData.oldPassword}
                             onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>New Password</Label>
-                        <Input
+                        <Label htmlFor="prof-new-password">New Password</Label>
+                        <Input id="prof-new-password"
                             type="password"
                             value={passwordData.newPassword}
                             onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Confirm New Password</Label>
-                        <Input
+                        <Label htmlFor="prof-confirm-new-password">Confirm New Password</Label>
+                        <Input id="prof-confirm-new-password"
                             type="password"
                             value={passwordData.confirmPassword}
                             onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}

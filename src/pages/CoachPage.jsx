@@ -292,7 +292,7 @@ const CoachPage = () => {
                                         <button
                                             type="button"
                                             onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id); }}
-                                            className="absolute right-1.5 opacity-0 group-hover:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity duration-fast shrink-0"
+                                            className="absolute right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity duration-fast shrink-0"
                                             title="Delete conversation"
                                             aria-label="Delete conversation"
                                         >
@@ -344,8 +344,11 @@ const CoachPage = () => {
                                                         href={href}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="inline-flex items-center justify-center min-w-[1.2rem] h-[1.2rem] px-1 ml-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors no-underline align-top"
+                                                        className={isCitation
+                                                            ? "inline-flex items-center justify-center min-w-6 h-6 px-1.5 ml-0.5 text-xs font-bold text-primary bg-primary/10 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors no-underline align-top"
+                                                            : "text-primary underline underline-offset-2"}
                                                         title={href}
+                                                        aria-label={isCitation && typeof children === 'string' ? `Source ${children}` : undefined}
                                                         {...props}
                                                     >
                                                         {children}

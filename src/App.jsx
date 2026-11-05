@@ -112,7 +112,7 @@ const AppLayout = () => {
         <Navigation />
 
         {/* Main Content Area - Canvas Mode (No Card) */}
-        <main className="flex-1 flex flex-col h-dvh overflow-hidden relative">
+        <main tabIndex={-1} className="flex-1 flex flex-col h-dvh overflow-hidden relative outline-none">
           <div ref={scrollRef} className="flex-1 overflow-y-auto pb-24 md:pb-0">
             <div className="max-w-6xl mx-auto md:p-6">
               <PageErrorBoundary key={pathname}>

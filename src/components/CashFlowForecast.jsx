@@ -121,7 +121,13 @@ const CashFlowForecast = () => {
                     <span className="text-xs font-normal text-muted-foreground">Projected net balance</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 p-2">
+            <CardContent
+                className="flex-1 min-h-0 p-2"
+                role="img"
+                aria-label={isPrivacyMode
+                    ? '8-week projected balance chart (amounts hidden)'
+                    : `8-week projected balance: ${forecast[0].balance.toLocaleString()} now, ${forecast[forecast.length - 1].balance.toLocaleString()} in week 8, lowest ${Math.min(...forecast.map((w) => w.balance)).toLocaleString()}`}
+            >
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={forecast} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />

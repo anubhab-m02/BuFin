@@ -65,6 +65,7 @@ const FutureTransactions = () => {
                                         className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                         onClick={(e) => { e.stopPropagation(); setEditingTransaction(t); }}
                                         title="Edit"
+                                        aria-label={`Edit ${t.description}`}
                                     >
                                         <Edit2 className="h-3.5 w-3.5" />
                                     </Button>
@@ -74,6 +75,7 @@ const FutureTransactions = () => {
                                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                                         onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
                                         title="Delete"
+                                        aria-label={`Delete ${t.description}`}
                                     >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </Button>

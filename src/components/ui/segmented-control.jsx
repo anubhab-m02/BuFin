@@ -13,6 +13,7 @@ const SegmentedControl = ({ options, value, onChange, className }) => {
                     <button
                         key={option.value}
                         type="button"
+                        aria-pressed={isActive}
                         onClick={() => onChange(option.value)}
                         className={cn(
                             "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-normal",

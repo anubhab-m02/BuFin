@@ -126,6 +126,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                             className="h-6 w-6 text-muted-foreground hover:text-foreground"
                                             onClick={onEdit}
                                             title="Edit Goal"
+                                            aria-label="Edit Goal"
                                         >
                                             <Pencil className="h-3.5 w-3.5" />
                                         </Button>
@@ -135,6 +136,7 @@ const JarVisualization = ({ goal, onEdit }) => {
                                             className="h-6 w-6 text-muted-foreground hover:text-destructive"
                                             onClick={() => deleteSavingsGoal(goal.id)}
                                             title="Delete Goal"
+                                            aria-label="Delete Goal"
                                         >
                                             <Trash2 className="h-3.5 w-3.5" />
                                         </Button>

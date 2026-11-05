@@ -94,7 +94,7 @@
     --warning-foreground: #ffffff;
 
     --border: #e1e5ea;
-    --input: #d4d9e0;
+    --input: #80858e; /* 3.7:1 on card, 3.3:1 on background (WCAG 1.4.11 needs 3:1) */
     --ring: #141414;
 
     /* Card radius 8px, control radius 6px (--radius-md below). */
@@ -153,7 +153,7 @@
     --warning-foreground: #451a03;
 
     --border: #25272c;
-    --input: #31343a;
+    --input: #666b74; /* 3.2:1 on card, 3.7:1 on background (WCAG 1.4.11 needs 3:1) */
     --ring: #f4f5f7;
 
     --data: #6ea0e8;

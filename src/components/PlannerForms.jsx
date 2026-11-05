@@ -107,8 +107,8 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                     {formData.type === 'loan' && (
                         <div className="grid grid-cols-3 gap-2 bg-secondary/30 p-3 rounded-md">
                             <div className="space-y-1">
-                                <Label className="text-xs">Principal</Label>
-                                <Input
+                                <Label htmlFor="pf-principal" className="text-xs">Principal</Label>
+                                <Input id="pf-principal"
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.principal}
@@ -116,8 +116,8 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs">Rate (%)</Label>
-                                <Input
+                                <Label htmlFor="pf-rate" className="text-xs">Rate (%)</Label>
+                                <Input id="pf-rate"
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.interestRate}
@@ -125,8 +125,8 @@ export const AddRecurringForm = ({ initialData, onSuccess, submitLabel }) => {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs">Months</Label>
-                                <Input
+                                <Label htmlFor="pf-months" className="text-xs">Months</Label>
+                                <Input id="pf-months"
                                     type="number"
                                     className="h-8 text-xs"
                                     value={formData.termMonths}
@@ -288,8 +288,8 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
 
                     {formData.isSplit && (
                         <div className="space-y-1">
-                            <Label className="text-xs">Split with (comma separated)</Label>
-                            <Input
+                            <Label htmlFor="pf-split-with-comma-separated" className="text-xs">Split with (comma separated)</Label>
+                            <Input id="pf-split-with-comma-separated"
                                 placeholder="e.g. Alice, Bob, Charlie"
                                 value={formData.splitWith}
                                 onChange={(e) => setFormData({ ...formData, splitWith: e.target.value })}
