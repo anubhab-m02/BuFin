@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import models, schemas
@@ -8,6 +8,8 @@ from .auth import get_current_user, get_active_household_id
 import uuid
 
 router = APIRouter()
+
+MAX_PAGE_SIZE = 1000
 
 # Household scope means "every transaction tagged to that household"; personal scope
 # (no active household) means "my own untagged transactions" - never a mix of both, so
@@ -18,8 +20,17 @@ def _scope_filter(current_user: models.User, household_id: Optional[str]):
     return and_(models.Transaction.user_id == current_user.id, models.Transaction.household_id.is_(None))
 
 @router.get("/transactions", response_model=List[schemas.Transaction])
-def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
-    transactions = db.query(models.Transaction).filter(_scope_filter(current_user, active_household_id)).offset(skip).limit(limit).all()
+def read_transactions(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=MAX_PAGE_SIZE), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
+    # Newest first, with id as a tiebreaker: an unordered LIMIT/OFFSET returns an arbitrary
+    # (and on Postgres, unstable) slice, so pages could skip or repeat rows.
+    transactions = (
+        db.query(models.Transaction)
+        .filter(_scope_filter(current_user, active_household_id))
+        .order_by(func.substr(models.Transaction.date, 1, 10).desc(), models.Transaction.date.desc(), models.Transaction.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return transactions
 
 @router.post("/transactions", response_model=schemas.Transaction)

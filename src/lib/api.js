@@ -13,6 +13,8 @@ const getScopeHeaders = (extra = {}) => {
     };
 };
 
+const TRANSACTIONS_PAGE_SIZE = 500;
+
 // The AI routes spend the shared Gemini quota, so the backend requires a logged-in user.
 const getAiHeaders = () => {
     const token = localStorage.getItem('token');
@@ -93,10 +95,23 @@ export const api = {
     },
 
     // Transactions
+    // The API pages the list (newest first). Balance, safe-to-spend and insights are computed
+    // from the whole ledger, so keep fetching until a short page says there is no more.
     getTransactions: async () => {
-        const response = await fetch(`${API_URL}/transactions`, { headers: getScopeHeaders() });
-        if (!response.ok) throw new Error('Failed to fetch transactions');
-        return response.json();
+        // Read the active persona once: a persona switch mid-load must not mix scopes.
+        const headers = getScopeHeaders();
+        const byId = new Map();
+        for (let skip = 0; ; skip += TRANSACTIONS_PAGE_SIZE) {
+            const response = await fetch(
+                `${API_URL}/transactions?skip=${skip}&limit=${TRANSACTIONS_PAGE_SIZE}`,
+                { headers }
+            );
+            if (!response.ok) throw new Error('Failed to fetch transactions');
+            const page = await response.json();
+            // Offset paging can repeat a row if one is inserted between pages.
+            page.forEach((tx) => byId.set(tx.id, tx));
+            if (page.length < TRANSACTIONS_PAGE_SIZE) return [...byId.values()];
+        }
     },
     createTransaction: async (transaction) => {
         const response = await fetch(`${API_URL}/transactions`, {
