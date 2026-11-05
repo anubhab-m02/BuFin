@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from database import get_db
-import models
+import models, schemas
 from .auth import get_current_user, get_active_household_id
+from .transactions import new_transaction
 import uuid
 from datetime import datetime, timezone
 
@@ -155,6 +156,63 @@ def delete_goal(goal_id: str, db: Session = Depends(get_db), current_user: model
     db.delete(db_goal)
     db.commit()
     return {"message": "Goal deleted"}
+
+class ContributeRequest(BaseModel):
+    amount: float = Field(allow_inf_nan=False, ge=-1e12, le=1e12)  # positive = deposit, negative = withdrawal
+    date: schemas.IsoDate
+
+    @field_validator("amount")
+    @classmethod
+    def amount_is_not_zero(cls, value):
+        if value == 0:
+            raise ValueError("amount must not be zero")
+        return value
+
+
+class ContributeResponse(BaseModel):
+    goal: GoalResponse
+    transaction: schemas.Transaction
+
+
+@router.post("/goals/{goal_id}/contribute", response_model=ContributeResponse)
+def contribute_to_goal(goal_id: str, body: ContributeRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):
+    """Move money into or out of a goal. The goal's saved amount, the contribution record and the
+    matching ledger transaction change in one commit, so the jar and the balance cannot disagree."""
+    db_goal = db.query(models.Goal).filter(models.Goal.id == goal_id, _scope_filter(current_user, active_household_id)).first()
+    if not db_goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    name = db_goal.name
+
+    # Conditional UPDATE keeps a concurrent withdrawal from driving the saved amount below zero.
+    # coalesce: a NULL saved amount counts as 0. The small epsilon absorbs float drift (0.1 + 0.1 +
+    # 0.1 is not exactly 0.3), so "withdraw everything" is not refused by a rounding error.
+    saved = func.coalesce(models.Goal.currentAmount, 0)
+    changed = db.query(models.Goal).filter(
+        models.Goal.id == goal_id, saved + body.amount >= -1e-9
+    ).update({models.Goal.currentAmount: saved + body.amount}, synchronize_session=False)
+    if not changed:
+        raise HTTPException(status_code=400, detail="You cannot withdraw more than is saved in this goal")
+
+    db.add(models.GoalContribution(
+        id=str(uuid.uuid4()), goal_id=goal_id, user_id=current_user.id, amount=body.amount,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    ))
+    if body.amount > 0:
+        transfer = new_transaction(
+            current_user, active_household_id, amount=body.amount, category='Savings',
+            description=f"Transfer to Goal: {name}", type='expense', necessity='essential', date=body.date,
+        )
+    else:
+        transfer = new_transaction(
+            current_user, active_household_id, amount=abs(body.amount), category='Savings Withdrawal',
+            description=f"Withdrawal from Goal: {name}", type='income', necessity='variable', date=body.date,
+        )
+    db.add(transfer)
+    db.commit()
+    db.refresh(db_goal)
+    db.refresh(transfer)
+    return {"goal": _goal_response(db, db_goal), "transaction": transfer}
+
 
 # --- Wishlist Endpoints ---
 

@@ -19,6 +19,19 @@ def _scope_filter(current_user: models.User, household_id: Optional[str]):
         return models.Transaction.household_id == household_id
     return and_(models.Transaction.user_id == current_user.id, models.Transaction.household_id.is_(None))
 
+def new_transaction(current_user: models.User, household_id: Optional[str], *, amount: float,
+                    category: str, description: str, type: str, necessity: str, date: str,
+                    linked_debt_id: Optional[str] = None) -> models.Transaction:
+    """Build (not add) a transaction owned by the caller, for the multi-step money operations
+    (repay a debt, borrow, move money to a goal) that record it in the same commit as the
+    change that caused it."""
+    return models.Transaction(
+        id=str(uuid.uuid4()), user_id=current_user.id, household_id=household_id,
+        amount=amount, category=category, description=description, merchant=None, type=type,
+        necessity=necessity, remarks='', date=date, linked_debt_id=linked_debt_id,
+    )
+
+
 def _check_linked_debt(db: Session, current_user: models.User, debt_id: Optional[str]):
     # A repayment may only link to the caller's own debt; otherwise deleting the transaction
     # would flip someone else's debt back to active.
@@ -57,9 +70,21 @@ def delete_transaction(transaction_id: str, db: Session = Depends(get_db), curre
     db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id, _scope_filter(current_user, active_household_id)).first()
     if not db_transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    # Deleting the record of a repayment un-repays the debt, in the same commit: otherwise the
+    # debt stays marked repaid with no matching transaction.
+    reverted_debt_id = None
+    if db_transaction.linked_debt_id:
+        # Only the debt's owner's repayment un-repays it: in a household another member can see
+        # and delete this row, but the debt is personal to whoever made the repayment.
+        debt = db.query(models.Debt).filter(
+            models.Debt.id == db_transaction.linked_debt_id, models.Debt.user_id == current_user.id
+        ).first()
+        if debt and debt.status == 'repaid':
+            debt.status = 'active'
+            reverted_debt_id = debt.id
     db.delete(db_transaction)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "reverted_debt_id": reverted_debt_id}
 
 @router.put("/transactions/{transaction_id}", response_model=schemas.Transaction)
 def update_transaction(transaction_id: str, transaction: schemas.TransactionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), active_household_id: Optional[str] = Depends(get_active_household_id)):

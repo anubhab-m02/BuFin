@@ -1,3 +1,5 @@
+import { parseLocalDate } from './utils';
+
 export const detectLeaks = (transactions) => {
     if (!transactions || transactions.length === 0) return [];
 
@@ -14,7 +16,7 @@ export const detectLeaks = (transactions) => {
     const merchantBreakdown = {};
 
     expenses.forEach(t => {
-        const d = new Date(t.date);
+        const d = parseLocalDate(t.date);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         const isCurrent = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
 
@@ -97,11 +99,12 @@ export const findSubscriptions = (transactions, recurringPlans = []) => {
     // 2. Identify patterns (>= 2 occurrences, spread out over time)
     for (const [name, group] of Object.entries(groups)) {
         if (group.length >= 2) {
-            const sorted = group.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sorted = group.sort((a, b) => parseLocalDate(a.date) - parseLocalDate(b.date));
             const lastTx = sorted[sorted.length - 1];
             const firstTx = sorted[0];
 
-            const spanDays = (new Date(lastTx.date) - new Date(firstTx.date)) / (1000 * 60 * 60 * 24);
+            // round: local-midnight differences are 23 or 25 hours across a daylight-saving change
+            const spanDays = Math.round((parseLocalDate(lastTx.date) - parseLocalDate(firstTx.date)) / (1000 * 60 * 60 * 24));
             if (spanDays < MIN_SUBSCRIPTION_SPAN_DAYS) continue;
 
             // Check amount consistency

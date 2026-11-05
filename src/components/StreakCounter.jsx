@@ -1,4 +1,5 @@
 import React from "react";
+import { dateOnly } from '../lib/utils';
 import { Flame } from "lucide-react";
 import { useFinancial } from "../context/FinancialContext";
 import { todayLocalStr } from "../lib/utils";
@@ -9,7 +10,7 @@ const StreakCounter = () => {
   const distinctDays = new Set(
     transactions
       .filter((t) => t.date)
-      .map((t) => todayLocalStr(new Date(t.date))),
+      .map((t) => dateOnly(t.date)),
   );
 
   let streak = 0;

@@ -1,4 +1,7 @@
 import asyncio
+import calendar
+import datetime
+from typing import NamedTuple
 import google.generativeai as genai
 import logging
 import os
@@ -262,12 +265,16 @@ def _parse_action_array(text_response: str):
     return data
 
 
-async def classify_transaction(text: str):
+def _classify_prompt(today: str = None) -> str:
+    """The Quick Add prompt with "today" filled in for relative dates ("tomorrow", "3rd Nov").
+    `today` is the client's local calendar day; the server's clock is only a fallback because
+    near midnight (or across timezones) it can be a different day from the user's."""
     import datetime
-    today_str = datetime.date.today().isoformat()
+    return DATA_ANALYST_PROMPT.replace("{today_date}", today or datetime.date.today().isoformat())
 
-    # Inject today's date into prompt for relative date parsing
-    formatted_prompt = DATA_ANALYST_PROMPT.replace("{today_date}", today_str)
+
+async def classify_transaction(text: str, today: str = None):
+    formatted_prompt = _classify_prompt(today)
 
     raw = _try_ollama(f"{formatted_prompt}\n\nInput: {text}\nOutput:", "classify_transaction")
 
@@ -331,6 +338,71 @@ async def analyze_purchase(query: str, context: dict):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+class SafeDaily(NamedTuple):
+    todays_transactions: list
+    spent_today: float
+    safe_daily: float
+    days_remaining: int
+
+
+def compute_safe_daily(transactions: list, balance: float, recurring_plans: list, today_date) -> SafeDaily:
+    """Conservative daily limit: (balance - upcoming expenses this month) / days left, never
+    below zero. Mirrors the app's useSafeToSpend hook so the alert and the gauge agree (the
+    hook also subtracts payable debts, which this endpoint is not given).
+
+    - Dates are compared by their calendar-day part, so date-only and timestamped rows both work.
+    - A day-of-month beyond the month's end ("31" in February) is clamped to its last day by the
+      same helper the recurring materializer uses, instead of crashing and dropping the plan.
+    - A monthly plan due today is already a real transaction in `balance` (materialized), so it
+      is not counted again; weekly/yearly plans are never materialized and still count today.
+    - Only future expenses in THIS month of THIS year count (the month alone also matched next
+      year's same month)."""
+    from routers.recurring import _resolve_expected_day
+
+    today_str = today_date.isoformat()
+    todays_transactions = [
+        t for t in transactions if t['type'] == 'expense' and str(t['date'])[:10] == today_str
+    ]
+    spent_today = sum(t['amount'] for t in todays_transactions)
+
+    _, days_in_month = calendar.monthrange(today_date.year, today_date.month)
+    days_remaining = max(1, days_in_month - today_date.day + 1)
+
+    total_recurring = 0
+    for p in recurring_plans:
+        if p['type'] != 'expense':
+            continue
+        expected_day = _resolve_expected_day(p.get('expectedDate'), today_date.year, today_date.month)
+        if expected_day is None:
+            logger.warning("Skipping a recurring plan with an unreadable expected day")
+            logger.debug("Plan that failed: %s", p.get('name'))
+            continue
+        if p.get('endDate'):
+            try:
+                if datetime.date(today_date.year, today_date.month, expected_day) > datetime.date.fromisoformat(p['endDate'][:10]):
+                    continue
+            except ValueError:
+                logger.warning("Ignoring an unreadable end date on a recurring plan")
+        is_upcoming = expected_day > today_date.day if p.get('frequency', 'monthly') == 'monthly' else expected_day >= today_date.day
+        if is_upcoming:
+            total_recurring += p['amount']
+
+    future_one_offs = 0
+    for t in transactions:
+        if t['type'] != 'expense':
+            continue
+        try:
+            t_date = datetime.date.fromisoformat(str(t['date'])[:10])
+        except ValueError:
+            logger.debug("Ignoring a transaction with an unreadable date")
+            continue
+        if t_date > today_date and (t_date.year, t_date.month) == (today_date.year, today_date.month):
+            future_one_offs += t['amount']
+
+    safe_daily = max(0, (balance - total_recurring - future_one_offs) / days_remaining)
+    return SafeDaily(todays_transactions, spent_today, safe_daily, days_remaining)
+
+
 async def generate_spending_alert(transactions: list, balance: float, recurring_plans: list, today: str = None):
     # Use the client's local calendar date if provided, so frontend and backend agree
     # on what "today" is instead of each computing it independently (can diverge near
@@ -342,65 +414,9 @@ async def generate_spending_alert(transactions: list, balance: float, recurring_
         today_date = datetime.date.today()
     today = today_date.isoformat()
 
-    todays_transactions = [t for t in transactions if t['date'].startswith(today) and t['type'] == 'expense']
-    spent_today = sum(t['amount'] for t in todays_transactions)
+    safe = compute_safe_daily(transactions, balance, recurring_plans, today_date)
+    todays_transactions, spent_today, safe_daily = safe.todays_transactions, safe.spent_today, safe.safe_daily
 
-    # Calculate daily safe-to-spend (Conservative: Balance - Upcoming Expenses)
-    now = today_date
-    import calendar
-    _, days_in_month = calendar.monthrange(now.year, now.month)
-    days_remaining = max(1, days_in_month - now.day + 1)
-    
-    # 1. Recurring Expenses (remaining in month)
-    # We must only subtract UPCOMING recurring expenses. 
-    # Past ones are assumed to be paid and already reflected in the Balance.
-    total_recurring = 0
-    for p in recurring_plans:
-        if p['type'] != 'expense':
-            continue
-            
-        try:
-            expected_date_val = p.get('expectedDate')
-            # Handle "last" or "last-working"
-            if expected_date_val == 'last':
-                expected_day = days_in_month
-            elif expected_date_val == 'last-working':
-                last_date = datetime.date(now.year, now.month, days_in_month)
-                while last_date.weekday() >= 5:  # Sat=5, Sun=6
-                    last_date -= datetime.timedelta(days=1)
-                expected_day = last_date.day
-            else:
-                expected_day = int(expected_date_val)
-            
-            # Check end date
-            if p.get('endDate'):
-                end_date = datetime.date.fromisoformat(p['endDate'])
-                # Construct this month's occurrence date
-                current_occurrence = datetime.date(now.year, now.month, expected_day)
-                if current_occurrence > end_date:
-                    continue
-
-            if expected_day >= now.day:
-                total_recurring += p['amount']
-        except Exception as e:
-            logger.warning("Error processing a recurring plan: %s", e)
-            logger.debug("Plan that failed: %s", p.get('name'))
-            continue
-
-    # 2. Future One-off Expenses (from transactions list)
-    # We need to check if any transactions are in the future of this month
-    future_one_offs = 0
-    for t in transactions:
-        try:
-            t_date = datetime.date.fromisoformat(t['date'])
-            if t['type'] == 'expense' and t_date > today_date and t_date.month == now.month:
-                future_one_offs += t['amount']
-        except:
-            pass
-
-    conservative_balance = balance - total_recurring - future_one_offs
-    safe_daily = max(0, conservative_balance / days_remaining)
-    
     if not todays_transactions:
         return None
 

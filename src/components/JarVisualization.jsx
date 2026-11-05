@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { PiggyBank, Plane, Laptop, Home, Car, GraduationCap, Heart, Star, Plus, Minus, Trophy, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays } from 'date-fns';
-import { cn } from '../lib/utils';
+import { cn, parseLocalDate } from '../lib/utils';
 
 const ICONS = {
     PiggyBank, Travel: Plane, Tech: Laptop, Home, Car, Education: GraduationCap, Health: Heart, Other: Star, Investment: TrendingUp
@@ -45,14 +45,14 @@ const JarVisualization = ({ goal, onEdit }) => {
     // Calculate Daily Savings Needed
     const getDailySavings = () => {
         if (!goal.targetDate || isCompleted) return null;
-        const daysLeft = differenceInDays(new Date(goal.targetDate), new Date());
+        const daysLeft = differenceInDays(parseLocalDate(goal.targetDate), new Date());
         if (daysLeft <= 0) return null;
         const remaining = goal.targetAmount - goal.currentAmount;
         return Math.ceil(remaining / daysLeft);
     };
 
     const dailySavings = getDailySavings();
-    const timeLeft = goal.targetDate ? formatDistanceToNow(new Date(goal.targetDate), { addSuffix: true }) : '';
+    const timeLeft = goal.targetDate ? formatDistanceToNow(parseLocalDate(goal.targetDate), { addSuffix: true }) : '';
 
     // Investment Projection (Simple Compound Interest for visual flair)
     const getProjectedValue = () => {

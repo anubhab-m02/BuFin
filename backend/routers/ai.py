@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 import ai_service
+import schemas
 from .auth import get_current_user
 
 # Every AI route spends the shared Gemini quota, so all of them require a logged-in user.
@@ -43,6 +44,8 @@ class AlertPlan(BaseModel):
 
 class ClassifyRequest(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+    # The client's local calendar day, used to resolve "tomorrow" / "3rd Nov" in the text.
+    today: Optional[schemas.IsoDate] = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -95,7 +98,7 @@ class CoachRequest(BaseModel):
 
 @router.post("/ai/classify")
 async def classify_transaction(request: ClassifyRequest):
-    return await ai_service.classify_transaction(request.text)
+    return await ai_service.classify_transaction(request.text, request.today)
 
 @router.post("/ai/analyze")
 async def analyze_purchase(request: AnalyzeRequest):

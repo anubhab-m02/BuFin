@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { addDays, isSameDay, format } from 'date-fns';
-import { resolveExpectedDay } from '../lib/utils';
+import { parseLocalDate, resolveExpectedDay } from '../lib/utils';
 import { chartTooltipStyle } from '../lib/chartTheme';
 import {
     ResponsiveContainer,
@@ -69,7 +69,7 @@ const CashFlowForecast = () => {
                     const planDay = resolveExpectedDay(plan.expectedDate, year, month);
 
                     // Check End Date
-                    if (plan.endDate && currentDay > new Date(plan.endDate)) return;
+                    if (plan.endDate && currentDay > parseLocalDate(plan.endDate)) return;
 
                     if (planDay === dayOfMonth) {
                         if (plan.type === 'income') weeklyIncome += plan.amount;
@@ -79,7 +79,7 @@ const CashFlowForecast = () => {
 
                 // 2. One-off Transactions (Future)
                 transactions.forEach(t => {
-                    const tDate = new Date(t.date);
+                    const tDate = parseLocalDate(t.date);
                     if (isSameDay(tDate, currentDay)) {
                         if (t.type === 'income') weeklyIncome += t.amount;
                         else weeklyExpense += t.amount;
@@ -89,7 +89,7 @@ const CashFlowForecast = () => {
                 // 3. Debts (Due Dates)
                 debts.forEach(debt => {
                     if (debt.dueDate && debt.status === 'active') {
-                        const dDate = new Date(debt.dueDate);
+                        const dDate = parseLocalDate(debt.dueDate);
                         if (isSameDay(dDate, currentDay)) {
                             if (debt.direction === 'receivable') weeklyIncome += debt.amount;
                             else weeklyExpense += debt.amount;

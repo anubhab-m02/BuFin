@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ThresholdProgress } from '../components/ui/progress';
 import { Trash2, Plus, Wallet2 } from 'lucide-react';
 import EmptyState from '../components/EmptyState';
-import { cn } from '../lib/utils';
+import { cn, parseLocalDate } from '../lib/utils';
 import PageHeader from '../components/PageHeader';
 import { formatMoney } from '../lib/money';
 
@@ -24,7 +24,7 @@ const BudgetsPage = () => {
     const now = new Date();
     const spentByCategory = transactions.reduce((acc, t) => {
         if (t.type !== 'expense') return acc;
-        const d = new Date(t.date);
+        const d = parseLocalDate(t.date);
         if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return acc;
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
