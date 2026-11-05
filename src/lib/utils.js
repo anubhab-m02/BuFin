@@ -13,6 +13,20 @@ export function todayLocalStr(d = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+// The calendar-day part (YYYY-MM-DD) of a stored transaction date. Rows hold either a plain
+// date or, for older rows, an ISO timestamp; the day part is what balances, "spent today" and
+// the server's own comparisons all use, so everything reads dates through this.
+export function dateOnly(value) {
+    return String(value ?? '').slice(0, 10);
+}
+
+// A Date at LOCAL midnight for a stored date. `new Date("2026-11-05")` is UTC midnight, which
+// getDate()/getMonth() then report as the previous day anywhere behind UTC.
+export function parseLocalDate(value) {
+    const [year, month, day] = dateOnly(value).split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 // Last weekday (Mon-Fri) of the given zero-indexed month/year.
 function lastWorkingDayOfMonth(year, month) {
     const d = new Date(year, month + 1, 0);

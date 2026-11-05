@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseLocalDate, todayLocalStr } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { formatSignedMoney } from '../lib/money';
 
 const dayLabel = (dateStr) => {
-    const d = new Date(dateStr);
+    const d = parseLocalDate(dateStr);
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -35,14 +36,14 @@ const TransactionTable = () => {
 
     const formatDate = (isoString) => {
         if (!isoString) return 'Unknown Date';
-        return new Date(isoString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+        return parseLocalDate(isoString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
     };
 
     const getDataSource = () => {
         if (filterType === 'debt') {
             return debts.map(d => ({
                 ...d,
-                date: d.dueDate || new Date().toISOString(),
+                date: d.dueDate || todayLocalStr(),
                 merchant: d.personName,
                 category: 'Debt',
                 description: d.direction === 'receivable' ? 'Owes me' : 'I owe',
@@ -53,7 +54,7 @@ const TransactionTable = () => {
         return transactions;
     };
 
-    const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+    const todayStr = todayLocalStr();
     const searchLower = search.trim().toLowerCase();
 
     const filteredData = getDataSource()

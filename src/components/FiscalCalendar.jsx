@@ -3,7 +3,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, List } from 'lucide-react';
-import { cn, resolveExpectedDay } from '../lib/utils';
+import { cn, parseLocalDate, resolveExpectedDay } from '../lib/utils';
 import Dialog from './ui/dialog';
 import SegmentedControl from './ui/segmented-control';
 
@@ -54,7 +54,7 @@ const computeItemsForDate = (date, recurringPlans, debts, transactions) => {
     // after the fact). The recurring-plan branch above already excludes any monthly
     // occurrence dated before tomorrow, so there's no risk of double-showing a past one here.
     transactions.forEach(t => {
-        const tDate = new Date(t.date);
+        const tDate = parseLocalDate(t.date);
         if (tDate.getDate() === day && tDate.getMonth() === month && tDate.getFullYear() === year) {
             items.push({ id: t.id, name: t.description || t.merchant, amount: t.amount, type: t.type, isTransaction: true, category: t.category });
         }

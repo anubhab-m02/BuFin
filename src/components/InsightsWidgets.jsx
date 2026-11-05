@@ -1,4 +1,5 @@
 import React from 'react';
+import { parseLocalDate } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { useMoney } from '../hooks/useMoney';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -22,7 +23,7 @@ export const SpendingComparisonWidget = () => {
     transactions
         .filter(t => t.type === 'expense')
         .forEach(t => {
-            const d = new Date(t.date);
+            const d = parseLocalDate(t.date);
             const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
             if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
                 currentMonthSpending[t.category] = (currentMonthSpending[t.category] || 0) + t.amount;
@@ -94,7 +95,7 @@ export const TrendPredictionWidget = () => {
     const monthlyExpenses = transactions
         .filter(t => t.type === 'expense')
         .reduce((acc, t) => {
-            const d = new Date(t.date);
+            const d = parseLocalDate(t.date);
             const key = `${d.getFullYear()}-${d.getMonth()}`; // "2023-10"
             acc[key] = (acc[key] || 0) + t.amount;
             return acc;

@@ -1,3 +1,5 @@
+import { todayLocalStr } from './utils';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Only transactions and goals are household-shareable, so only their calls need the
@@ -605,7 +607,8 @@ export const api = {
         const response = await apiFetch(`${API_URL}/ai/classify`, {
             method: 'POST',
             headers: getAiHeaders(),
-            body: JSON.stringify({ text }),
+            // today: the user's local day, so "tomorrow" / "3rd Nov" resolve against it, not the server's clock
+            body: JSON.stringify({ text, today: todayLocalStr() }),
         });
         if (!response.ok) throw new Error('AI classification failed');
         return response.json();

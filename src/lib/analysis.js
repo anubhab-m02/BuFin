@@ -1,3 +1,5 @@
+import { parseLocalDate } from './utils';
+
 export const detectLeaks = (transactions) => {
     if (!transactions || transactions.length === 0) return [];
 
@@ -14,7 +16,7 @@ export const detectLeaks = (transactions) => {
     const merchantBreakdown = {};
 
     expenses.forEach(t => {
-        const d = new Date(t.date);
+        const d = parseLocalDate(t.date);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         const isCurrent = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
 

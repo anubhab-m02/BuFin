@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { addDays, isSameDay, format } from 'date-fns';
-import { resolveExpectedDay } from '../lib/utils';
+import { parseLocalDate, resolveExpectedDay } from '../lib/utils';
 import { chartTooltipStyle } from '../lib/chartTheme';
 import {
     ResponsiveContainer,
@@ -79,7 +79,7 @@ const CashFlowForecast = () => {
 
                 // 2. One-off Transactions (Future)
                 transactions.forEach(t => {
-                    const tDate = new Date(t.date);
+                    const tDate = parseLocalDate(t.date);
                     if (isSameDay(tDate, currentDay)) {
                         if (t.type === 'income') weeklyIncome += t.amount;
                         else weeklyExpense += t.amount;

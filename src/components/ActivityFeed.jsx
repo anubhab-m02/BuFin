@@ -1,4 +1,5 @@
 import React from 'react';
+import { parseLocalDate, todayLocalStr } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -9,7 +10,7 @@ import { useFinancial } from '../context/FinancialContext';
 import { Wallet } from 'lucide-react';
 
 const dayLabel = (dateStr) => {
-    const d = new Date(dateStr);
+    const d = parseLocalDate(dateStr);
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(today.getDate() - 1);
@@ -26,7 +27,7 @@ const ActivityFeed = () => {
     const { transactions, deleteTransaction, isDataLoading } = useFinancial();
     const navigate = useNavigate();
 
-    const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+    const todayStr = todayLocalStr();
     const recent = transactions
         .filter(t => (t.date || '').split('T')[0] <= todayStr)
         .sort((a, b) => new Date(b.date) - new Date(a.date))

@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import Dialog from './ui/dialog';
 import AddTransactionForm from './AddTransactionForm';
 import { formatSignedMoney } from '../lib/money';
-import { cn } from '../lib/utils';
+import { cn, parseLocalDate } from '../lib/utils';
 
 const FutureTransactions = () => {
     const { transactions, deleteTransaction, isPrivacyMode } = useFinancial();
@@ -52,7 +52,7 @@ const FutureTransactions = () => {
                         <div key={t.id} className="flex items-center justify-between py-3 group">
                             <div className="min-w-0">
                                 <p className="font-medium text-sm truncate">{t.description || t.merchant}</p>
-                                <p className="text-xs text-muted-foreground">{format(new Date(t.date), 'MMM d, yyyy')}</p>
+                                <p className="text-xs text-muted-foreground">{format(parseLocalDate(t.date), 'MMM d, yyyy')}</p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0 pl-2">
                                 <div className={cn('font-semibold text-sm tabular-nums', t.type === 'income' ? 'text-success' : 'text-foreground')}>
