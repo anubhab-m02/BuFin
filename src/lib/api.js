@@ -220,18 +220,38 @@ export const api = {
         if (!response.ok) throw new Error('Failed to fetch debts');
         return response.json();
     },
+    // Returns the debt plus, for borrowed money sent with cash_in_date, the income transaction
+    // the server recorded in the same commit (null otherwise). Scope headers are sent because
+    // that transaction lands in whichever persona is active, as a separate request used to.
     createDebt: async (debt) => {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
         const response = await apiFetch(`${API_URL}/debts`, {
             method: 'POST',
-            headers,
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(debt),
         });
         if (!response.ok) throw new Error('Failed to create debt');
+        return response.json();
+    },
+    // One request marks the debt repaid and records the repayment transaction, atomically.
+    // `date` is the caller's local day (YYYY-MM-DD). Resolves to { debt, transaction }.
+    repayDebt: async (id, date) => {
+        const response = await apiFetch(`${API_URL}/debts/${id}/repay`, {
+            method: 'POST',
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ date }),
+        });
+        if (!response.ok) throw new Error('Failed to repay debt');
+        return response.json();
+    },
+    // One request moves money into (amount > 0) or out of (amount < 0) a goal and records the
+    // matching ledger transaction, atomically. Resolves to { goal, transaction }.
+    contributeToGoal: async (id, amount, date) => {
+        const response = await apiFetch(`${API_URL}/goals/${id}/contribute`, {
+            method: 'POST',
+            headers: getScopeHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ amount, date }),
+        });
+        if (!response.ok) throw new Error('Failed to update goal');
         return response.json();
     },
     deleteDebt: async (id) => {

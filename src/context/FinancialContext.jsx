@@ -173,18 +173,13 @@ export const FinancialProvider = ({ children }) => {
 
   const deleteTransaction = async (id) => {
     try {
-      // If this transaction was auto-created by repaying a debt, revert the debt
-      // to 'active' so it doesn't stay silently marked repaid with no matching transaction.
-      const tx = transactions.find(t => t.id === id);
-      if (tx?.linked_debt_id) {
-        const linkedDebt = debts.find(d => d.id === tx.linked_debt_id);
-        if (linkedDebt && linkedDebt.status === 'repaid') {
-          await updateDebt(linkedDebt.id, { ...linkedDebt, status: 'active' });
-        }
-      }
-
-      await api.deleteTransaction(id);
+      // The server reverts a repaid debt in the same commit when its repayment transaction is
+      // deleted, so the debt can never be left 'repaid' with no matching transaction.
+      const { reverted_debt_id } = await api.deleteTransaction(id);
       setTransactions(prev => prev.filter(t => t.id !== id));
+      if (reverted_debt_id) {
+        setDebts(prev => prev.map(d => d.id === reverted_debt_id ? { ...d, status: 'active' } : d));
+      }
     } catch (error) {
       fail('Could not delete transaction', error);
     }
@@ -241,26 +236,16 @@ export const FinancialProvider = ({ children }) => {
 
   const addDebt = async (debt) => {
     try {
-      const newDebt = await api.createDebt(debt);
+      // Borrowing (I owe) is cash in: the server records the income in the same commit as the
+      // debt (cash_in_date), so a failure cannot leave a payable debt with no matching income.
+      // Lending (owes me) is deliberately not auto-recorded as an expense: it may be a split
+      // bill the user already logged, and recording it again would double-count.
+      const { transaction, ...newDebt } = await api.createDebt({
+        ...debt,
+        ...(debt.direction === 'payable' ? { cash_in_date: todayLocalStr() } : {})
+      });
       setDebts(prev => [...prev, newDebt]);
-
-      // 1. Borrowing (I Owe) -> Income (Cash In)
-      if (debt.direction === 'payable') {
-        console.log("Adding Income for Borrowed Money:", debt.amount);
-        await addTransaction({
-          amount: parseFloat(debt.amount),
-          category: 'Income',
-          description: `Borrowed from ${debt.personName}`,
-          type: 'income',
-          date: new Date().toISOString(),
-          necessity: 'variable'
-        });
-      }
-      // 2. Lending (Owes Me) -> Expense (Cash Out)
-      // Note: We assume this is a direct loan. If it's a split bill, the user might have already logged the expense.
-      // For now, we will NOT auto-add expense for receivable to avoid double-counting, 
-      // unless we add a checkbox "Record as Expense?". 
-      // But for "Borrowed", it's definitely Income.
+      if (transaction) setTransactions(prev => [transaction, ...prev]);
     } catch (error) {
       fail('Could not add debt', error);
     }
@@ -403,36 +388,11 @@ export const FinancialProvider = ({ children }) => {
     repayingDebtIds.current.add(id);
 
     try {
-      // 1. Mark as Repaid
-      const updatedDebt = { ...debt, status: 'repaid' };
-      await updateDebt(id, updatedDebt);
-
-      // 2. Financial Impact
-      if (debt.direction === 'payable') {
-        // I Repay -> Expense
-        console.log("Adding Expense for Debt Repayment:", debt.amount);
-        await addTransaction({
-          amount: parseFloat(debt.amount),
-          category: 'Debt Repayment',
-          description: `Repaid ${debt.personName}`,
-          type: 'expense',
-          date: new Date().toISOString(),
-          necessity: 'essential',
-          linked_debt_id: debt.id
-        });
-      } else if (debt.direction === 'receivable') {
-        // They Repay Me -> Income
-        console.log("Adding Income for Debt Repayment Received:", debt.amount);
-        await addTransaction({
-          amount: parseFloat(debt.amount),
-          category: 'Debt Repayment',
-          description: `Repayment from ${debt.personName}`,
-          type: 'income',
-          date: new Date().toISOString(),
-          necessity: 'variable',
-          linked_debt_id: debt.id
-        });
-      }
+      // One request: the server marks the debt repaid and records the repayment transaction in
+      // the same commit, so the debt and the ledger cannot disagree if the second step fails.
+      const { debt: repaid, transaction } = await api.repayDebt(id, todayLocalStr());
+      setDebts(prev => prev.map(d => d.id === id ? repaid : d));
+      setTransactions(prev => [transaction, ...prev]);
     } catch (error) {
       fail('Could not repay debt', error);
     } finally {
@@ -476,33 +436,13 @@ export const FinancialProvider = ({ children }) => {
       const goal = savingsGoals.find(g => g.id === id);
       if (!goal) return;
 
-      const updatedGoal = await api.updateGoal(id, {
-        currentAmount: goal.currentAmount + amountToAdd
-      });
-      setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
+      if (!amountToAdd) return;
 
-      // Create transaction to reflect money movement
-      if (amountToAdd > 0) {
-        // Deposit: Expense (Money leaves Available Balance)
-        await addTransaction({
-          amount: parseFloat(amountToAdd),
-          category: 'Savings',
-          description: `Transfer to Goal: ${goal.name}`,
-          type: 'expense',
-          date: new Date().toISOString(),
-          necessity: 'essential'
-        });
-      } else if (amountToAdd < 0) {
-        // Withdrawal: Income (Money returns to Available Balance)
-        await addTransaction({
-          amount: Math.abs(parseFloat(amountToAdd)),
-          category: 'Savings Withdrawal',
-          description: `Withdrawal from Goal: ${goal.name}`,
-          type: 'income',
-          date: new Date().toISOString(),
-          necessity: 'variable'
-        });
-      }
+      // One request: the goal's saved amount, the contribution record and the matching ledger
+      // transaction change in the same commit, so the jar and the balance cannot disagree.
+      const { goal: updatedGoal, transaction } = await api.contributeToGoal(id, amountToAdd, todayLocalStr());
+      setSavingsGoals(prev => prev.map(g => g.id === id ? updatedGoal : g));
+      setTransactions(prev => [transaction, ...prev]);
     } catch (error) {
       fail('Could not update savings goal', error);
     }
