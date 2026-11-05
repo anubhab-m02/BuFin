@@ -94,7 +94,7 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     _check_linked_debt(db, current_user, transaction.linked_debt_id)
-    for key, value in transaction.model_dump(exclude={"id"}).items(): # Don't update ID
+    for key, value in transaction.model_dump(exclude={"id"}, exclude_unset=True).items(): # Don't update ID; keep fields the client left out
         setattr(db_transaction, key, value)
 
     db.commit()

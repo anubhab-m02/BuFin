@@ -79,6 +79,16 @@ def _delete_household(db: Session, household_id: str):
     # Revert shared transactions/goals to personal rather than deleting them - a
     # household disappearing shouldn't take anyone's logged financial data with it.
     # (Each row's own user_id already tells you whose personal view it lands back in.)
+    # Rows whose owner already deleted their account have no personal view to land in (user_id is
+    # NULL), so they would become unreachable orphans; they go with the household, as in delete_account.
+    orphan_goal_ids = [g.id for g in db.query(models.Goal.id).filter(
+        models.Goal.household_id == household_id, models.Goal.user_id.is_(None))]
+    if orphan_goal_ids:
+        db.query(models.GoalContribution).filter(models.GoalContribution.goal_id.in_(orphan_goal_ids)).delete(synchronize_session=False)
+        db.query(models.Goal).filter(models.Goal.id.in_(orphan_goal_ids)).delete(synchronize_session=False)
+    db.query(models.Transaction).filter(
+        models.Transaction.household_id == household_id, models.Transaction.user_id.is_(None)
+    ).delete(synchronize_session=False)
     db.query(models.Transaction).filter(models.Transaction.household_id == household_id).update(
         {models.Transaction.household_id: None}, synchronize_session=False
     )

@@ -218,7 +218,10 @@ export const AddDebtForm = ({ initialData, onSuccess }) => {
                 if (names.length === 0) return;
 
                 const totalAmount = parseFloat(formData.amount);
-                const splitAmount = totalAmount / (names.length + 1); // +1 for user
+                // Work in whole cents (the server stores cents): everyone else owes an equal
+                // share and the user absorbs the leftover cent(s), so the shares always add up.
+                const totalCents = Math.round(totalAmount * 100);
+                const splitAmount = Math.floor(totalCents / (names.length + 1)) / 100; // +1 for user
 
                 names.forEach(name => {
                     addDebt({

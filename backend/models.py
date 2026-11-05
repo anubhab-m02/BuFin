@@ -23,8 +23,8 @@ class Transaction(Base):
         CheckConstraint("type IN ('income', 'expense')", name="type_valid"),
         CheckConstraint("necessity IN ('fixed', 'variable', 'essential')", name="necessity_valid"),
         # Personal ledger and paging: WHERE user_id = ? [AND household_id IS NULL] ORDER BY date DESC.
-        Index("ix_transactions_user_date", "user_id", text("date DESC")),
-        Index("ix_transactions_household_date", "household_id", text("date DESC"), postgresql_where=text("household_id IS NOT NULL")),
+        Index("ix_transactions_user_date", "user_id", text("date DESC"), text("id DESC")),
+        Index("ix_transactions_household_date", "household_id", text("date DESC"), text("id DESC"), postgresql_where=text("household_id IS NOT NULL")),
         Index("ix_transactions_linked_debt_id", "linked_debt_id", postgresql_where=text("linked_debt_id IS NOT NULL")),
         # One materialized occurrence per recurring plan and day; NULL plan ids (manual entries) are unconstrained.
         Index("uq_transactions_recurring_plan_date", "recurring_plan_id", "date", unique=True, postgresql_where=text("recurring_plan_id IS NOT NULL")),
@@ -124,6 +124,8 @@ class GoalContribution(Base):
     __table_args__ = (
         CheckConstraint("amount <> 0", name="amount_nonzero"),
         Index("ix_goal_contributions_goal_id", "goal_id"),
+        # user deletion sets user_id NULL here; without an index that is a scan of this growth table
+        Index("ix_goal_contributions_user_id", "user_id", postgresql_where=text("user_id IS NOT NULL")),
     )
 
     id = Column(String, primary_key=True)
@@ -148,6 +150,9 @@ class Budget(Base):
 
 class Household(Base):
     __tablename__ = "households"
+    __table_args__ = (
+        Index("ix_households_created_by", "created_by", postgresql_where=text("created_by IS NOT NULL")),
+    )
 
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
@@ -174,6 +179,8 @@ class HouseholdInvite(Base):
     __tablename__ = "household_invites"
     __table_args__ = (
         Index("ix_household_invites_household_id", "household_id"),
+        Index("ix_household_invites_created_by", "created_by"),
+        Index("ix_household_invites_used_by", "used_by", postgresql_where=text("used_by IS NOT NULL")),
     )
 
     id = Column(String, primary_key=True)

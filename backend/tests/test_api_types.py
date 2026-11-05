@@ -1,5 +1,7 @@
 """The API keeps its public shape while the database got real types: money as JSON numbers, days as
 YYYY-MM-DD, timestamps as ISO 8601. Bad input is a 422, never a database error."""
+import datetime as dt
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -8,6 +10,7 @@ import models
 from database import get_db
 from error_handlers import register_error_handlers
 from routers import chat, debts, goals, net_worth, recurring, transactions
+import schemas
 from routers.auth import get_active_household_id, get_current_user
 
 
@@ -110,3 +113,117 @@ def test_net_worth_and_chat_timestamps_and_validation(client):
     sid = session.json()["id"]
     assert client.post(f"/api/chat/sessions/{sid}/messages", json={"role": "system", "content": "x"}).status_code == 422
     assert client.post(f"/api/chat/sessions/{sid}/messages", json={"role": "user", "content": "hello"}).status_code == 200
+
+
+# --- forms send '' for "no date" ---
+
+def test_a_blank_optional_day_means_no_date_but_a_required_day_still_must_be_real(client):
+    assert client.post("/api/debts", json={"personName": "Raj", "amount": 5, "direction": "payable", "dueDate": ""}).json()["dueDate"] is None
+    assert client.post("/api/goals", json={"name": "Trip", "targetAmount": 5, "targetDate": ""}).json()["targetDate"] is None
+    plan = client.post("/api/recurring_plans", json={"name": "Rent", "amount": 5, "type": "expense", "frequency": "monthly", "expectedDate": "1", "endDate": ""})
+    assert plan.status_code == 200 and plan.json()["endDate"] is None
+    assert client.post("/api/transactions", json={**TX, "date": ""}).status_code == 422
+
+
+# --- PUT keeps what the client did not send ---
+
+def test_editing_a_debt_without_a_status_does_not_un_repay_it(client, session_factory):
+    debt = client.post("/api/debts", json={"personName": "Raj", "amount": 50, "direction": "payable"}).json()
+    assert client.post(f"/api/debts/{debt['id']}/repay", json={"date": "2025-03-04"}).status_code == 200
+    resp = client.put(f"/api/debts/{debt['id']}", json={"personName": "Rajesh", "amount": 50, "direction": "payable"})
+    assert resp.status_code == 200 and resp.json()["status"] == "repaid" and resp.json()["personName"] == "Rajesh"
+
+
+def test_editing_a_transaction_without_a_necessity_keeps_it(client):
+    tx_id = client.post("/api/transactions", json={**TX, "necessity": "fixed"}).json()["id"]
+    body = {k: v for k, v in TX.items()}
+    resp = client.put(f"/api/transactions/{tx_id}", json={**body, "date": "2025-04-05", "amount": 20})
+    assert resp.status_code == 200 and resp.json()["necessity"] == "fixed" and resp.json()["date"] == "2025-04-05"
+
+
+@pytest.mark.parametrize("payload", [{"targetAmount": None}, {"name": None}, {"currentAmount": None}])
+def test_an_explicit_null_in_a_goal_update_means_unchanged_not_a_500(client, payload):
+    goal = client.post("/api/goals", json={"name": "Trip", "targetAmount": 100}).json()
+    resp = client.put(f"/api/goals/{goal['id']}", json=payload)
+    assert resp.status_code == 200 and resp.json()["name"] == "Trip" and resp.json()["targetAmount"] == 100
+
+
+def test_a_goal_edit_that_sets_the_saved_amount_records_a_clean_cent_delta(client):
+    goal = client.post("/api/goals", json={"name": "Trip", "targetAmount": 100}).json()
+    client.put(f"/api/goals/{goal['id']}", json={"currentAmount": 0.3})
+    resp = client.put(f"/api/goals/{goal['id']}", json={"currentAmount": 0.6})
+    assert [c["amount"] for c in resp.json()["contributions"]] == [0.3, 0.3]
+
+
+# --- bounds that match the columns ---
+
+@pytest.mark.parametrize("cost", [-1, 1e13])
+def test_wishlist_cost_is_bounded_like_the_column(client, cost):
+    assert client.post("/api/wishlist", json={"name": "Phone", "cost": cost}).status_code == 422
+
+
+def test_a_goal_cannot_be_pushed_past_what_the_column_holds(client):
+    goal = client.post("/api/goals", json={"name": "Trip", "targetAmount": 100}).json()
+    big = {"amount": schemas.MAX_MONEY, "date": "2025-03-04"}
+    assert client.post(f"/api/goals/{goal['id']}/contribute", json=big).status_code == 200
+    resp = client.post(f"/api/goals/{goal['id']}/contribute", json={"amount": 1, "date": "2025-03-04"})
+    assert resp.status_code == 400 and "cannot hold" in resp.json()["detail"]
+
+
+def test_responses_do_not_reapply_input_bounds_to_stored_rows(client, session_factory):
+    with session_factory() as db:  # a row that bypassed the API but is valid for the database
+        db.add(models.Transaction(id="big", user_id="u", date=dt.date(2025, 1, 1), amount=5_000_000_000_000.0, category="c", description="d", type="income"))
+        db.commit()
+    resp = client.get("/api/transactions")
+    assert resp.status_code == 200 and resp.json()[0]["amount"] == 5_000_000_000_000.0
+
+
+# --- recurring materialization under a race ---
+
+def test_a_lost_race_on_one_plan_does_not_discard_the_other_plans_new_rows(session_factory):
+    from routers import recurring
+
+    class FixedDate(dt.date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 12, 15)
+
+    with session_factory() as setup:
+        setup.add(models.User(id="u", email="u@x.y", hashed_password="x"))
+        setup.flush()
+        for pid, day in (("a", "1"), ("b", "2")):
+            setup.add(models.RecurringPlan(id=pid, user_id="u", name=pid, amount=10.0, type="expense", frequency="monthly", expectedDate=day))
+        setup.commit()
+
+    with session_factory() as db:
+        user = db.get(models.User, "u")
+
+        class RacingSession:
+            raced = False
+
+            def query(self, *a, **k):
+                return db.query(*a, **k)
+
+            def begin_nested(self):
+                if not RacingSession.raced:  # another request materializes plan a's December occurrence first
+                    RacingSession.raced = True
+                    with session_factory() as other:
+                        other.add(models.Transaction(id="other", user_id="u", date=dt.date(2026, 12, 1), amount=10.0, category="Bills",
+                                                     description="a", type="expense", recurring_plan_id="a"))
+                        other.commit()
+                return db.begin_nested()
+
+            def add_all(self, rows):
+                return db.add_all(rows)
+
+            def commit(self):
+                return db.commit()
+
+        from unittest.mock import patch
+        with patch.object(recurring, "date", FixedDate):
+            recurring._materialize_recurring_plans(RacingSession(), user)
+
+    with session_factory() as check:
+        rows = {(t.recurring_plan_id, t.date): t.id for t in check.query(models.Transaction)}
+    assert rows[("a", dt.date(2026, 12, 1))] == "other"  # exactly one row for the contested occurrence
+    assert ("b", dt.date(2026, 12, 2)) in rows  # the other plan still got its row

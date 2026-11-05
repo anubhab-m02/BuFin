@@ -27,6 +27,7 @@ class AssetUpdate(BaseModel):
 
 class AssetResponse(AssetBase):
     id: str
+    current_value: float
     user_id: str
     created_at: datetime
 
@@ -47,6 +48,7 @@ class LiabilityUpdate(BaseModel):
 
 class LiabilityResponse(LiabilityBase):
     id: str
+    current_balance: float
     user_id: str
     created_at: datetime
 

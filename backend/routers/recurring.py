@@ -58,10 +58,11 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
     plans = db.query(models.RecurringPlan).filter(
         models.RecurringPlan.user_id == current_user.id,
         models.RecurringPlan.frequency == 'monthly'
-    ).all()
+    ).order_by(models.RecurringPlan.id).all()
 
     for plan in plans:
         end_date = plan.endDate  # a date or None (DATE column)
+        new_rows = []
 
         last_tx = db.query(models.Transaction).filter(
             models.Transaction.recurring_plan_id == plan.id
@@ -92,7 +93,7 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
             # the whole month has already elapsed by construction)
 
             if is_due:
-                db.add(models.Transaction(
+                new_rows.append(models.Transaction(
                     id=str(uuid.uuid4()),
                     user_id=current_user.id,
                     date=occurrence_date,
@@ -108,12 +109,16 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
 
             year, month = _add_month(year, month)
 
-    try:
-        db.commit()
-    except IntegrityError:
-        # A concurrent request materialized the same occurrence first (unique plan+date index);
-        # its rows are the ones we wanted, so drop ours.
-        db.rollback()
+        # One savepoint per plan: if a concurrent request already materialized one of these
+        # occurrences (unique plan+date index), only this plan's rows are dropped - theirs are the
+        # rows we wanted - and the other plans' new rows still commit.
+        try:
+            with db.begin_nested():
+                db.add_all(new_rows)
+        except IntegrityError:
+            pass
+
+    db.commit()
 
 # --- Endpoints ---
 

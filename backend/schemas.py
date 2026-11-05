@@ -18,6 +18,15 @@ def _iso_date(value):
 # client sends its own local day, so the server never has to guess a timezone (the old flows
 # stamped UTC timestamps, which land on the wrong day in IST).
 IsoDate = Annotated[date, BeforeValidator(_iso_date)]
+Day = date  # alias for response models, where a field named `date` shadows the type inside the class body
+
+
+def _blank_to_none(value):
+    # The forms send '' for "no date"; an optional day treats that as unset (a required one still rejects it).
+    return None if value == "" else value
+
+
+OptionalIsoDate = Annotated[Optional[IsoDate], BeforeValidator(_blank_to_none)]
 
 # Amounts match the NUMERIC(15,2) columns: anything larger would be a database error, so it is a 422.
 MAX_MONEY = 999_999_999_999.99
@@ -114,6 +123,10 @@ class TransactionCreate(TransactionBase):
 
 class Transaction(TransactionBase):
     id: str
+    amount: float  # responses echo what the database holds; the input bounds live on TransactionBase
+    type: str
+    necessity: str
+    date: Day
     household_id: Optional[str] = None  # null = personal transaction; server-derived, not client-writable
     recurring_plan_id: Optional[str] = None  # set for auto-materialized recurring occurrences; server-derived
     model_config = ConfigDict(from_attributes=True)
@@ -124,20 +137,24 @@ class RecurringPlanBase(BaseModel):
     type: TransactionType
     frequency: Literal['monthly', 'weekly', 'yearly']
     expectedDate: str
-    endDate: Optional[IsoDate] = None
+    endDate: OptionalIsoDate = None
 
 class RecurringPlanCreate(RecurringPlanBase):
     id: Optional[str] = None
 
 class RecurringPlan(RecurringPlanBase):
     id: str
+    amount: float
+    type: str
+    frequency: str
+    endDate: Optional[Day] = None
     model_config = ConfigDict(from_attributes=True)
 
 class DebtBase(BaseModel):
     personName: str
     amount: Money
     direction: Literal['payable', 'receivable']
-    dueDate: Optional[IsoDate] = None
+    dueDate: OptionalIsoDate = None
     status: Literal['active', 'repaid'] = 'active'
 
 class DebtCreate(DebtBase):
@@ -145,6 +162,10 @@ class DebtCreate(DebtBase):
 
 class Debt(DebtBase):
     id: str
+    amount: float
+    direction: str
+    status: str
+    dueDate: Optional[Day] = None
     model_config = ConfigDict(from_attributes=True)
 
 class WishlistItemBase(BaseModel):
@@ -157,6 +178,7 @@ class WishlistItemCreate(WishlistItemBase):
 
 class WishlistItem(WishlistItemBase):
     id: str
+    cost: float
     model_config = ConfigDict(from_attributes=True)
 
 class BudgetBase(BaseModel):
@@ -168,6 +190,7 @@ class BudgetCreate(BudgetBase):
 
 class Budget(BudgetBase):
     id: str
+    monthlyLimit: float
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -175,7 +198,7 @@ class Budget(BudgetBase):
 class DebtCreateRequest(DebtCreate):
     # Borrowing ("payable") is cash in. When set, the matching income transaction is recorded in
     # the same commit as the debt; unset keeps the old behaviour (debt only).
-    cash_in_date: Optional[IsoDate] = None
+    cash_in_date: OptionalIsoDate = None
 
 class DebtWithTransaction(Debt):
     transaction: Optional[Transaction] = None

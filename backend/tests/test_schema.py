@@ -157,4 +157,25 @@ def test_the_indexes_the_queries_rely_on_exist(pg_engine):
     with pg_engine.connect() as conn:
         names = {r[0] for r in conn.execute(text("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"))}
     assert {"ix_transactions_user_date", "ix_transactions_household_date", "uq_transactions_recurring_plan_date",
-            "uq_users_email_lower", "ix_goal_contributions_goal_id", "ix_chat_messages_session_created"} <= names
+            "uq_users_email_lower", "ix_goal_contributions_goal_id", "ix_goal_contributions_user_id",
+            "ix_household_invites_created_by", "ix_household_invites_used_by", "ix_households_created_by",
+            "ix_chat_messages_session_created"} <= names
+
+
+def test_deleting_a_household_removes_rows_nobody_can_reach_but_returns_the_rest_to_their_owners(db):
+    from routers.households import _delete_household
+
+    db.add(models.Household(id="h", name="H", created_by="a", created_at=NOW))
+    db.flush()
+    db.add_all([tx("mine", household_id="h"), tx("orphan", household_id="h", user_id=None),
+                models.Goal(id="g-mine", user_id="a", name="n", targetAmount=5.0, household_id="h"),
+                models.Goal(id="g-orphan", user_id=None, name="n", targetAmount=5.0, household_id="h")])
+    db.flush()
+    db.add(models.GoalContribution(id="c", goal_id="g-orphan", user_id=None, amount=1.0, created_at=NOW))
+    db.commit()
+    _delete_household(db, "h")
+    db.commit()
+    assert [r[0] for r in db.execute(text("SELECT id FROM transactions"))] == ["mine"]
+    assert db.execute(text("SELECT household_id FROM transactions WHERE id = 'mine'")).scalar() is None
+    assert [r[0] for r in db.execute(text("SELECT id FROM goals"))] == ["g-mine"]
+    assert db.execute(text("SELECT count(*) FROM goal_contributions")).scalar() == 0
