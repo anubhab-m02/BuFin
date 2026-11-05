@@ -1,8 +1,9 @@
 import json
+from datetime import date
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 import ai_service
 from .auth import get_current_user
@@ -14,9 +15,30 @@ MAX_PAYLOAD_CHARS = 500_000
 
 
 def _check_size(value: Any) -> Any:
-    if value is not None and len(json.dumps(value, default=str)) > MAX_PAYLOAD_CHARS:
+    try:
+        too_big = value is not None and len(json.dumps(value, default=str)) > MAX_PAYLOAD_CHARS
+    except RecursionError:
+        too_big = True
+    if too_big:
         raise ValueError("payload too large")
     return value
+
+
+MONEY_LIMITS = dict(allow_inf_nan=False, ge=-1e12, le=1e12)
+
+
+class AlertTransaction(BaseModel):
+    # Only the fields generate_spending_alert indexes directly; anything else passes through.
+    model_config = ConfigDict(extra="allow")
+    date: str
+    type: str
+    amount: float = Field(**MONEY_LIMITS)
+
+
+class AlertPlan(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    type: str
+    amount: float = Field(**MONEY_LIMITS)
 
 
 class ClassifyRequest(BaseModel):
@@ -30,24 +52,29 @@ class AnalyzeRequest(BaseModel):
     @field_validator("context")
     @classmethod
     def context_size(cls, value):
+        if value is None:
+            raise ValueError("context is required")
         return _check_size(value)
 
 
 class AlertRequest(BaseModel):
-    transactions: List[dict] = Field(max_length=5000)
-    balance: float
-    recurringPlans: List[dict] = Field(default_factory=list, max_length=500)
-    today: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    transactions: List[AlertTransaction] = Field(max_length=5000)
+    balance: Optional[float] = Field(default=None, **MONEY_LIMITS)
+    recurringPlans: List[AlertPlan] = Field(default_factory=list, max_length=500)
+    today: Optional[str] = None
 
-    @field_validator("transactions", "recurringPlans")
+    @field_validator("today")
     @classmethod
-    def lists_size(cls, value):
-        return _check_size(value)
+    def today_is_a_calendar_date(cls, value):
+        if value is not None:
+            date.fromisoformat(value)
+        return value
+
 
 
 class TipsRequest(BaseModel):
     transactions: List[dict] = Field(max_length=5000)
-    balance: float
+    balance: Optional[float] = Field(default=None, **MONEY_LIMITS)
 
     @field_validator("transactions")
     @classmethod
@@ -76,7 +103,9 @@ async def analyze_purchase(request: AnalyzeRequest):
 
 @router.post("/ai/alert")
 async def generate_alert(request: AlertRequest):
-    return await ai_service.generate_spending_alert(request.transactions, request.balance, request.recurringPlans, request.today)
+    transactions = [t.model_dump() for t in request.transactions]
+    plans = [p.model_dump() for p in request.recurringPlans]
+    return await ai_service.generate_spending_alert(transactions, request.balance, plans, request.today)
 
 @router.post("/ai/tips")
 async def generate_tips(request: TipsRequest):

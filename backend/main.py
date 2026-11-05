@@ -14,6 +14,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BuFin API", version="2.0.0")
 
+from error_handlers import register_error_handlers
+register_error_handlers(app)
+
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
