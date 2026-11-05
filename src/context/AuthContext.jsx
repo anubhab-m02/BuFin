@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api, UNAUTHORIZED_EVENT } from '../lib/api';
+import { useToast } from './ToastContext';
 
 const AuthContext = createContext();
 
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
 
     // Any API call that answers 401 (expired or revoked token) ends the session. Registered
     // before the init effect below so a 401 from the very first request is not missed.
@@ -34,16 +36,25 @@ export const AuthProvider = ({ children }) => {
                     setUser(userData);
                     setIsAuthenticated(true);
                 } catch (error) {
-                    // A 401 already logged the user out through the event above. Anything else
-                    // (backend down, a 500, a network blip) must not throw away a valid token:
-                    // the user stays signed out of this page load and a reload retries.
+                    // A 401 already logged the user out through the event above (and cleared the
+                    // token). Anything else (backend down, a 500, a network blip) must not throw
+                    // away a valid token: the user stays signed out of this page load, is told
+                    // why, and a reload retries.
                     console.error("Auth initialization failed", error);
+                    if (localStorage.getItem('token')) {
+                        toast({
+                            title: 'Could not verify your session',
+                            description: 'The server did not respond. You are still signed in; reload to try again.',
+                            variant: 'destructive',
+                            duration: 0
+                        });
+                    }
                 }
             }
             setLoading(false);
         };
         initAuth();
-    }, [token]);
+    }, [token, toast]);
 
     const login = async (email, password) => {
         try {

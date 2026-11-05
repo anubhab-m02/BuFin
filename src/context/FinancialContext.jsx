@@ -18,7 +18,7 @@ export const useFinancial = () => {
 
 export const FinancialProvider = ({ children }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
 
   // Every mutation reports failure to the user instead of only to the console: a save that
   // silently did nothing looks exactly like a save that worked.
@@ -78,6 +78,9 @@ export const FinancialProvider = ({ children }) => {
 
   // Initial Fetch
   useEffect(() => {
+    // The failure toast is sticky (duration 0). Dismiss it when this effect run is torn down
+    // so a remount (StrictMode in dev, a re-login) does not leave duplicates behind.
+    let loadToastId = null;
     const fetchData = async () => {
       setIsDataLoading(true);
       try {
@@ -112,7 +115,7 @@ export const FinancialProvider = ({ children }) => {
         if (failed.length > 0) {
           console.error('Failed to load:', failed.join(', '));
           const everything = failed.length === loaders.length + 1;
-          toast({
+          loadToastId = toast({
             title: everything ? 'Could not load your data' : 'Some of your data did not load',
             description: everything
               ? 'Check that the backend is running and try refreshing.'
@@ -128,7 +131,10 @@ export const FinancialProvider = ({ children }) => {
       }
     };
     fetchData();
-  }, [toast]);
+    return () => {
+      if (loadToastId !== null) dismiss(loadToastId);
+    };
+  }, [toast, dismiss]);
 
   // Actions
   const addTransaction = async (transaction) => {
