@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../lib/api';
+import { api, UNAUTHORIZED_EVENT } from '../lib/api';
 
 const AuthContext = createContext();
 
+// A context module exports its hook next to its provider by design.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -11,18 +13,31 @@ export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // Any API call that answers 401 (expired or revoked token) ends the session. Registered
+    // before the init effect below so a 401 from the very first request is not missed.
+    useEffect(() => {
+        const onUnauthorized = () => {
+            localStorage.removeItem('token');
+            setToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+        };
+        window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+        return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    }, []);
+
     useEffect(() => {
         const initAuth = async () => {
             if (token) {
                 try {
-                    // Set token in API headers (we'll update api.js to handle this)
-                    // For now, we assume api.js will be updated to use this token
                     const userData = await api.getMe(token);
                     setUser(userData);
                     setIsAuthenticated(true);
                 } catch (error) {
+                    // A 401 already logged the user out through the event above. Anything else
+                    // (backend down, a 500, a network blip) must not throw away a valid token:
+                    // the user stays signed out of this page load and a reload retries.
                     console.error("Auth initialization failed", error);
-                    logout();
                 }
             }
             setLoading(false);
