@@ -1,12 +1,14 @@
 import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useMoney } from '../hooks/useMoney';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Progress } from './ui/progress';
 import { Trophy, Medal, Star, Target, TrendingUp, ShieldCheck, PiggyBank, Award } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const Achievements = () => {
-    const { transactions, savingsGoals, debts, recurringPlans, balance } = useFinancial();
+    const { transactions, savingsGoals, debts, recurringPlans } = useFinancial();
+    const { fmt } = useMoney();
 
     // Shared derived values so condition/progress pairs below don't each recompute them.
     const savingsDeposits = transactions.filter(t => t.category === 'Savings' && t.type === 'expense');
@@ -62,7 +64,7 @@ const Achievements = () => {
             // instant lump-sum transfer that would unlock this the moment a goal is created.
             condition: () => savingsTotal > 10000 && savingsDistinctDays >= 3,
             progress: () => Math.min(100, (savingsTotal / 10000) * 100),
-            progressLabel: () => `${Math.round(savingsTotal).toLocaleString()}/10,000 saved`,
+            progressLabel: () => `${fmt(savingsTotal)}/${fmt(10000)} saved`,
             color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/20'
         },
         {

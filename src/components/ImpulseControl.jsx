@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useMoney } from '../hooks/useMoney';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -42,6 +43,7 @@ const parseAddedAt = (addedAt) => {
 
 const ImpulseControl = () => {
     const { wishlist, addWishlistItem, deleteWishlistItem, addTransaction } = useFinancial();
+    const { fmt } = useMoney();
     const { user } = useAuth();
     const [newItem, setNewItem] = useState('');
     const [newCost, setNewCost] = useState('');
@@ -158,7 +160,7 @@ const ImpulseControl = () => {
                                         <div className="flex justify-between items-start mb-3 gap-3">
                                             <div className="min-w-0">
                                                 <h4 className="font-semibold text-sm text-foreground truncate">{item.name}</h4>
-                                                <p className="text-xs text-muted-foreground">₹{item.cost.toFixed(2)}</p>
+                                                <p className="text-xs text-muted-foreground">{fmt(item.cost, { precise: true })}</p>
                                             </div>
                                             <div className="text-right shrink-0">
                                                 {isExpired ? (

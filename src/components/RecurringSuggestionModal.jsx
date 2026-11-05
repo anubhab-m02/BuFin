@@ -1,10 +1,12 @@
 import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useMoney } from '../hooks/useMoney';
 import Dialog from './ui/dialog';
 import { Button } from './ui/button';
 
 const RecurringSuggestionModal = () => {
     const { recurringSuggestion, setRecurringSuggestion, addRecurringPlan } = useFinancial();
+    const { fmt } = useMoney();
 
     if (!recurringSuggestion) return null;
 
@@ -37,7 +39,7 @@ const RecurringSuggestionModal = () => {
                     </div>
                     <div className="flex justify-between">
                         <span>Amount</span>
-                        <span className="font-medium">₹{recurringSuggestion.amount}</span>
+                        <span className="font-medium">{fmt(recurringSuggestion.amount)}</span>
                     </div>
                 </div>
                 <div className="flex justify-end gap-2">
