@@ -18,9 +18,7 @@ flowchart LR
     API -->|HTTPS, API key| GEM[Gemini API]
     API -->|HTTP localhost:11434| OLL[Ollama - phi4-mini, optional]
     API -.->|planned| PG[(PostgreSQL)]
-    API -.->|planned| RDS[(Redis cache and queue)]
-    WRK[Worker - planned] -.-> PG
-    WRK -.-> RDS
+    WRK[Worker - planned, Postgres-backed queue] -.-> PG
     WRK -.->|batch AI| GEM
 ```
 
@@ -103,13 +101,13 @@ erDiagram
 
 | Concern | State |
 |---|---|
-| Authn/z | Works. Per-user filtering on every router; household membership checked. JWT secret is a hard-coded string in `auth_utils.py`. No refresh tokens, no logout revocation. |
-| Config | Mostly env (`GEMINI_API_KEY`, `OLLAMA_*`). Hard-coded: JWT secret, DB URL, CORS origins; the frontend API URL became configurable in PR #106. |
+| Authn/z | Works. Per-user filtering on every router; household membership checked. The JWT secret now comes from `JWT_SECRET_KEY` (required, 32+ characters, when `BUFIN_ENV=production`; PR #149). All AI routes require login since PR #167. Still open: no refresh tokens or revocation (a token lives 24 hours, even after a password change or account deletion), no password policy, no rate limit on sign-in (#155). |
+| Config | Mostly env (`GEMINI_API_KEY`, `JWT_SECRET_KEY`, `BUFIN_ENV`, `OLLAMA_*`). Hard-coded: DB URL, CORS origins; the frontend API URL became configurable in PR #106. |
 | Money | Stored as `Float`. Dates stored as ISO `String`. |
-| Concurrency | `async def` handlers call synchronous SQLAlchemy and `requests`, so each request blocks the event loop. |
+| Concurrency | The CRUD handlers are plain `def`, so FastAPI runs them in a threadpool. What can block the event loop is the `async def` code: the dependency `get_current_user` runs a synchronous DB query on the loop for every authenticated request, and the AI handlers in `routers/ai.py` call synchronous Gemini/Ollama clients (the coach call was moved to a thread in PR #171; the SDK-based calls were not). |
 | Observability | `print` statements. No metrics, tracing or error reporting. |
-| Testing | None. Verification is manual plus build and lint. |
-| CI/CD | None. No Dockerfile on `main` (PR #83 pending). |
+| Testing | A pytest suite exists for the backend (auth secret, AI routes, transaction listing, account lifecycle, atomic money operations, date maths; in-memory databases only). No frontend tests, and CI does not run pytest yet (milestone #142). |
+| CI/CD | GitHub Actions runs the frontend build, lint of changed files, a backend import check and the Alembic single-head check. It does not run tests. No Dockerfile on `main` (PR #83 pending). |
 | Rate limiting | None, including on the AI endpoints that cost money. |
 | Privacy | Prompts containing transaction data go to Gemini unless Ollama answers. Privacy Mode masks the UI only. |
 
@@ -118,7 +116,7 @@ erDiagram
 1. **Correctness of money.** Float arithmetic and string dates will produce off-by-paisa and off-by-a-day bugs (two have already shipped: #69 and the "upcoming" bug). Highest risk because it is silent.
 2. **Security of a deployed instance.** The JWT secret is public in the repository. Anyone can mint a token for any email.
 3. **Event-loop blocking.** A slow Gemini call (up to tens of seconds) stalls every other request on that worker.
-4. **Client-side aggregation.** The SPA downloads the full transaction list and computes balance, safe-to-spend, forecasts and trends itself. Fine for hundreds of rows, wrong for tens of thousands, and it makes every client re-implement money rules.
+4. **Client-side aggregation.** The SPA downloads the whole ledger (in pages of 500 since PR #170; before that it silently got only 100 rows) and computes balance, safe-to-spend, forecasts and trends itself. Fine for hundreds of rows, wrong for tens of thousands, and it makes every client re-implement money rules.
 5. **SQLite single writer.** Fine for one user. Blocks multi-user write concurrency and any second server instance.
 6. **AI cost and abuse.** No quotas, caching, or budgets per user.
 
@@ -140,8 +138,7 @@ flowchart TB
       MCP[MCP server: BuFin tools for agents]
     end
     subgraph Data
-      PG[(PostgreSQL, row-level security)]
-      RDS[(Redis: cache, queue, rate-limit)]
+      PG[(PostgreSQL: data, agent checkpoints, queue, quotas, cache; row-level security)]
       OBJ[(Object store: receipts, statements)]
     end
     subgraph Obs
@@ -150,14 +147,11 @@ flowchart TB
     SPA --> CDN
     SPA --> GW --> API
     API --> PG
-    API --> RDS
     API --> AIG
     WRK --> PG
-    WRK --> RDS
     WRK --> AIG
     MCP --> API
-    AIG --> GEM[Gemini / other providers]
-    AIG --> OLL[Local models]
+    AIG --> GEM[Gemini]
     API --> OBJ
     API -.-> OT
     WRK -.-> OT
