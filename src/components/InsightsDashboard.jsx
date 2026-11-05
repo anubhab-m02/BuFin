@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useMoney } from '../hooks/useMoney';
 import { detectLeaks, findSubscriptions } from '../lib/analysis';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -12,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 
 const InsightsDashboard = () => {
     const { transactions, recurringPlans, balance, ignoredMerchants, ignoreMerchant, deleteRecurringPlan } = useFinancial();
+    const { fmt } = useMoney();
 
     const leaks = useMemo(() => detectLeaks(transactions), [transactions]);
     const rawSubscriptions = useMemo(() => findSubscriptions(transactions, recurringPlans), [transactions, recurringPlans]);
@@ -87,7 +89,7 @@ const InsightsDashboard = () => {
                                             <p className="font-medium text-foreground">{leak.category}</p>
                                             <p className="text-sm text-muted-foreground">{leak.suggestion}</p>
                                         </div>
-                                        <div className="font-bold">-₹{leak.amount.toFixed(2)}</div>
+                                        <div className="font-bold">-{fmt(leak.amount, { precise: true })}</div>
                                     </div>
                                 ))}
                             </div>
@@ -118,7 +120,7 @@ const InsightsDashboard = () => {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <div className="font-bold">₹{sub.amount.toFixed(2)}</div>
+                                            <div className="font-bold">{fmt(sub.amount, { precise: true })}</div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button
                                                     variant="ghost"
@@ -158,7 +160,7 @@ const InsightsDashboard = () => {
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <div className="font-bold text-warning tabular-nums">₹{sub.amount.toFixed(2)}</div>
+                                                <div className="font-bold text-warning tabular-nums">{fmt(sub.amount, { precise: true })}</div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button
                                                         variant="ghost"

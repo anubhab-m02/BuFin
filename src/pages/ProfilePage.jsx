@@ -211,13 +211,13 @@ const ProfilePage = () => {
                         <div className="space-y-1">
                             <span className="text-sm text-muted-foreground">Monthly income</span>
                             <div className="font-semibold text-lg">
-                                {user?.monthly_income != null ? `${user?.currency === 'USD' ? '$' : '₹'}${user.monthly_income.toLocaleString()}` : '—'}
+                                {user?.monthly_income != null ? (isPrivacyMode ? '••••' : `${user?.currency === 'USD' ? '$' : '₹'}${user.monthly_income.toLocaleString()}`) : '—'}
                             </div>
                         </div>
                         <div className="space-y-1">
                             <span className="text-sm text-muted-foreground">Savings goal</span>
                             <div className="font-semibold text-lg">
-                                {user?.savings_goal != null ? `${user?.currency === 'USD' ? '$' : '₹'}${user.savings_goal.toLocaleString()}` : '—'}
+                                {user?.savings_goal != null ? (isPrivacyMode ? '••••' : `${user?.currency === 'USD' ? '$' : '₹'}${user.savings_goal.toLocaleString()}`) : '—'}
                             </div>
                         </div>
                         <div className="space-y-1">

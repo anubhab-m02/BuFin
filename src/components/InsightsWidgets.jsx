@@ -1,5 +1,6 @@
 import React from 'react';
 import { useFinancial } from '../context/FinancialContext';
+import { useMoney } from '../hooks/useMoney';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -9,6 +10,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recha
 // compare against, and presenting made-up numbers as data would be actively misleading).
 export const SpendingComparisonWidget = () => {
     const { transactions } = useFinancial();
+    const { fmt } = useMoney();
 
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -73,8 +75,8 @@ export const SpendingComparisonWidget = () => {
                                 />
                             </div>
                             <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-                                <span>You: ₹{item.user.toFixed(0)}</span>
-                                <span>Your avg: ₹{item.avg.toFixed(0)}</span>
+                                <span>You: {fmt(item.user)}</span>
+                                <span>Your avg: {fmt(item.avg)}</span>
                             </div>
                         </div>
                     ))
@@ -86,6 +88,7 @@ export const SpendingComparisonWidget = () => {
 
 export const TrendPredictionWidget = () => {
     const { transactions } = useFinancial();
+    const { fmt } = useMoney();
 
     // 1. Group expenses by month (last 3 months)
     const monthlyExpenses = transactions
@@ -116,7 +119,7 @@ export const TrendPredictionWidget = () => {
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col items-center justify-center py-4">
-                    <span className="text-3xl font-bold">₹{prediction.toFixed(0)}</span>
+                    <span className="text-3xl font-bold">{fmt(prediction)}</span>
                     <p className="text-xs text-muted-foreground mt-1 text-center">
                         Predicted spending for next month based on your recent trends (+5% buffer).
                     </p>
@@ -124,7 +127,7 @@ export const TrendPredictionWidget = () => {
                 <div className="mt-4 space-y-2">
                     <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">3-Month Avg</span>
-                        <span>₹{average.toFixed(0)}</span>
+                        <span>{fmt(average)}</span>
                     </div>
                     {last3Months.map(m => {
                         const [y, monthIdx] = m.split('-');
@@ -132,7 +135,7 @@ export const TrendPredictionWidget = () => {
                         return (
                             <div key={m} className="flex justify-between text-xs">
                                 <span className="text-muted-foreground">{monthName}</span>
-                                <span>₹{monthlyExpenses[m].toFixed(0)}</span>
+                                <span>{fmt(monthlyExpenses[m])}</span>
                             </div>
                         );
                     })}
