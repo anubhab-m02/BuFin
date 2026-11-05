@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -184,9 +184,12 @@ def contribute_to_goal(goal_id: str, body: ContributeRequest, db: Session = Depe
     name = db_goal.name
 
     # Conditional UPDATE keeps a concurrent withdrawal from driving the saved amount below zero.
+    # coalesce: a NULL saved amount counts as 0. The small epsilon absorbs float drift (0.1 + 0.1 +
+    # 0.1 is not exactly 0.3), so "withdraw everything" is not refused by a rounding error.
+    saved = func.coalesce(models.Goal.currentAmount, 0)
     changed = db.query(models.Goal).filter(
-        models.Goal.id == goal_id, models.Goal.currentAmount + body.amount >= 0
-    ).update({models.Goal.currentAmount: models.Goal.currentAmount + body.amount}, synchronize_session=False)
+        models.Goal.id == goal_id, saved + body.amount >= -1e-9
+    ).update({models.Goal.currentAmount: saved + body.amount}, synchronize_session=False)
     if not changed:
         raise HTTPException(status_code=400, detail="You cannot withdraw more than is saved in this goal")
 

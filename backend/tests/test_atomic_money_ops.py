@@ -168,3 +168,45 @@ def test_deleting_an_ordinary_transaction_reports_no_reverted_debt(env):
                                   category="c", description="d", merchant="m", date="2026-11-05"))
         db.commit()
     assert client.delete("/api/transactions/plain").json()["reverted_debt_id"] is None
+
+
+def test_another_users_delete_cannot_revert_a_debt_they_do_not_own(env):
+    client, Session = env
+    tx_id = client.post("/api/debts/owe/repay", json={"date": "2026-11-05"}).json()["transaction"]["id"]
+    # a household member (user b) deletes a's repayment transaction: the row goes, a's debt must not flip
+    client.app.dependency_overrides[get_current_user] = lambda: models.User(id="b", email="b@x.y")
+    with Session() as db:  # make the row visible to b the way a household would
+        db.add(models.Household(id="hh", name="H", created_by="a", created_at="2026-01-01"))
+        db.flush()
+        db.add(models.HouseholdMember(id="m", household_id="hh", user_id="b", role="member", joined_at="2026-01-01"))
+        db.query(models.Transaction).filter(models.Transaction.id == tx_id).update({"household_id": "hh"}, synchronize_session=False)
+        db.commit()
+    client.app.dependency_overrides[get_active_household_id] = lambda: "hh"
+    response = client.delete(f"/api/transactions/{tx_id}")
+    assert response.status_code == 200 and response.json()["reverted_debt_id"] is None
+    with Session() as db:
+        assert db.get(models.Debt, "owe").status == "repaid"
+
+
+@pytest.mark.parametrize("amount", [0, -5, 1e13])
+def test_borrowing_rejects_non_positive_or_absurd_amounts(env, amount):
+    client, Session = env
+    response = client.post("/api/debts", json={"personName": "Kim", "amount": amount, "direction": "payable", "cash_in_date": "2026-11-05"})
+    assert response.status_code == 422
+    assert txs(Session) == []
+
+
+@pytest.mark.parametrize("date", ["20261105", "2026-W45-3", "2026-11-5", " 2026-11-05"])
+def test_only_canonical_dates_are_accepted(env, date):
+    client, _ = env
+    assert client.post("/api/debts/owe/repay", json={"date": date}).status_code == 422
+    assert client.post("/api/goals/trip/contribute", json={"amount": 5, "date": date}).status_code == 422
+
+
+def test_withdrawing_exactly_everything_saved_works_despite_float_drift(env):
+    client, Session = env
+    for _ in range(3):  # 0.1 + 0.1 + 0.1 != 0.3 in binary floating point
+        assert client.post("/api/goals/trip/contribute", json={"amount": 0.1, "date": "2026-11-05"}).status_code == 200
+    saved = client.get("/api/goals").json()
+    trip = next(g for g in saved if g["id"] == "trip")["currentAmount"]
+    assert client.post("/api/goals/trip/contribute", json={"amount": -trip, "date": "2026-11-05"}).status_code == 200

@@ -1,10 +1,13 @@
 from datetime import date
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 from typing import Annotated, Optional, List
 
 
 def _iso_date(value: str) -> str:
-    date.fromisoformat(value)  # a ValueError becomes a 422
+    # fromisoformat also accepts forms like 20261105 or 2026-W45-3; only the canonical
+    # YYYY-MM-DD may be stored, because dates are compared and sorted as strings.
+    if date.fromisoformat(value).isoformat() != value:  # a ValueError becomes a 422
+        raise ValueError("date must be YYYY-MM-DD")
     return value
 
 
@@ -132,6 +135,9 @@ class Budget(BudgetBase):
 
 # --- Multi-step money operations (one request, one commit) ---
 class DebtCreateRequest(DebtCreate):
+    # The amount becomes a ledger transaction when cash_in_date is set, so it must be a real,
+    # positive, bounded number.
+    amount: float = Field(gt=0, le=1e12, allow_inf_nan=False)
     # Borrowing ("payable") is cash in. When set, the matching income transaction is recorded in
     # the same commit as the debt; unset keeps the old behaviour (debt only).
     cash_in_date: Optional[IsoDate] = None

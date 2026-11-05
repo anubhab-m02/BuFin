@@ -74,7 +74,11 @@ def delete_transaction(transaction_id: str, db: Session = Depends(get_db), curre
     # debt stays marked repaid with no matching transaction.
     reverted_debt_id = None
     if db_transaction.linked_debt_id:
-        debt = db.query(models.Debt).filter(models.Debt.id == db_transaction.linked_debt_id).first()
+        # Only the debt's owner's repayment un-repays it: in a household another member can see
+        # and delete this row, but the debt is personal to whoever made the repayment.
+        debt = db.query(models.Debt).filter(
+            models.Debt.id == db_transaction.linked_debt_id, models.Debt.user_id == current_user.id
+        ).first()
         if debt and debt.status == 'repaid':
             debt.status = 'active'
             reverted_debt_id = debt.id
