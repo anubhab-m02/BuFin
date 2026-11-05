@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { parseLocalDate } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useFinancial } from '../context/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -19,7 +20,7 @@ export const BudgetSummaryCard = () => {
         const spent = transactions
             .filter(t => {
                 if (t.type !== 'expense' || t.category !== b.category) return false;
-                const d = new Date(t.date);
+                const d = parseLocalDate(t.date);
                 return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
             })
             .reduce((acc, t) => acc + t.amount, 0);
@@ -167,7 +168,7 @@ export const ExpenseBreakdown = () => {
                     if (transaction.type !== 'expense' || (transaction.category || 'Other') !== selectedCategory) {
                         return false;
                     }
-                    const transactionDate = new Date(transaction.date);
+                    const transactionDate = parseLocalDate(transaction.date);
                     return transactionDate.getMonth() === month && transactionDate.getFullYear() === year;
                 })
                 .reduce((sum, transaction) => sum + (Number(transaction.amount) || 0), 0);

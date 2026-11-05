@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { todayLocalStr } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { classifyTransaction } from '../lib/gemini';
 import { Button } from './ui/button';
@@ -54,7 +55,7 @@ const NaturalLanguageInput = ({ onManualEntry }) => {
                         description: action.title || action.merchant || 'Transaction', // Title is the main display
                         merchant: action.merchant,
                         type: action.type || 'expense',
-                        date: action.date || new Date().toISOString(),
+                        date: action.date || todayLocalStr(),
                         necessity: 'variable', // Default for quick add
                         remarks: action.remarks || ''
                     });

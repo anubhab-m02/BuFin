@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { dateOnly, todayLocalStr } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,7 +12,7 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
     const { addTransaction, updateTransaction, categories } = useFinancial();
 
     const [formData, setFormData] = useState({
-        date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: initialData?.date ? dateOnly(initialData.date) : todayLocalStr(),
         amount: initialData?.amount || '',
         type: initialData?.type || 'expense',
         category: initialData?.category || '',
@@ -28,7 +29,7 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
         const transactionData = {
             ...formData,
             amount: parseFloat(formData.amount),
-            date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString()
+            date: formData.date || todayLocalStr()
         };
 
         if (mode === 'edit' && initialData?.id) {
@@ -47,7 +48,7 @@ const AddTransactionForm = ({ onSuccess, initialData, mode = 'add' }) => {
                     category: '',
                     description: '',
                     type: 'expense',
-                    date: new Date().toISOString().split('T')[0],
+                    date: todayLocalStr(),
                     remarks: '',
                     necessity: 'variable'
                 });

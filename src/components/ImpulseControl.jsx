@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { todayLocalStr } from '../lib/utils';
 import { useFinancial } from '../context/FinancialContext';
 import { useMoney } from '../hooks/useMoney';
 import { useAuth } from '../context/AuthContext';
@@ -70,7 +71,7 @@ const ImpulseControl = () => {
             category: 'Shopping',
             description: item.name,
             type: 'expense',
-            date: new Date().toISOString(),
+            date: todayLocalStr(),
             necessity: 'variable' // Impulse buys are usually variable
         });
         deleteWishlistItem(item.id);

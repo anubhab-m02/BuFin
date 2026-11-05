@@ -1,5 +1,5 @@
 import { useFinancial } from '../context/FinancialContext';
-import { resolveExpectedDay } from '../lib/utils';
+import { dateOnly, parseLocalDate, resolveExpectedDay, todayLocalStr } from '../lib/utils';
 
 // Single source of truth for the safe-to-spend calculation, extracted from the old
 // SafeToSpendWidget so the Dashboard hero gauge and anything else that needs this number
@@ -11,11 +11,13 @@ export function useSafeToSpend() {
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const daysRemaining = Math.max(1, lastDay.getDate() - today.getDate() + 1);
 
+    // Compare calendar days as YYYY-MM-DD strings: parsing "2026-11-05" with new Date() is UTC
+    // midnight, which lands on a different day than the user's behind UTC (and for timestamps
+    // near midnight everywhere).
+    const todayKey = todayLocalStr();
     const isFutureThisMonth = (dateStr) => {
-        const d = new Date(dateStr);
-        const now = new Date();
-        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
-        return d.getDate() > now.getDate();
+        const day = dateOnly(dateStr);
+        return day.slice(0, 7) === todayKey.slice(0, 7) && day > todayKey;
     };
 
     // A monthly plan's occurrence today, if due, is already a real materialized
@@ -23,14 +25,14 @@ export function useSafeToSpend() {
     // today here avoids counting it twice. Weekly/yearly plans are never materialized,
     // so their existing "today still counts as upcoming" behavior is unchanged.
     const isPlanUpcoming = (plan, expectedDay) =>
-        plan.frequency === 'monthly' ? expectedDay > today.getDate() : expectedDay >= today.getDate();
+        (plan.frequency ?? 'monthly') === 'monthly' ? expectedDay > today.getDate() : expectedDay >= today.getDate();
 
     const upcomingRecurringFixed = recurringPlans
         .filter(p => {
             if (p.type !== 'expense') return false;
             const expectedDay = resolveExpectedDay(p.expectedDate, today.getFullYear(), today.getMonth());
             if (p.endDate) {
-                const end = new Date(p.endDate);
+                const end = parseLocalDate(p.endDate);
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
                 if (current > end) return false;
             }
@@ -49,7 +51,7 @@ export function useSafeToSpend() {
             if (p.type !== 'income') return false;
             const expectedDay = resolveExpectedDay(p.expectedDate, today.getFullYear(), today.getMonth());
             if (p.endDate) {
-                const end = new Date(p.endDate);
+                const end = parseLocalDate(p.endDate);
                 const current = new Date(today.getFullYear(), today.getMonth(), expectedDay);
                 if (current > end) return false;
             }
@@ -67,7 +69,7 @@ export function useSafeToSpend() {
         .filter(d => {
             if (d.direction !== 'payable' || d.status !== 'active') return false;
             if (!d.dueDate) return true;
-            const due = new Date(d.dueDate);
+            const due = parseLocalDate(d.dueDate);
             return due <= lastDay;
         })
         .reduce((acc, curr) => acc + curr.amount, 0);
