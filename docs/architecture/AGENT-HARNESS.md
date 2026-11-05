@@ -179,3 +179,25 @@ This order replaces the sequence at the end of `SCALING-ROADMAP.md`: Postgres no
 - The initial seed content for merchants, categories, instruments and tax sections, and who curates it.
 - Default per-user daily budget for server-key calls, set from Gemini's current free limits.
 - The retention period for `agent_steps` and `correction_events`.
+
+## 13. Security review addendum (key handling)
+
+Review date 2026-11-05 of ADR-2 and ADR-8. Items below amend the design; each becomes a test in milestone 3 or 4.
+
+High
+1. Per-request keys are passed only as a constructor argument wrapped in `SecretStr`, on a model object built per call. Never set `GOOGLE_API_KEY` or any key in `os.environ`: it is process-global and concurrent users would use each other's keys.
+2. Keys travel in the `x-goog-api-key` header, never the URL. The current `coach_chat` REST call puts the key in the query string (`ai_service.py`), where exceptions and access logs record it; the call is replaced in milestone 3.
+3. Changing or removing a stored key requires the account password again, sends a notice, and is rate-limited. Otherwise a stolen token lets an attacker swap in their own key and receive the user's future redacted prompts.
+4. The first admin is not seeded from `ADMIN_EMAILS` while sign-up has no email verification, because whoever registers that email first would become admin. Grant the role to an existing account with a one-off CLI command, or add email verification first.
+5. Checkpoints are stored redacted. The redaction map is not persisted; real names are re-linked at display time from SQL. This keeps real identifiers out of checkpoints and lets any instance resume a run.
+
+Medium
+6. Encrypt a payload that binds the owner (`user_id` plus key) and verify the owner on decrypt, so ciphertext copied between rows is rejected. Fernet has no associated-data field.
+7. `KEY_ENCRYPTION_KEYS` is separate from the JWT secret, scrubbed from error reporters and crash dumps, and rotation is covered by a tested re-encrypt job.
+8. The model name is validated against an allowlist; it is never interpolated into a URL or path from user input.
+9. Resume endpoint: the run must belong to the caller, approval is idempotent, edits are re-validated by the server schema, and expired runs refuse resumption.
+10. Redaction is best-effort. The Settings notice says it reduces exposure and does not remove it. Golden tests cover Indian formats (UPI IDs, PAN, Aadhaar, phone numbers).
+11. Tool results are wrapped in delimited data blocks and treated as data. Agents that read free text have no write tools.
+12. Rate-limit sign-up and the test-on-save endpoint, since signup farming drains the shared server-key quota.
+
+Low: Neo4j connections use TLS (`neo4j+s://`) and named parameterized queries only. The salt behind `user_hash_for_distinct_count` is secret and rotated.
