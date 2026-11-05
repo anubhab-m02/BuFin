@@ -9,9 +9,15 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or PR supersedes the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,12 +32,15 @@ jobs:
       # frontend files this PR touched. Switch to `npm run lint` once #91 is closed.
       - name: Lint changed files
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          files=$(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" -- 'src/*.js' 'src/*.jsx' 'src/**/*.js' 'src/**/*.jsx')
+          files=$(git diff --name-only --diff-filter=ACMR "origin/$BASE_REF...HEAD" -- 'src/*.js' 'src/*.jsx' 'src/**/*.js' 'src/**/*.jsx')
           if [ -n "$files" ]; then npx eslint $files; else echo "no frontend source changes"; fi
 
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # A throwaway PostgreSQL 16 for the migrations and the tests (BuFin is Postgres-only, ADR-6).
     # The password only protects this job's own container.
     services:
