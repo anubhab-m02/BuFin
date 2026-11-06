@@ -14,7 +14,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 RUN useradd --create-home --uid 10001 bufin
-COPY --chown=bufin:bufin . .
+# Code stays root-owned and read-only for the runtime user: a compromised process cannot rewrite the app.
+COPY . .
 USER bufin
 
 EXPOSE 8000

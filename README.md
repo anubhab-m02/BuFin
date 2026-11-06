@@ -203,7 +203,7 @@ echo "JWT_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(4
 docker compose --profile full up --build
 ```
 
-Open <http://localhost:8080>. A one-shot `migrate` service applies the migrations first, then `api` and `web` (nginx, which also proxies `/api`) start. `docker compose up -d postgres` is unchanged and starts only the database. If `api` keeps restarting, check that `JWT_SECRET_KEY` is set and at least 32 characters. `GET /api/health` answers while the process is up (it never touches the database); `GET /api/ready` also checks the database and returns 503 without detail when it is down.
+Open <http://localhost:8080>. A one-shot `migrate` service applies the migrations first, then `api` and `web` (nginx, which also proxies `/api`) start. `docker compose up -d postgres` is unchanged and starts only the database. If `api` keeps restarting, check that `JWT_SECRET_KEY` is set and at least 32 characters. `GET /api/health` answers while the process is up (it never touches the database). `GET /api/ready` also checks the database and returns 503 without detail when it is down; nginx does not expose it, so reach it inside the network, for example `docker compose --profile full exec api python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/ready').read())"`. The `api` service publishes no port on purpose: anything that could reach it directly could forge client addresses and dodge the rate limits.
 
 ## 🔐 Security & Privacy
 

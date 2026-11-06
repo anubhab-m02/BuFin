@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from database import engine
+from database import probe_engine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -20,11 +20,12 @@ def liveness():
 @router.get("/ready")
 def readiness():
     """The database answers. For load balancers and start-up ordering, not for restarts. Anonymous
-    and silent on failure: the reason goes to the log, never to the caller."""
+    and silent on failure: the reason goes to the log (one line, no traceback: a probe every few
+    seconds during an outage would flood it), never to the caller. Uses its own bounded pool."""
     try:
-        with engine.connect() as conn:
+        with probe_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-    except Exception:
-        logger.exception("readiness check failed")
+    except Exception as exc:
+        logger.warning("readiness check failed: %s", exc.__class__.__name__)
         return JSONResponse(status_code=503, content={"status": "unavailable"})
     return {"status": "ready"}

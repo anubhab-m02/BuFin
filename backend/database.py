@@ -49,6 +49,16 @@ engine = create_engine(
     pool_size=_int_env("DB_POOL_SIZE", 5),
     max_overflow=_int_env("DB_MAX_OVERFLOW", 5),
 )
+# Readiness probe: its own one-connection pool, so a saturated request pool can neither delay nor be
+# starved by the probe, and a hung database fails it within ~2 s (pool_timeout, statement_timeout).
+probe_engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_size=1,
+    max_overflow=0,
+    pool_timeout=2,
+    pool_pre_ping=True,
+    connect_args={"connect_timeout": 3, "options": "-c statement_timeout=2000"},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Deterministic constraint and index names: Alembic autogenerate and the baseline migration
