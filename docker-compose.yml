@@ -5,6 +5,10 @@
 # 127.0.0.1 only. Production credentials come from the environment, never from this file.
 # Postgres applies the password only when the volume is first created: after changing it, run
 # `docker compose down -v` to recreate the database.
+x-backend: &backend
+  build: ./backend
+  image: bufin-backend:local
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -23,6 +27,58 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # --- Full stack: docker compose --profile full up --build ---------------------------------------
+  # Needs JWT_SECRET_KEY in a root .env file (see .env.example). The default `docker compose up -d
+  # postgres` workflow above is unchanged: these services start only under the `full` profile.
+
+  # One-shot: applies the migrations once, then exits. api starts only after it succeeds, so several
+  # api replicas can never race to migrate, and a failed migration stops the stack with a clear error.
+  migrate:
+    <<: *backend
+    profiles: ["full"]
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://bufin:bufin_dev_password@postgres:5432/bufin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *backend
+    profiles: ["full"]
+    restart: unless-stopped
+    environment:
+      # Production mode refuses to start without a strong JWT secret (backend/auth_utils.py).
+      BUFIN_ENV: production
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DATABASE_URL: postgresql+psycopg://bufin:bufin_dev_password@postgres:5432/bufin
+      # nginx (web) overwrites X-Forwarded-For with the real peer address; trust it so the rate
+      # limiter sees real clients. Safe because api is reachable only from this Compose network and
+      # 127.0.0.1 (never publish port 8000 beyond localhost).
+      FORWARDED_ALLOW_IPS: "*"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8000:8000"
+    stop_grace_period: 30s  # a little above uvicorn's 20 s graceful-shutdown window
+
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
 
 volumes:
   bufin_pgdata:

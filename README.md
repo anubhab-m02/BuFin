@@ -193,6 +193,18 @@ An interactive planning tool that shows:
 - Future scheduled transactions
 - Click any date to see detailed breakdown
 
+## 🐳 Run the whole stack in Docker (optional)
+
+The default workflow above runs the API and the web app on your machine and only Postgres in Docker. To run everything in containers instead:
+
+```bash
+# one time: a strong secret in .env at the project root (production mode refuses to start without it)
+echo "JWT_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" >> .env
+docker compose --profile full up --build
+```
+
+Open <http://localhost:8080>. A one-shot `migrate` service applies the migrations first, then `api` and `web` (nginx, which also proxies `/api`) start. `docker compose up -d postgres` is unchanged and starts only the database. If `api` keeps restarting, check that `JWT_SECRET_KEY` is set and at least 32 characters. `GET /api/health` answers while the process is up (it never touches the database); `GET /api/ready` also checks the database and returns 503 without detail when it is down.
+
 ## 🔐 Security & Privacy
 
 - **Local storage**: your transaction/goal/budget data is stored in a PostgreSQL database that you run yourself (locally via Docker), not a third-party cloud database
