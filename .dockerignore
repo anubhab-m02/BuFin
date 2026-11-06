@@ -1,0 +1,23 @@
+# Build context for Dockerfile.web (the repository root). The backend image has its own
+# backend/.dockerignore; nothing under backend/ belongs in the web image.
+.git
+.github
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.db
+**/*.db.*
+**/*.db-*
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/*.log
+**/node_modules
+dist
+venv
+.venv
+env
+backend
+docs
+.claude

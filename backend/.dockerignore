@@ -1,0 +1,22 @@
+# Keep secrets, local databases (they hold real personal data), caches and tests out of the image.
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.db
+**/*.db.*
+**/*.db-*
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/*.log
+venv/
+.venv/
+env/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+Dockerfile
+.dockerignore

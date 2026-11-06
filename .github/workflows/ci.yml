@@ -88,3 +88,34 @@ jobs:
       - name: Tests
         # conftest.py builds bufin_test from the migrations and truncates it between tests.
         run: python -m pytest -q
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build both images and start the full stack (migrate, api, web)
+        run: |
+          # A throwaway secret for this job only; production mode refuses to start without a strong one.
+          export JWT_SECRET_KEY="$(openssl rand -base64 48 | tr -d '\n')"
+          docker compose --profile full up --build -d --wait
+      - name: Health and the web app answer through nginx; readiness only inside the network
+        run: |
+          curl -fsS http://localhost:8080/api/health
+          curl -fsS -o /dev/null http://localhost:8080/
+          curl -fsS -o /dev/null http://localhost:8080/ledger   # single-page-app fallback
+          # /api/ready opens a database connection per call, so nginx does not expose it:
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/ready)" = "404"
+          docker compose --profile full exec -T api python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3).read().decode())"
+          # the api publishes no port, so nothing can reach it around nginx and forge client addresses
+          ! curl -s --max-time 3 http://localhost:8000/api/health
+      - name: The API stops cleanly on SIGTERM (graceful shutdown, exit code 0)
+        run: |
+          docker compose --profile full stop api
+          test "$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose --profile full ps -aq api)")" = "0"
+      - name: Logs (on failure)
+        if: failure()
+        run: docker compose --profile full logs --no-color
+      - name: Tear down
+        if: always()
+        run: docker compose --profile full down -v
