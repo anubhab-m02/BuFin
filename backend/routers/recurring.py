@@ -1,15 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import models, schemas
+import models
+import schemas
 from database import get_db
 from .auth import get_current_user
 import uuid
 import calendar
+import logging
 from datetime import date, timedelta
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # --- Materialization helpers ---
 
@@ -20,11 +24,9 @@ def _resolve_expected_day(expected_date: str, year: int, month: int) -> Optional
     if expectedDate can't be parsed at all (matches the JS side's effective behavior of
     a garbage value simply never matching any day, rather than fabricating one).
 
-    Unlike the JS version, an out-of-range day (e.g. "31" in February) is clamped to
-    the month's actual last day instead of left to roll over into the next month - the
-    billing-cycle convention most recurring-charge systems use, and a materialized
-    Transaction rolling into a different month than intended would be a worse surprise
-    than clamping.
+    A valid day from 1-31 that does not exist in this particular month (e.g. "31" in
+    February) is clamped to the month's actual last day instead of rolling into the
+    next month. Values outside 1-31 return None and are rejected on API writes.
     """
     last_day = calendar.monthrange(year, month)[1]
     if expected_date == 'last':
@@ -37,6 +39,8 @@ def _resolve_expected_day(expected_date: str, year: int, month: int) -> Optional
     try:
         day = int(expected_date)
     except (TypeError, ValueError):
+        return None
+    if not 1 <= day <= 31:
         return None
     return max(1, min(day, last_day))
 
@@ -60,16 +64,27 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
         models.RecurringPlan.frequency == 'monthly'
     ).order_by(models.RecurringPlan.id).all()
 
+    last_dates = {}
+    if plans:
+        last_dates = dict(db.query(
+            models.Transaction.recurring_plan_id,
+            func.max(models.Transaction.date),
+        ).filter(
+            models.Transaction.recurring_plan_id.in_([plan.id for plan in plans])
+        ).group_by(models.Transaction.recurring_plan_id).all())
+
+    inserted_any = False
+
     for plan in plans:
+        if _resolve_expected_day(plan.expectedDate, today.year, today.month) is None:
+            logger.warning("Skipping recurring plan %s with invalid expectedDate", plan.id)
+            continue
+
         end_date = plan.endDate  # a date or None (DATE column)
-        new_rows = []
+        last_date = last_dates.get(plan.id)
 
-        last_tx = db.query(models.Transaction).filter(
-            models.Transaction.recurring_plan_id == plan.id
-        ).order_by(models.Transaction.date.desc()).first()
-
-        if last_tx:
-            year, month = _add_month(last_tx.date.year, last_tx.date.month)
+        if last_date:
+            year, month = _add_month(last_date.year, last_date.month)
         else:
             # No materialized history yet, and RecurringPlan has no created_at field to
             # know how far back this plan "should" go - only ever consider the current
@@ -93,7 +108,7 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
             # the whole month has already elapsed by construction)
 
             if is_due:
-                new_rows.append(models.Transaction(
+                values = dict(
                     id=str(uuid.uuid4()),
                     user_id=current_user.id,
                     date=occurrence_date,
@@ -105,20 +120,23 @@ def _materialize_recurring_plans(db: Session, current_user: models.User):
                     necessity='fixed',
                     remarks='Auto-generated from recurring plan',
                     recurring_plan_id=plan.id
-                ))
+                )
+                # A concurrent request may have created this occurrence after the
+                # grouped history query. The partial unique index is authoritative.
+                result = db.execute(
+                    postgresql_insert(models.Transaction)
+                    .values(**values)
+                    .on_conflict_do_nothing()
+                )
+                # Some drivers report -1 or None when rowcount is unknown. Treat that
+                # as a possible insert so successful materialization is committed.
+                if result.rowcount is None or result.rowcount < 0 or result.rowcount > 0:
+                    inserted_any = True
 
             year, month = _add_month(year, month)
 
-        # One savepoint per plan: if a concurrent request already materialized one of these
-        # occurrences (unique plan+date index), only this plan's rows are dropped - theirs are the
-        # rows we wanted - and the other plans' new rows still commit.
-        try:
-            with db.begin_nested():
-                db.add_all(new_rows)
-        except IntegrityError:
-            pass
-
-    db.commit()
+    if inserted_any:
+        db.commit()
 
 # --- Endpoints ---
 
