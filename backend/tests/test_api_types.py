@@ -91,6 +91,15 @@ def test_debt_and_plan_dates_and_enums(client):
     assert client.post("/api/recurring_plans", json={"name": "X", "amount": 1, "type": "expense", "frequency": "daily", "expectedDate": "1"}).status_code == 422
 
 
+@pytest.mark.parametrize("expected_day", [0, 32, "0", "32", "soon", "last-working-day"])
+def test_recurring_plan_rejects_invalid_expected_day(client, expected_day):
+    response = client.post("/api/recurring_plans", json={
+        "name": "Rent", "amount": 1, "type": "expense", "frequency": "monthly",
+        "expectedDate": expected_day,
+    })
+    assert response.status_code == 422
+
+
 def test_materialized_recurring_occurrences_are_dated_days_and_not_duplicated(client):
     client.post("/api/recurring_plans", json={"name": "Rent", "amount": 1000, "type": "expense", "frequency": "monthly", "expectedDate": "1"})
     first = client.get("/api/recurring_plans")
@@ -139,6 +148,62 @@ def test_editing_a_transaction_without_a_necessity_keeps_it(client):
     body = {k: v for k, v in TX.items()}
     resp = client.put(f"/api/transactions/{tx_id}", json={**body, "date": "2025-04-05", "amount": 20})
     assert resp.status_code == 200 and resp.json()["necessity"] == "fixed" and resp.json()["date"] == "2025-04-05"
+
+
+def test_transaction_put_rejects_timestamp_dates(client):
+    tx_id = client.post("/api/transactions", json=TX).json()["id"]
+    resp = client.put(f"/api/transactions/{tx_id}", json={**TX, "date": "2025-04-05T12:30:00Z"})
+    assert resp.status_code == 422
+
+
+def test_recurring_transaction_move_to_occupied_date_returns_409(client, session_factory):
+    with session_factory() as db:
+        db.add(models.RecurringPlan(id="rent", user_id="u", name="Rent", amount=100.0,
+                                    type="expense", frequency="monthly", expectedDate="1"))
+        db.add_all([
+            models.Transaction(id="one", user_id="u", date=dt.date(2026, 11, 1), amount=100.0,
+                               category="Bills", description="Rent", type="expense", necessity="fixed",
+                               recurring_plan_id="rent"),
+            models.Transaction(id="two", user_id="u", date=dt.date(2026, 11, 2), amount=100.0,
+                               category="Bills", description="Rent", type="expense", necessity="fixed",
+                               recurring_plan_id="rent"),
+        ])
+        db.commit()
+
+    resp = client.put("/api/transactions/two", json={**TX, "date": "2026-11-01"})
+    assert resp.status_code == 409
+    assert "2026-11-01" in resp.json()["detail"]
+
+
+def test_manual_transaction_may_share_recurring_date(client, session_factory):
+    with session_factory() as db:
+        db.add(models.RecurringPlan(id="rent", user_id="u", name="Rent", amount=100.0,
+                                    type="expense", frequency="monthly", expectedDate="1"))
+        db.add_all([
+            models.Transaction(id="recurring", user_id="u", date=dt.date(2026, 11, 1), amount=100.0,
+                               category="Bills", description="Rent", type="expense", necessity="fixed",
+                               recurring_plan_id="rent"),
+            models.Transaction(id="manual", user_id="u", date=dt.date(2026, 11, 2), amount=100.0,
+                               category="Bills", description="Lunch", type="expense", necessity="fixed"),
+        ])
+        db.commit()
+
+    resp = client.put("/api/transactions/manual", json={**TX, "date": "2026-11-01"})
+    assert resp.status_code == 200
+
+
+def test_unrelated_integrity_error_is_not_converted_to_409(client, monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.orm import Session
+
+    tx_id = client.post("/api/transactions", json=TX).json()["id"]
+
+    def fail_commit(self):
+        raise IntegrityError("update", {}, RuntimeError("unrelated constraint"))
+
+    monkeypatch.setattr(Session, "commit", fail_commit)
+    resp = client.put(f"/api/transactions/{tx_id}", json={**TX, "date": "2025-04-05"})
+    assert resp.status_code == 500
 
 
 @pytest.mark.parametrize("payload", [{"targetAmount": None}, {"name": None}, {"currentAmount": None}])
@@ -204,17 +269,18 @@ def test_a_lost_race_on_one_plan_does_not_discard_the_other_plans_new_rows(sessi
             def query(self, *a, **k):
                 return db.query(*a, **k)
 
-            def begin_nested(self):
+            @property
+            def bind(self):
+                return db.bind
+
+            def execute(self, statement):
                 if not RacingSession.raced:  # another request materializes plan a's December occurrence first
                     RacingSession.raced = True
                     with session_factory() as other:
                         other.add(models.Transaction(id="other", user_id="u", date=dt.date(2026, 12, 1), amount=10.0, category="Bills",
                                                      description="a", type="expense", recurring_plan_id="a"))
                         other.commit()
-                return db.begin_nested()
-
-            def add_all(self, rows):
-                return db.add_all(rows)
+                return db.execute(statement)
 
             def commit(self):
                 return db.commit()

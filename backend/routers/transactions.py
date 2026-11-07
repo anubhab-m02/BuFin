@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import models, schemas
+import models
+import schemas
 from database import get_db
 from .auth import get_current_user, get_active_household_id
 import uuid
+import logging
 from datetime import date as date_type
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 MAX_PAGE_SIZE = 1000
 
@@ -97,6 +101,25 @@ def update_transaction(transaction_id: str, transaction: schemas.TransactionCrea
     for key, value in transaction.model_dump(exclude={"id"}, exclude_unset=True).items(): # Don't update ID; keep fields the client left out
         setattr(db_transaction, key, value)
 
-    db.commit()
+    recurring_plan_id = db_transaction.recurring_plan_id
+    attempted_date = db_transaction.date
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        constraint_name = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if recurring_plan_id and constraint_name == "uq_transactions_recurring_plan_date":
+            collision = db.query(models.Transaction.id).filter(
+                models.Transaction.recurring_plan_id == recurring_plan_id,
+                models.Transaction.date == attempted_date,
+                models.Transaction.id != transaction_id,
+            ).first()
+            if collision:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"A transaction already exists for this recurring plan on {attempted_date}",
+                )
+        logger.exception("Unrelated transaction integrity error while updating %s", transaction_id)
+        raise
     db.refresh(db_transaction)
     return db_transaction

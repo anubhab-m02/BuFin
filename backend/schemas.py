@@ -131,12 +131,35 @@ class Transaction(TransactionBase):
     recurring_plan_id: Optional[str] = None  # set for auto-materialized recurring occurrences; server-derived
     model_config = ConfigDict(from_attributes=True)
 
+
+def _coerce_expected_date(value):
+    # Keep the JSON API's numeric day compatibility while validating the normalized string.
+    if isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    return value
+
+
+def _validate_expected_date(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError("expectedDate must be a day from 1 to 31, 'last', or 'last-working'")
+    if value in ("last", "last-working"):
+        return value
+    if not value.isdigit() or not 1 <= int(value) <= 31:
+        raise ValueError("expectedDate must be a day from 1 to 31, 'last', or 'last-working'")
+    return str(int(value))
+
+
+RecurringExpectedDate = Annotated[
+    str, BeforeValidator(_coerce_expected_date), AfterValidator(_validate_expected_date)
+]
+
+
 class RecurringPlanBase(BaseModel):
     name: str
     amount: Money
     type: TransactionType
     frequency: Literal['monthly', 'weekly', 'yearly']
-    expectedDate: str
+    expectedDate: RecurringExpectedDate
     endDate: OptionalIsoDate = None
 
 class RecurringPlanCreate(RecurringPlanBase):
